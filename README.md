@@ -11,7 +11,7 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 236 tests passed — engine, rules, scoring, preceptor, deployment, installer |
+| ✅ **Tests** | 237 tests passed — engine, rules, scoring, preceptor, deployment, installer |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 6 Gold marts · 13-agent environment |
@@ -99,6 +99,11 @@ Results land in the `FabricIQReadiness` Lakehouse: the medallion layers under
 ready for the DirectLake governance semantic model. Deployment also sets the workspace
 Spark runtime to **2.0** by default (pass `--skip-spark-runtime-upgrade` to leave it
 unchanged).
+
+By default the notebook publishes the DirectLake Delta marts in snapshot mode
+(`delta_publish_mode = "overwrite"`), so the report shows the latest readiness run
+without duplicate historical rows. The medallion JSONL files still preserve every run;
+switch `delta_publish_mode` to `"append"` only for explicit trend experiments.
 
 Full instructions, prerequisites and caveats: [`fabric/README.md`](fabric/README.md).
 

@@ -104,6 +104,11 @@ class NotebookBindingTests(unittest.TestCase):
         )
         self.assertIn('tenant_id = ""', content)
 
+    def test_notebook_publishes_delta_snapshot_by_default(self):
+        self.assertIn('delta_publish_mode = "overwrite"', self.source)
+        self.assertIn("delta_publish_mode must be 'overwrite' or 'append'", self.source)
+        self.assertIn(".mode(delta_publish_mode)", self.source)
+
     def test_source_without_metadata_block_is_rejected(self):
         with self.assertRaises(DeploymentError):
             build_notebook_content(

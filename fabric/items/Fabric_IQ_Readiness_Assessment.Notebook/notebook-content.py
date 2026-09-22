@@ -62,6 +62,11 @@ run_review = True
 # Publish the Gold marts as Delta tables.
 publish_delta = True
 
+# How Delta tables are published for the DirectLake report.
+# "overwrite" keeps the report focused on the latest run (recommended).
+# "append" keeps run history in the Delta tables for trend/reporting experiments.
+delta_publish_mode = "overwrite"
+
 # METADATA ********************
 
 # META {
@@ -198,8 +203,11 @@ print(f"written to {readiness_root}")
 
 # ## 4. Publish the Gold marts as Delta tables
 #
-# Each run appends, so the marts keep their history and a report can trend readiness
-# over time. `run_id` is the partition key of every mart.
+# By default this step overwrites the Delta tables with the current run so the
+# DirectLake report shows one clear, current readiness snapshot. The medallion
+# files under `Files/readiness/gold/**` still keep each run as a separate JSONL
+# file. Set `delta_publish_mode = "append"` only when you intentionally want the
+# DirectLake tables themselves to keep run history for trend experiments.
 #
 # A mart can legitimately have zero rows for a run (a clean tenant has no blocking
 # findings, a fresh scan may find no scanned objects yet). Reading an empty NDJSON
@@ -235,6 +243,8 @@ def _empty_gold_frame(table: str):
 
 
 if publish_delta:
+    if delta_publish_mode not in {"overwrite", "append"}:
+        raise ValueError("delta_publish_mode must be 'overwrite' or 'append'")
     relative_gold = f"Files/readiness/{GOLD}"
     for table in GOLD_TABLES:
         source = f"{relative_gold}/{table}/{run_id}.jsonl"
@@ -246,13 +256,13 @@ if publish_delta:
         if frame is None or not frame.columns:
             frame = _empty_gold_frame(table)
         row_count = frame.count()
-        (
-            frame.write.format("delta")
-            .mode("append")
-            .option("mergeSchema", "true")
-            .saveAsTable(table)
-        )
-        print(f"  {table}: +{row_count} row(s)")
+        writer = frame.write.format("delta").mode(delta_publish_mode)
+        if delta_publish_mode == "overwrite":
+            writer = writer.option("overwriteSchema", "true")
+        else:
+            writer = writer.option("mergeSchema", "true")
+        writer.saveAsTable(table)
+        print(f"  {table}: {delta_publish_mode} {row_count} row(s)")
 else:
     print("publish_delta is False; Delta tables were not refreshed")
 
