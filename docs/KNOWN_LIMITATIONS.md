@@ -236,14 +236,33 @@ re-enabled, and the workspace's users assigned to such a capacity, before Data A
 would function — that assertion was tested directly against a live F2-capacity tenant
 and found to be false, so both rules (`TEN-011`, `WKS-011`) were removed entirely.
 
-The tenant-level setting was subsequently reintroduced as `TEN-011`, but reframed as an
-**advisory recommendation, not a requirement**: `Severity.INFO`, uncapped (an `INFO`
-finding never lowers a score the way `BLOCKING`/`MAJOR` findings do), low weight (0.5).
-It exists purely to flag a cost/attribution nicety — designating a capacity as a Copilot
-capacity lets Copilot usage on one workspace bill against a different, designated
-capacity — with no bearing on whether Data Agents or Copilot actually function.
-`WKS-011` (the workspace-level, sub-F64-gating nuance) stays removed, since the live
-test specifically disproved that gating claim.
+Both rules were subsequently reintroduced — `TEN-011` (tenant-level) and `WKS-011`
+(workspace-level) — but reframed as **advisory recommendations, not requirements**:
+`Severity.INFO`, uncapped (an `INFO` finding never lowers a score the way
+`BLOCKING`/`MAJOR` findings do), low weight (0.5), and scored with `partial()` credit
+rather than `failed()` on a soft miss. They exist purely to flag a cost/attribution
+nicety — designating a capacity as a Copilot capacity lets Copilot usage on one
+workspace bill against a different, designated capacity — with no bearing on whether
+Data Agents or Copilot actually function. `WKS-011` is `not_applicable` once a
+workspace's capacity already meets or exceeds the F64/P1-equivalent threshold
+(`COPILOT_NATIVE_F_UNITS`), since Copilot is natively available there without a
+separate designation.
+
+**Collector gap:** neither `copilot_capacity_designation_enabled` (tenant) nor
+`copilot_capacity_assigned` (workspace) is currently populated by the live collector
+in [`fabric_iq/collectors/fabric_api.py`](../fabric_iq/collectors/fabric_api.py) — the
+Fabric/Power BI Admin REST surface does not expose a documented, scriptable read for
+"is this capacity designated as a Copilot capacity" as of this writing (the setting is
+only visible/settable in the Fabric Admin Portal UI, under Capacity settings ›
+Delegated tenant settings, and via the tenant switch "Copilot and Fabric IQ features").
+Both rules therefore return `not_evaluated` in a fully automated run unless the
+inventory JSON supplies these two fields explicitly. Until Microsoft ships an
+Admin API for this, treat them as **manual-input fields**: set
+`tenant.copilot_capacity_designation_enabled` and
+`workspace.copilot_capacity_assigned` directly in the inventory JSON after checking the
+Admin Portal by hand. This is the intentional, documented fallback for the "config
+parameter in the flow" request — a manual/config field rather than a live API read,
+because no scriptable Admin API signal exists yet for this setting.
 
 Finally, **Microsoft Purview data loss prevention (DLP) policies and access restriction
 policies do not override effective permissions**. A Data Agent runs under the requesting

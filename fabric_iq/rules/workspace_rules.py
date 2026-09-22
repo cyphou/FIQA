@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fabric_iq.models import Dimension, Effort, ObjectType, RuleOutcome, Severity
 from fabric_iq.rules.base import evidence, graded, ratio, registry, require
-from fabric_iq.rules.tenant_rules import _sku_is_eligible
+from fabric_iq.rules.tenant_rules import COPILOT_NATIVE_F_UNITS, _sku_f_units, _sku_is_eligible
 
 W = ObjectType.WORKSPACE
 DOCS_ROLES = "https://learn.microsoft.com/fabric/fundamentals/roles-workspaces"
@@ -324,4 +324,44 @@ def workspace_capacity_state(subject: dict) -> RuleOutcome:
         f"capacity is {state}, so it cannot serve agent workloads",
         observed={"state": state},
         evidence=evidence("fabric_rest", "capacities[].state"),
+    )
+
+
+@registry.add(
+    "WKS-011",
+    "A sub-F64 hosting capacity is covered by a Fabric Copilot capacity assignment (recommended, not required)",
+    W,
+    Dimension.OPERATIONS,
+    Severity.INFO,
+    "Consider assigning this workspace's users as Fabric Copilot capacity users on a designated Copilot capacity "
+    "so that Copilot usage here is billed against it. This is a cost-attribution convenience, not a functional "
+    "requirement: Fabric Data Agents already run on any eligible F2+/P1+ capacity without it.",
+    weight=0.5,
+    effort=Effort.S,
+    owner_role="Capacity Administrator",
+    docs="https://learn.microsoft.com/fabric/enterprise/fabric-copilot-capacity",
+)
+def workspace_copilot_capacity_coverage(subject: dict) -> RuleOutcome:
+    gap = require(subject, "capacity_sku")
+    if gap:
+        return gap
+    sku = subject["capacity_sku"]
+    if not _sku_is_eligible(sku):
+        return RuleOutcome.not_applicable("capacity SKU is not Copilot-eligible; see WKS-001")
+    if _sku_f_units(sku) >= COPILOT_NATIVE_F_UNITS:
+        return RuleOutcome.not_applicable(f"{sku} natively supports Copilot and Data Agent workloads")
+    gap = require(subject, "copilot_capacity_assigned")
+    if gap:
+        return gap
+    if subject["copilot_capacity_assigned"]:
+        return RuleOutcome.passed(
+            "workspace users are covered by a designated Fabric Copilot capacity",
+            evidence=evidence("fabric_rest", "workspace.copilot_capacity_assigned"),
+        )
+    return RuleOutcome.partial(
+        0.5,
+        f"{sku} is below the F64/P1 native-Copilot threshold and no Copilot capacity assignment was found. This "
+        "is only a recommendation: Data Agents already work here without it; assigning a Copilot capacity just "
+        "lets Copilot usage be billed against it instead of failing outright for Pro/PPU-hosted Copilot features.",
+        evidence=evidence("fabric_rest", "workspace.copilot_capacity_assigned"),
     )

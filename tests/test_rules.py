@@ -186,6 +186,40 @@ class TestWorkspaceCapacityState(unittest.TestCase):
         self.assertIs(outcome.status, RuleStatus.NOT_EVALUATED)
 
 
+class TestWorkspaceCopilotCapacityCoverage(unittest.TestCase):
+    def _run(self, subject):
+        return registry.get("WKS-011").evaluate(subject)
+
+    def test_assigned_copilot_capacity_passes(self):
+        subject = {"capacity_sku": "F8", "copilot_capacity_assigned": True}
+        self.assertIs(self._run(subject).status, RuleStatus.PASSED)
+
+    def test_unassigned_copilot_capacity_is_only_partial_not_failed(self):
+        # This is a recommendation, not a requirement: it must never fail outright,
+        # and it must never cap the score the way a BLOCKING/MAJOR rule would.
+        subject = {"capacity_sku": "F8", "copilot_capacity_assigned": False}
+        outcome = self._run(subject)
+        self.assertIs(outcome.status, RuleStatus.PARTIAL)
+        rule = registry.get("WKS-011")
+        self.assertIs(rule.severity, Severity.INFO)
+
+    def test_ineligible_sku_is_not_applicable(self):
+        subject = {"capacity_sku": "", "copilot_capacity_assigned": False}
+        self.assertIs(self._run(subject).status, RuleStatus.NOT_APPLICABLE)
+
+    def test_f64_or_above_natively_supports_copilot_and_is_not_applicable(self):
+        subject = {"capacity_sku": "F64", "copilot_capacity_assigned": False}
+        self.assertIs(self._run(subject).status, RuleStatus.NOT_APPLICABLE)
+
+    def test_premium_p1_is_treated_as_the_f64_equivalent(self):
+        subject = {"capacity_sku": "P1", "copilot_capacity_assigned": False}
+        self.assertIs(self._run(subject).status, RuleStatus.NOT_APPLICABLE)
+
+    def test_unrecorded_assignment_is_not_evaluated(self):
+        subject = {"capacity_sku": "F8", "copilot_capacity_assigned": None}
+        self.assertIs(self._run(subject).status, RuleStatus.NOT_EVALUATED)
+
+
 class TestSemanticModelRules(unittest.TestCase):
     def _run(self, rule_id, subject):
         return registry.get(rule_id).evaluate(subject)

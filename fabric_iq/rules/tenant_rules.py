@@ -22,10 +22,28 @@ DOCS_SCANNER = "https://learn.microsoft.com/fabric/governance/metadata-scanning-
 ELIGIBLE_FABRIC_SKUS = {"F2", "F4", "F8", "F16", "F32", "F64", "F128", "F256", "F512", "F1024", "F2048"}
 ELIGIBLE_PREMIUM_SKUS = {"P1", "P2", "P3", "P4", "P5"}
 
+#: F-capacity-unit equivalence for Premium SKUs, per Microsoft's published mapping.
+_PREMIUM_SKU_F_UNITS = {"P1": 64, "P2": 128, "P3": 256, "P4": 512, "P5": 1024}
+
+#: Below this many F-capacity-units, Copilot workloads only bill against a
+#: designated Fabric Copilot capacity when one is assigned (WKS-011); Data
+#: Agents themselves run on any eligible F2+/P1+ capacity regardless.
+COPILOT_NATIVE_F_UNITS = 64
+
 
 def _sku_is_eligible(sku: str) -> bool:
     normalized = (sku or "").strip().upper()
     return normalized in ELIGIBLE_FABRIC_SKUS or normalized in ELIGIBLE_PREMIUM_SKUS
+
+
+def _sku_f_units(sku: str) -> int:
+    """Return the F-capacity-unit equivalent of a SKU, or 0 if unrecognised."""
+    normalized = (sku or "").strip().upper()
+    if normalized in _PREMIUM_SKU_F_UNITS:
+        return _PREMIUM_SKU_F_UNITS[normalized]
+    if normalized.startswith("F") and normalized[1:].isdigit():
+        return int(normalized[1:])
+    return 0
 
 
 @registry.add(
