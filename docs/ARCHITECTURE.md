@@ -120,6 +120,7 @@ any field inside an object is present. Absent fields are the normal case, handle
 | `MartBlockingFindings` | blocking finding × run |
 | `MartRemediationBacklog` | backlog item × run |
 | `MartCoverageAndFreshness` | object × run |
+| `MartRunTrend` | object comparison × current run |
 
 Every row carries `run_id`. `MartRunSummary` is intentionally one row per run and gives
 Copilot, Fabric IQ and Data Agents a simple entry point for the current assessment:
@@ -140,7 +141,10 @@ classifies score movement separately from observability movement: a lower score 
 stable coverage is a quality regression, while a lower score with materially lower
 coverage is a collection incident that should be fixed before blaming the object owner.
 Ruleset-version changes are flagged as incompatible for score trending instead of being
-plotted as if the scale were unchanged.
+plotted as if the scale were unchanged. `MartRunTrend` persists those object-level
+comparisons when a baseline run is provided; it is empty on the first run but still
+published with an explicit schema so the DirectLake semantic model and report page remain
+stable before history exists.
 
 ## Error Handling
 

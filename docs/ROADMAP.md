@@ -27,7 +27,7 @@ Fabric IQ and agentic experiences — and exactly what to change, object by obje
 | 1 | Inventory and live collection | ✅ Done — all four sprints closed and field-validated |
 | 2 | Static readiness scoring | 🟡 Engine done (65 rules), catalogue-hardening pass (Sprint 2.1) still open |
 | 3 | Agentic readiness | 🟡 Rules done, evaluation harness missing |
-| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression foundation and CI gate shipped; trend mart/report still open |
+| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression mart/page and CI gate shipped; remediation burn-down still open |
 | 5 | Fabric IQ extension | ⏳ Continuous |
 
 ---
@@ -269,22 +269,24 @@ inspection alone.
 - **Exit gate.** The readiness model scores ≥ 85 under its own rules; then close this
   sprint formally.
 
-### Sprint 4.3 — Trend and regression detection (1.5 weeks) 🟡 Foundation shipped
+### Sprint 4.3 — Trend and regression detection (1.5 weeks) 🟡 Mart/report shipped
 
 - Score deltas per object between runs, new blocking findings, remediation burn-down.
 - Distinguish a genuine regression from a coverage change: **an object that dropped because
   we could no longer read it is a collection incident, not a quality regression.**
-- **Delivered foundation.** [`fabric_iq.trends`](../fabric_iq/trends.py) compares two
+- **Delivered comparison engine.** [`fabric_iq.trends`](../fabric_iq/trends.py) compares two
   `AssessmentRun` instances and classifies object movement as `quality_regression`,
   `coverage_loss`, `coverage_gain`, `improved`, `unchanged`, `new_object`,
   `removed_object`, or `ruleset_changed`. Seeded tests verify that a score drop with
   comparable coverage is a quality regression while a score drop caused by lost coverage
   is treated as a collection incident.
-- Build this from medallion run history first, not by turning the operational report back
-  into an append-only table. Candidate output: `MartRunTrend` / `MartRegressionFindings`
-  or a separate trend model/report page that explicitly handles ruleset-version changes.
-- **Remaining exit gate.** Persist the trend output from medallion history and expose it in
-  a dedicated trend mart/report page.
+- **Delivered mart/report surface.** `MartRunTrend` persists one object-comparison row per
+  current run when a baseline run is supplied. It stays schema-stable and empty before a
+  baseline exists, so the DirectLake semantic model and the **Trend & Regression** report
+  page can be deployed from day one without converting the operational Delta tables back
+  to append-only history.
+- **Remaining exit gate.** Add remediation burn-down over multiple runs and wire automatic
+  baseline selection from medallion history in the Fabric notebook.
 
 ### Sprint 4.4 — CI gate (1 week) ✅ Delivered
 
@@ -297,8 +299,9 @@ inspection alone.
 
 **Phase exit gate.** A monthly run produces a trend, a burn-down, and a gate — unattended.
 Scheduling, snapshot persistence, AI-readable run summary, the semantic model/report, the
-trend/regression comparison foundation and the CI gate are shipped; the trend mart/report
-and the formal self-assessment of the readiness semantic model remain to close this phase.
+trend/regression mart/page and the CI gate are shipped; remediation burn-down, automatic
+baseline selection and the formal self-assessment of the readiness semantic model remain
+to close this phase.
 
 ---
 

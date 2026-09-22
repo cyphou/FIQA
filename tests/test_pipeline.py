@@ -6,11 +6,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 
 from fabric_iq.collectors.base import BronzeRecord, CollectionResult, empty_inventory
 from fabric_iq.collectors.offline import OfflineCollector
 from fabric_iq.errors import CollectionError, NormalizationError, PersistenceError
-from fabric_iq.lakehouse import LakehouseWriter
+from fabric_iq.lakehouse import LakehouseWriter, gold_mart_rows
 from fabric_iq.models import ObjectType
 from fabric_iq.remediation import build_backlog
 from fabric_iq.reporting import to_console, to_html
@@ -134,6 +135,32 @@ class TestLakehouseWriter(unittest.TestCase):
         self.assertEqual(row["assessed_object_count"], leaf_count)
         self.assertEqual(row["blocking_findings_count"], len(self.run.blocking_findings))
         self.assertEqual(row["backlog_items_count"], len(self.backlog.items))
+
+    def test_run_trend_mart_is_empty_without_a_baseline(self):
+        marts = gold_mart_rows(self.run, self.backlog, run_id="run_lh")
+
+        self.assertEqual(marts["MartRunTrend"], [])
+
+    def test_run_trend_mart_classifies_regressions_with_a_baseline(self):
+        baseline = replace(self.run, run_id="baseline")
+        current_cards = list(self.run.scorecards)
+        object_index = next(
+            i for i, card in enumerate(current_cards)
+            if card.object_type is ObjectType.SEMANTIC_MODEL
+        )
+        current_cards[object_index] = replace(
+            current_cards[object_index],
+            score=max(0, current_cards[object_index].score - 10),
+        )
+        current = replace(self.run, run_id="current", scorecards=current_cards)
+
+        marts = gold_mart_rows(current, self.backlog, run_id="current", baseline_run=baseline)
+        trend_rows = marts["MartRunTrend"]
+        target_rows = [row for row in trend_rows if row["object_id"] == current_cards[object_index].object_id]
+
+        self.assertEqual(len(target_rows), 1)
+        self.assertEqual(target_rows[0]["classification"], "quality_regression")
+        self.assertLess(target_rows[0]["score_delta"], 0)
 
     def test_reruns_are_idempotent_per_run_id(self):
         with tempfile.TemporaryDirectory() as tmp:

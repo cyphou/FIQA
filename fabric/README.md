@@ -168,7 +168,7 @@ that cannot mount its own Lakehouse.
 
 ## 📈 Semantic Model & Report
 
-`IsFabricReadyForIQ.SemanticModel` is a **Direct Lake** model over the six `Mart*` Delta
+`IsFabricReadyForIQ.SemanticModel` is a **Direct Lake** model over the eight `Mart*` Delta
 tables — there is nothing to refresh; the model reflects the Lakehouse the instant a
 run finishes writing it. `IsFabricReadyForIQ.Report` is a genuine **Power BI report**
 (`.pbir`/TMDL, not a static HTML export), deliberately styled after the [Fabric Capacity
@@ -184,6 +184,7 @@ report conventions familiar to Fabric administrators:
 | Blocking Findings | The "cannot ship" list — walls, not quality issues |
 | Remediation Backlog | The prioritised work, grouped by owner role |
 | Coverage & Freshness | How much of the estate could actually be observed, and when |
+| Trend & Regression | What changed between a baseline and current run, separating quality regressions from coverage loss |
 
 Because the model is Direct Lake, the report needs no separate refresh schedule — only
 the pipeline's schedule (or a manual notebook run) needs to produce a new Gold write.

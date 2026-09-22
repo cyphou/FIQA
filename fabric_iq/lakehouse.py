@@ -16,6 +16,7 @@ from typing import Any, Iterable
 from fabric_iq.errors import PersistenceError
 from fabric_iq.models import AssessmentRun, ReadinessStatus, utcnow
 from fabric_iq.remediation import RemediationBacklog
+from fabric_iq.trends import compare_runs
 
 BRONZE = "bronze"
 SILVER = "silver"
@@ -30,6 +31,7 @@ GOLD_TABLES = (
     "MartBlockingFindings",
     "MartRemediationBacklog",
     "MartCoverageAndFreshness",
+    "MartRunTrend",
 )
 
 #: Explicit column schema for every Gold mart, keyed by table name.
@@ -170,6 +172,26 @@ GOLD_SCHEMAS: dict[str, tuple[tuple[str, str], ...]] = {
         ("not_evaluated_rules_json", "string"),
         ("is_published", "boolean"),
         ("assessed_at", "string"),
+    ),
+    "MartRunTrend": (
+        ("run_id", "string"),
+        ("baseline_run_id", "string"),
+        ("current_run_id", "string"),
+        ("ruleset_version_changed", "boolean"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("classification", "string"),
+        ("score_delta", "double"),
+        ("confidence_delta", "double"),
+        ("coverage_delta", "double"),
+        ("baseline_score", "double"),
+        ("current_score", "double"),
+        ("baseline_coverage", "double"),
+        ("current_coverage", "double"),
+        ("baseline_confidence", "double"),
+        ("current_confidence", "double"),
+        ("detail", "string"),
     ),
 }
 
@@ -344,8 +366,31 @@ def run_summary_mart_rows(
     ]
 
 
+def run_trend_mart_rows(
+    baseline: AssessmentRun | None,
+    current: AssessmentRun,
+    run_id: str = "",
+) -> list[dict[str, Any]]:
+    """Build run-to-run trend rows for the current assessment run."""
+
+    if baseline is None:
+        return []
+    report = compare_runs(baseline, current)
+    rows = []
+    for finding in report.findings:
+        row = finding.to_dict()
+        row["run_id"] = run_id
+        row["ruleset_version_changed"] = report.ruleset_version_changed
+        rows.append(row)
+    return rows
+
+
 def gold_mart_rows(
-    run: AssessmentRun, backlog: RemediationBacklog, *, run_id: str = ""
+    run: AssessmentRun,
+    backlog: RemediationBacklog,
+    *,
+    run_id: str = "",
+    baseline_run: AssessmentRun | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Build every Gold mart's rows for one run, keyed by table name.
 
@@ -361,6 +406,7 @@ def gold_mart_rows(
         "MartBlockingFindings": blocking_mart_rows(run, run_id),
         "MartRemediationBacklog": backlog_mart_rows(backlog, run_id),
         "MartCoverageAndFreshness": coverage_mart_rows(run, run_id),
+        "MartRunTrend": run_trend_mart_rows(baseline_run, run, run_id),
     }
 
 
@@ -397,8 +443,14 @@ class LakehouseWriter:
             written.append(self._write_ndjson(SILVER, section, rows))
         return written
 
-    def write_gold(self, run: AssessmentRun, backlog: RemediationBacklog) -> dict[str, str]:
-        marts = gold_mart_rows(run, backlog, run_id=self.run_id)
+    def write_gold(
+        self,
+        run: AssessmentRun,
+        backlog: RemediationBacklog,
+        *,
+        baseline_run: AssessmentRun | None = None,
+    ) -> dict[str, str]:
+        marts = gold_mart_rows(run, backlog, run_id=self.run_id, baseline_run=baseline_run)
         return {name: self._write_ndjson(GOLD, name, rows) for name, rows in marts.items()}
 
     def write_run(
@@ -408,6 +460,7 @@ class LakehouseWriter:
         *,
         inventory: dict[str, Any] | None = None,
         bronze: Iterable[Any] | None = None,
+        baseline_run: AssessmentRun | None = None,
     ) -> dict[str, Any]:
         """Persist every layer for one run and return the written paths."""
         written: dict[str, Any] = {"run_id": self.run_id, "written_at": utcnow()}
@@ -415,7 +468,7 @@ class LakehouseWriter:
             written[BRONZE] = self.write_bronze(bronze)
         if inventory is not None:
             written[SILVER] = self.write_silver(inventory)
-        written[GOLD] = self.write_gold(run, backlog)
+        written[GOLD] = self.write_gold(run, backlog, baseline_run=baseline_run)
         return written
 
     # ── io ────────────────────────────────────────────────────────

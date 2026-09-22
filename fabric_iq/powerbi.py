@@ -187,6 +187,28 @@ COVERAGE_COLUMNS: tuple[Column, ...] = (
     Column("assessed_at", "type text", "string", description="UTC timestamp (ISO 8601) when this object was assessed."),
 )
 
+#: ``MartRunTrend`` -- one row per object comparison between two runs.
+TREND_COLUMNS: tuple[Column, ...] = (
+    Column("run_id", "type text", "string", description="Current assessment run ID. This is the run being compared against a baseline."),
+    Column("baseline_run_id", "type text", "string", description="Assessment run ID used as the baseline for this comparison."),
+    Column("current_run_id", "type text", "string", description="Assessment run ID being evaluated for regression or improvement."),
+    Column("ruleset_version_changed", "type logical", "boolean", description="True when the baseline and current runs used different rule catalogue versions; score deltas should not be trended blindly."),
+    Column("object_id", "type text", "string", description="ID of the object compared across the two runs."),
+    Column("object_name", "type text", "string", description="Human-readable name of the object compared across the two runs."),
+    Column("object_type", "type text", "string", description="Kind of object compared: tenant, workspace, semantic_model, report, or data_agent."),
+    Column("classification", "type text", "string", description="Trend classification: quality_regression, coverage_loss, improved, unchanged, new_object, removed_object, or ruleset_changed."),
+    Column("score_delta", "type number", "double", "0.0", description="Current score minus baseline score. Negative values indicate a lower current readiness score."),
+    Column("confidence_delta", "type number", "double", "0%", description="Current confidence minus baseline confidence. Negative values indicate less observable evidence."),
+    Column("coverage_delta", "type number", "double", "0%", description="Current coverage minus baseline coverage. Negative values indicate less rule evidence was collected."),
+    Column("baseline_score", "type number", "double", "0.0", description="Baseline readiness score for this object, if it existed in the baseline run."),
+    Column("current_score", "type number", "double", "0.0", description="Current readiness score for this object, if it exists in the current run."),
+    Column("baseline_coverage", "type number", "double", "0%", description="Baseline rule coverage for this object, if it existed in the baseline run."),
+    Column("current_coverage", "type number", "double", "0%", description="Current rule coverage for this object, if it exists in the current run."),
+    Column("baseline_confidence", "type number", "double", "0%", description="Baseline evidence confidence for this object, if it existed in the baseline run."),
+    Column("current_confidence", "type number", "double", "0%", description="Current evidence confidence for this object, if it exists in the current run."),
+    Column("detail", "type text", "string", description="Plain-English explanation of why the comparison received this classification."),
+)
+
 #: Table name -> its Column spec, in Gold-mart order.
 MART_COLUMNS: dict[str, tuple[Column, ...]] = {
     "MartRunSummary": RUN_SUMMARY_COLUMNS,
@@ -196,6 +218,7 @@ MART_COLUMNS: dict[str, tuple[Column, ...]] = {
     "MartBlockingFindings": BLOCKING_COLUMNS,
     "MartRemediationBacklog": BACKLOG_COLUMNS,
     "MartCoverageAndFreshness": COVERAGE_COLUMNS,
+    "MartRunTrend": TREND_COLUMNS,
 }
 
 #: Table name -> plain-English description, surfaced in the semantic model
@@ -209,6 +232,7 @@ MART_DESCRIPTIONS: dict[str, str] = {
     "MartBlockingFindings": "One row per blocking (structurally disqualifying) finding raised during a run. These must be fixed before an object is eligible.",
     "MartRemediationBacklog": "One row per prioritized remediation action across all findings in a run, grouped by owner role.",
     "MartCoverageAndFreshness": "One row per assessed object, per run. How much evidence could be collected (coverage) and how confident the score is.",
+    "MartRunTrend": "One row per object compared between a baseline and current run. Separates true quality regressions from collection or coverage loss.",
 }
 
 
@@ -546,6 +570,11 @@ def build_model_bim(data_dir: str) -> dict[str, Any]:
             COVERAGE_COLUMNS,
             _m_expression(os.path.join(data_dir, "MartCoverageAndFreshness.csv"), COVERAGE_COLUMNS),
         ),
+        _tmsl_table(
+            "MartRunTrend",
+            TREND_COLUMNS,
+            _m_expression(os.path.join(data_dir, "MartRunTrend.csv"), TREND_COLUMNS),
+        ),
     ]
     return _model_bim(tables, [])
 
@@ -629,6 +658,12 @@ def build_model_bim_directlake(
             "MartCoverageAndFreshness",
             COVERAGE_COLUMNS,
             entity_name=_directlake_entity_name("MartCoverageAndFreshness"),
+            schema_name=schema_name,
+        ),
+        _tmsl_table_directlake(
+            "MartRunTrend",
+            TREND_COLUMNS,
+            entity_name=_directlake_entity_name("MartRunTrend"),
             schema_name=schema_name,
         ),
     ]
@@ -879,8 +914,35 @@ def _coverage_page() -> dict[str, Any]:
     return _page("ReportSection5", "Coverage & Freshness", 5, [visual])
 
 
+def _trend_page() -> dict[str, Any]:
+    fields = [
+        "classification",
+        "object_name",
+        "object_type",
+        "score_delta",
+        "coverage_delta",
+        "confidence_delta",
+        "baseline_run_id",
+        "current_run_id",
+        "detail",
+    ]
+    names = {
+        "classification": "Trend",
+        "object_name": "Object",
+        "object_type": "Type",
+        "score_delta": "Score Delta",
+        "coverage_delta": "Coverage Delta",
+        "confidence_delta": "Confidence Delta",
+        "baseline_run_id": "Baseline Run",
+        "current_run_id": "Current Run",
+        "detail": "Detail",
+    }
+    visual = _table_visual(20, 20, PAGE_WIDTH - 40, PAGE_HEIGHT - 40, "MartRunTrend", fields, names)
+    return _page("ReportSection6", "Trend & Regression", 6, [visual])
+
+
 def build_report_json() -> dict[str, Any]:
-    """Build the legacy ``report.json`` document with six fixed pages."""
+    """Build the legacy ``report.json`` document with fixed report pages."""
     sections = [
         _overview_page(),
         _tenant_workspace_page(),
@@ -888,6 +950,7 @@ def build_report_json() -> dict[str, Any]:
         _blocking_page(),
         _backlog_page(),
         _coverage_page(),
+        _trend_page(),
     ]
     config = {
         "version": "5.45",
