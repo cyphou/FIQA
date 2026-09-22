@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "IsFabricReadyForIQ",
+    "description": "Fabric IQ Readiness scorecards, findings and remediation backlog -- Import model reading its three CSV sources straight from OneLake (no gateway, no local path)."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "00000000-0000-0000-0000-000000000004"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "properties": {
+    "description": "Runs the read-only Fabric IQ readiness assessment and fails the run when a blocking finding is present.",
+    "parameters": {
+      "tenant_id": {
+        "type": "string",
+        "defaultValue": ""
+      },
+      "modified_since_days": {
+        "type": "int",
+        "defaultValue": 7
+      },
+      "include_artifact_users": {
+        "type": "bool",
+        "defaultValue": true
+      },
+      "run_review": {
+        "type": "bool",
+        "defaultValue": true
+      },
+      "fail_on_blocking": {
+        "type": "bool",
+        "defaultValue": false
+      }
+    },
+    "activities": [
+      {
+        "name": "Assess readiness",
+        "type": "TridentNotebook",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 300,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "typeProperties": {
+          "notebookId": "00000000-0000-0000-0000-000000000000",
+          "workspaceId": "00000000-0000-0000-0000-000000000000",
+          "parameters": {
+            "tenant_id": {
+              "value": {
+                "value": "@pipeline().parameters.tenant_id",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "modified_since_days": {
+              "value": {
+                "value": "@pipeline().parameters.modified_since_days",
+                "type": "Expression"
+              },
+              "type": "int"
+            },
+            "include_artifact_users": {
+              "value": {
+                "value": "@pipeline().parameters.include_artifact_users",
+                "type": "Expression"
+              },
+              "type": "bool"
+            },
+            "run_review": {
+              "value": {
+                "value": "@pipeline().parameters.run_review",
+                "type": "Expression"
+              },
+              "type": "bool"
+            },
+            "run_id": {
+              "value": {
+                "value": "@concat('run_', formatDateTime(utcNow(), 'yyyyMMddTHHmmss'), 'Z')",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "Blocking findings present",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "Assess readiness",
+            "dependencyConditions": ["Succeeded"]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "value": "@and(pipeline().parameters.fail_on_blocking, greater(int(json(string(activity('Assess readiness').output.result.exitValue)).blocking_findings), 0))",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "Fail on blocking findings",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": {
+                  "value": "@concat('Fabric IQ readiness run ', string(json(string(activity('Assess readiness').output.result.exitValue)).run_id), ' carries ', string(json(string(activity('Assess readiness').output.result.exitValue)).blocking_findings), ' blocking finding(s). Read MartBlockingFindings before discussing any score.')",
+                  "type": "Expression"
+                },
+                "errorCode": "FabricIQReadinessBlocked"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

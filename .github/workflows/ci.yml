@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Verify no runtime dependency crept in
+        run: |
+          python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as handle:
+              deps = tomllib.load(handle)["project"]["dependencies"]
+          assert deps == [], f"core engine must stay stdlib-only, found: {deps}"
+          print("stdlib-only: ok")
+          PY
+
+      - name: Run test suite
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: Check agent file ownership
+        run: python scripts/check_agent_ownership.py
+
+      - name: Check rule documentation is current
+        run: python scripts/build_rules_doc.py --check
+
+      - name: End-to-end assessment on sample fixtures
+        run: python assess.py --inventory examples/sample_tenant --review --out artifacts
+
+      - name: Verify blocking findings set exit code 2
+        run: |
+          set +e
+          python assess.py --inventory examples/sample_tenant --quiet \
+            --out artifacts --fail-on-blocking
+          code=$?
+          set -e
+          if [ "$code" -ne 2 ]; then
+            echo "expected exit code 2 for blocking findings, got $code"
+            exit 1
+          fi
+          echo "blocking gate: ok"
+
+      - name: Upload assessment artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assessment-${{ matrix.python-version }}
+          path: artifacts/
+          retention-days: 7

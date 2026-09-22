@@ -1,0 +1,68 @@
+[
+  {
+    "id": "ws-sales",
+    "name": "Sales Analytics (Prod)",
+    "capacity_sku": "F64",
+    "region": "westeurope",
+    "source_regions": ["westeurope"],
+    "cross_geo_approved": false,
+    "business_owner": "dana.sales",
+    "technical_owner": "alex.platform",
+    "lifecycle_stage": "prod",
+    "role_assignments": [
+      { "principal": "sg-sales-admins", "principal_type": "Group", "role": "Admin" },
+      { "principal": "sg-sales-authors", "principal_type": "Group", "role": "Contributor" },
+      { "principal": "sg-sales-readers", "principal_type": "Group", "role": "Viewer" }
+    ],
+    "days_since_last_activity": 1,
+    "refresh_total": 120,
+    "refresh_failed": 2,
+    "items_total": 4,
+    "items_scanned": 4,
+    "scan_errors": []
+  },
+  {
+    "id": "ws-finance",
+    "name": "Finance Reporting",
+    "capacity_sku": "F64",
+    "region": "westeurope",
+    "source_regions": ["westeurope", "eastus"],
+    "cross_geo_approved": false,
+    "business_owner": null,
+    "technical_owner": "alex.platform",
+    "lifecycle_stage": null,
+    "role_assignments": [
+      { "principal": "maria.finance", "principal_type": "User", "role": "Admin" },
+      { "principal": "paul.finance", "principal_type": "User", "role": "Admin" },
+      { "principal": "jo.finance", "principal_type": "User", "role": "Admin" },
+      { "principal": "kim.finance", "principal_type": "User", "role": "Admin" },
+      { "principal": "sg-finance-readers", "principal_type": "Group", "role": "Viewer" }
+    ],
+    "days_since_last_activity": 4,
+    "refresh_total": 60,
+    "refresh_failed": 9,
+    "items_total": 2,
+    "items_scanned": 1,
+    "scan_errors": ["schemaRetrievalError on Finance P&L"]
+  },
+  {
+    "id": "ws-lab",
+    "name": "Data Science Lab",
+    "capacity_sku": "F2",
+    "region": "westeurope",
+    "source_regions": ["westeurope"],
+    "cross_geo_approved": false,
+    "business_owner": "omar.lab",
+    "technical_owner": "omar.lab",
+    "lifecycle_stage": "dev",
+    "role_assignments": [
+      { "principal": "sg-lab", "principal_type": "Group", "role": "Member" }
+    ],
+    "days_since_last_activity": 140,
+    "refresh_total": 0,
+    "refresh_failed": 0,
+    "items_total": 1,
+    "items_scanned": 1,
+    "scan_errors": []
+  }
+]

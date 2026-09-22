@@ -1,0 +1,94 @@
+[
+  {
+    "id": "sm-sales-star",
+    "name": "Sales Star Model",
+    "parent_id": "ws-sales",
+    "tables": [
+      { "name": "Sales", "role": "fact", "description": "Invoiced sales transactions at order-line grain, in reporting currency.", "is_date_table": false },
+      { "name": "Customer", "role": "dimension", "description": "Billed customer, deduplicated on the golden customer identifier.", "is_date_table": false },
+      { "name": "Product", "role": "dimension", "description": "Sellable product with its commercial hierarchy and list price.", "is_date_table": false },
+      { "name": "Date", "role": "dimension", "description": "Gregorian and fiscal calendar starting in July, one row per day.", "is_date_table": true }
+    ],
+    "columns": [
+      { "name": "Order Date", "description": "Date the order was confirmed. Primary date for all sales analysis.", "data_type": "dateTime", "semantic_role": "date", "summarize_by": "none", "hidden": false },
+      { "name": "Ship Date", "description": "Date the order left the warehouse. Use only for logistics analysis.", "data_type": "dateTime", "semantic_role": "date", "summarize_by": "none", "hidden": false },
+      { "name": "Customer Key", "description": "Surrogate key joining Sales to Customer.", "data_type": "int64", "semantic_role": "identifier", "summarize_by": "none", "hidden": true },
+      { "name": "Fiscal Year", "description": "Fiscal year label, starting in July.", "data_type": "int64", "semantic_role": "year", "summarize_by": "none", "hidden": false },
+      { "name": "Postal Code", "description": "Customer billing postal code, stored as a number in the source.", "data_type": "int64", "semantic_role": "code", "summarize_by": "sum", "hidden": false }
+    ],
+    "measures": [
+      { "name": "Total Sales", "description": "Net invoiced revenue excluding tax, in reporting currency.", "expression": "SUM(Sales[Net Amount])", "synonyms": ["Revenue", "Turnover", "Chiffre d'affaires"], "hidden": false },
+      { "name": "Gross Margin", "description": "Net revenue minus standard cost. Preferred margin definition for all reporting.", "expression": "[Total Sales] - [Standard Cost]", "synonyms": ["Margin", "Marge"], "hidden": false },
+      { "name": "Standard Cost", "description": "Standard cost of goods sold at order-line grain.", "expression": "SUM(Sales[Standard Cost])", "synonyms": ["COGS"], "hidden": false },
+      { "name": "YTD Sales", "description": "Net revenue accumulated since the start of the fiscal year.", "expression": "TOTALYTD([Total Sales], 'Date'[Date], \"6/30\")", "synonyms": ["Year to date revenue"], "hidden": false }
+    ],
+    "relationships": [
+      { "name": "Sales-Customer", "invalid": false, "ambiguous": false },
+      { "name": "Sales-Product", "invalid": false, "ambiguous": false },
+      { "name": "Sales-Date", "invalid": false, "ambiguous": false }
+    ],
+    "has_time_intelligence": true,
+    "visible_object_count": 12,
+    "ai_data_schema": { "selected_objects": 8, "missing_dependencies": [] },
+    "ai_instructions": "Sales domain. When a user asks about revenue, sales or turnover, use [Total Sales]. When a user asks about margin, always use [Gross Margin]; never compute a margin from raw columns. The fiscal year starts on 1 July. Order Date is the primary date; use Ship Date only when the question is explicitly about logistics or delivery. A higher margin percentage is positive. When a question mentions a region without naming it, ask the user to clarify.",
+    "verified_answers": [
+      { "question": "What were total sales last quarter?", "broken": false },
+      { "question": "Which products drove margin growth?", "broken": false },
+      { "question": "How does revenue compare to last year?", "broken": false },
+      { "question": "Who are our top 10 customers by revenue?", "broken": false },
+      { "question": "What is year-to-date revenue versus plan?", "broken": false }
+    ],
+    "rls_required": true,
+    "rls_roles": [{ "name": "Regional Sales", "tested": true }],
+    "hours_since_refresh": 6,
+    "freshness_sla_hours": 24,
+    "schema_retrieval_error": null
+  },
+  {
+    "id": "sm-finance-pnl",
+    "name": "FIN_PNL_CONSO",
+    "parent_id": "ws-finance",
+    "tables": [
+      { "name": "FIN_PNL_CONSO", "role": "unknown", "description": "", "is_date_table": false }
+    ],
+    "columns": [
+      { "name": "GL_ACCT_CD", "description": "", "data_type": "string", "semantic_role": "code", "summarize_by": "none", "hidden": false },
+      { "name": "AMT_EUR", "description": "", "data_type": "double", "semantic_role": "amount", "summarize_by": "sum", "hidden": false },
+      { "name": "PERIOD_ID", "description": "", "data_type": "int64", "semantic_role": "identifier", "summarize_by": "sum", "hidden": false }
+    ],
+    "measures": [
+      { "name": "AMT", "description": "", "expression": "SUM(FIN_PNL_CONSO[AMT_EUR])", "synonyms": [], "hidden": false },
+      { "name": "AMT2", "description": "", "expression": "SUM(FIN_PNL_CONSO[AMT_EUR])", "synonyms": [], "hidden": false }
+    ],
+    "relationships": [],
+    "has_time_intelligence": true,
+    "visible_object_count": 6,
+    "ai_data_schema": { "selected_objects": 0, "missing_dependencies": [] },
+    "ai_instructions": "",
+    "verified_answers": [],
+    "rls_required": true,
+    "rls_roles": [],
+    "hours_since_refresh": 96,
+    "freshness_sla_hours": 24,
+    "schema_retrieval_error": null
+  },
+  {
+    "id": "sm-lab-sandbox",
+    "name": "Churn Sandbox",
+    "parent_id": "ws-lab",
+    "tables": null,
+    "columns": null,
+    "measures": null,
+    "relationships": null,
+    "has_time_intelligence": null,
+    "visible_object_count": null,
+    "ai_data_schema": null,
+    "ai_instructions": null,
+    "verified_answers": null,
+    "rls_required": null,
+    "rls_roles": null,
+    "hours_since_refresh": null,
+    "freshness_sla_hours": null,
+    "schema_retrieval_error": "Dataset has never been refreshed; sub-metadata unavailable"
+  }
+]

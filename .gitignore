@@ -1,0 +1,42 @@
+# Assessment output — evidence, never source
+artifacts/
+*.ndjson
+
+# Local lakehouse output
+lakehouse_out/
+bronze/
+silver/
+gold/
+
+# Never commit a real tenant inventory. Fixtures live in examples/sample_tenant/.
+inventory_*.json
+tenant_*.json
+!examples/sample_tenant/tenant.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Tooling scratch output
+.playwright-mcp/

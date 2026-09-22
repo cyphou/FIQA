@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "Install_IsFabricReadyForIQ",
+    "description": "One-time installer: fetches the IsFabricReadyForIQ solution from GitHub and deploys it into this workspace using your own delegated Fabric identity."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "00000000-0000-0000-0000-000000000006"
+  }
+}

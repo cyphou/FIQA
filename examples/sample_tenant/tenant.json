@@ -1,0 +1,22 @@
+{
+  "id": "contoso-tenant",
+  "name": "Contoso",
+  "fabric_enabled": true,
+  "copilot_enabled": true,
+  "agents_enabled": true,
+  "copilot_security_groups": ["sg-fabric-iq-pilot"],
+  "capacities": [
+    { "id": "cap-001", "name": "Contoso-Prod", "sku": "F64", "state": "Active", "throttled": false },
+    { "id": "cap-002", "name": "Contoso-Dev", "sku": "F2", "state": "Active", "throttled": true }
+  ],
+  "cross_geo_required": true,
+  "cross_geo_approved": false,
+  "scanner_enabled": true,
+  "scanner_service_principal": "sp-fabric-readiness",
+  "workspaces_total": 3,
+  "workspaces_scanned": 3,
+  "sensitivity_labels_enabled": true,
+  "labelled_item_ratio": 0.72,
+  "owners": { "platform": "alex.platform", "security": "sam.security", "business": null },
+  "audit_log_enabled": true
+}

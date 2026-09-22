@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "Fabric_IQ_Readiness_Assessment",
+    "description": "Read-only Fabric IQ readiness assessment. Collects the tenant via the Scanner API, scores every object, and publishes the medallion marts."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "00000000-0000-0000-0000-000000000002"
+  }
+}

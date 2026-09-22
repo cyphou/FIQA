@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fabric-iq-readiness"
+version = "0.1.0"
+description = "Assess whether a Power BI / Microsoft Fabric tenant and its objects are ready for Fabric IQ and agentic experiences."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+keywords = ["fabric", "power-bi", "fabric-iq", "data-agent", "readiness", "assessment"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+# The core engine deliberately has no runtime dependency: it must run inside a
+# Fabric notebook without installing anything.
+dependencies = []
+
+[project.scripts]
+fabric-iq-assess = "assess:main"
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools]
+packages = ["fabric_iq", "fabric_iq.rules", "fabric_iq.collectors"]
+py-modules = ["assess"]
+
+[tool.unittest]
+start-dir = "tests"
+top-level-directory = "."

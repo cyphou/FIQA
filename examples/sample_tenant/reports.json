@@ -1,0 +1,70 @@
+[
+  {
+    "id": "rpt-sales-exec",
+    "name": "Sales Executive Overview",
+    "parent_id": "ws-sales",
+    "semantic_model_id": "sm-sales-star",
+    "visual_count": 14,
+    "broken_visuals": [],
+    "untitled_visuals": ["card_3"],
+    "report_level_measures": [],
+    "hidden_filters": [],
+    "visuals_with_alt_text": 12,
+    "owner": "dana.sales",
+    "audience": "Sales leadership",
+    "monthly_views": 412,
+    "verified_answer_candidates": [
+      "Revenue versus last year by region",
+      "Top 10 customers by margin",
+      "Year-to-date revenue versus plan"
+    ]
+  },
+  {
+    "id": "rpt-sales-ops",
+    "name": "Sales Ops Detail",
+    "parent_id": "ws-sales",
+    "semantic_model_id": "sm-sales-star",
+    "visual_count": 26,
+    "broken_visuals": ["matrix_7"],
+    "untitled_visuals": ["chart_2", "chart_9", "card_1", "card_4"],
+    "report_level_measures": ["Adjusted Margin", "Open Pipeline"],
+    "hidden_filters": ["Region = EMEA", "Status <> Cancelled"],
+    "visuals_with_alt_text": 4,
+    "owner": "dana.sales",
+    "audience": "Sales operations",
+    "monthly_views": 88,
+    "verified_answer_candidates": ["Open pipeline by stage"]
+  },
+  {
+    "id": "rpt-finance-pnl",
+    "name": "P&L Consolidated",
+    "parent_id": "ws-finance",
+    "semantic_model_id": "sm-finance-pnl",
+    "visual_count": 9,
+    "broken_visuals": ["table_2"],
+    "untitled_visuals": ["table_2", "chart_5"],
+    "report_level_measures": ["EBITDA adj"],
+    "hidden_filters": ["Entity = FR01"],
+    "visuals_with_alt_text": 0,
+    "owner": null,
+    "audience": null,
+    "monthly_views": 63,
+    "verified_answer_candidates": []
+  },
+  {
+    "id": "rpt-orphan",
+    "name": "Legacy Marketing Dashboard",
+    "parent_id": "ws-lab",
+    "semantic_model_id": "sm-deleted-model",
+    "visual_count": 6,
+    "broken_visuals": ["chart_1", "chart_2"],
+    "untitled_visuals": [],
+    "report_level_measures": [],
+    "hidden_filters": [],
+    "visuals_with_alt_text": 6,
+    "owner": "omar.lab",
+    "audience": "None",
+    "monthly_views": 0,
+    "verified_answer_candidates": []
+  }
+]

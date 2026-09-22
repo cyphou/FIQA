@@ -1,0 +1,78 @@
+[
+  {
+    "id": "agt-sales",
+    "name": "Sales Insights Agent",
+    "parent_id": "ws-sales",
+    "data_sources": [
+      {
+        "id": "sm-sales-star",
+        "name": "Sales Star Model",
+        "type": "semantic_model",
+        "reachable": true,
+        "description": "Answers every commercial question about revenue, margin, customers and products."
+      },
+      {
+        "id": "lh-sales-raw",
+        "name": "Sales Lakehouse",
+        "type": "lakehouse",
+        "reachable": true,
+        "description": "Answers order-line level questions that need detail below the semantic model grain."
+      }
+    ],
+    "instructions": "You answer commercial questions for the Sales organisation. Route revenue, margin and customer questions to the Sales Star Model. Route order-line detail questions to the Sales Lakehouse. Never answer questions about employee compensation, HR data or finance consolidation; refuse and redirect the user to the relevant team. Always state the period you used. If a question is ambiguous about the date or the region, ask for clarification before answering.",
+    "target_languages": ["en", "fr"],
+    "requires_write": false,
+    "expects_bulk_export": false,
+    "latency_sla_seconds": 30,
+    "preview_dependencies": [
+      { "name": "Data agent evaluation SDK", "risk_accepted": true, "fallback": "Manual question bank review" }
+    ],
+    "evaluation": {
+      "questions_asked": 48,
+      "executable_queries": 46,
+      "correct_answers": 42,
+      "critical_questions_asked": 12,
+      "critical_questions_correct": 12,
+      "personas_tested": 3,
+      "leakage_incidents": 0,
+      "negative_tests": 10,
+      "negative_tests_refused": 10,
+      "languages_tested": ["en", "fr"],
+      "latency_p95_seconds": 22
+    }
+  },
+  {
+    "id": "agt-finance",
+    "name": "Finance Copilot Agent",
+    "parent_id": "ws-finance",
+    "data_sources": [
+      { "id": "sm-finance-pnl", "name": "FIN_PNL_CONSO", "type": "semantic_model", "reachable": true, "description": "" },
+      { "id": "wh-finance", "name": "Finance Warehouse", "type": "warehouse", "reachable": true, "description": "" },
+      { "id": "lh-finance", "name": "Finance Lakehouse", "type": "lakehouse", "reachable": true, "description": "" },
+      { "id": "kql-finance", "name": "Finance Events", "type": "kql_database", "reachable": false, "description": "" },
+      { "id": "sql-finance", "name": "Finance SQL DB", "type": "sql_database", "reachable": true, "description": "" },
+      { "id": "ext-erp", "name": "SAP extract", "type": "external_api", "reachable": false, "description": "" }
+    ],
+    "instructions": "Answer finance questions.",
+    "target_languages": ["fr", "en"],
+    "requires_write": false,
+    "expects_bulk_export": true,
+    "latency_sla_seconds": 30,
+    "preview_dependencies": [
+      { "name": "Ontology as agent source", "risk_accepted": false, "fallback": "" }
+    ],
+    "evaluation": {
+      "questions_asked": 12,
+      "executable_queries": 7,
+      "correct_answers": 5,
+      "critical_questions_asked": 4,
+      "critical_questions_correct": 2,
+      "personas_tested": 1,
+      "leakage_incidents": 2,
+      "negative_tests": 0,
+      "negative_tests_refused": 0,
+      "languages_tested": ["en"],
+      "latency_p95_seconds": 51
+    }
+  }
+]
