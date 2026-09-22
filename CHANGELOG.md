@@ -4,6 +4,64 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery surface
+(semantic model, report, installer notebook) on top of the 0.1.0 engine.
+
+### Added
+
+**Rule catalogue** — grown from 61 to **65 rules**, ruleset `2026.09.1`
+- `TEN-011` (tenant) and `WKS-011` (workspace) — advisory, `Severity.INFO` recommendations
+  to designate a capacity as a **Fabric Copilot capacity** for billing-attribution
+  purposes only. Added, then removed after a live F2-capacity tenant test proved Data
+  Agents and Copilot function without this designation, then reinstated as
+  non-blocking advisories once the "billing attribution, not a functional gate" framing
+  was confirmed. `WKS-011` is `not_applicable` once a workspace's capacity already meets
+  the native-Copilot threshold (F64/P1-equivalent). See
+  [`docs/KNOWN_LIMITATIONS.md` §8](./docs/KNOWN_LIMITATIONS.md#8-product-limits-age).
+- Full history of tenant-level (`TEN-012`) and capacity-eligibility rule wording refined
+  after the same live-tenant pass.
+
+**Fabric deployment surface** (new, via an FCA/FUAM-style installer)
+- [`fabric/items/Install_IsFabricReadyForIQ.Notebook`](./fabric/items/Install_IsFabricReadyForIQ.Notebook) —
+  a one-click installer notebook that clones [`cyphou/FIQA`](https://github.com/cyphou/FIQA)
+  into a temporary local checkout, deploys every Fabric item into the target workspace via
+  REST, and deletes the checkout — no credentials, connection strings, or tenant
+  identifiers are read from or written to the GitHub repository at any point. See the
+  "🔐 Confidentiality Guarantees" section of [`docs/INSTALL.md`](./docs/INSTALL.md) and its
+  enforcement test, [`tests/test_installer.py`](./tests/test_installer.py).
+- [`fabric/items/IsFabricReadyForIQ.SemanticModel`](./fabric/items/IsFabricReadyForIQ.SemanticModel) —
+  a Direct Lake model over the Gold `Mart*` Delta tables (no import, no refresh schedule
+  to manage).
+- [`fabric/items/IsFabricReadyForIQ.Report`](./fabric/items/IsFabricReadyForIQ.Report) — a
+  Power BI report (not HTML) styled after Fabric Capacity Analysis (FCA) / FUAM report
+  conventions: tenant posture, workspace ranking, blocking findings, backlog by owner,
+  coverage and freshness pages.
+- [`fabric/items/Fabric_IQ_Readiness_Orchestration.DataPipeline`](./fabric/items/Fabric_IQ_Readiness_Orchestration.DataPipeline)
+  scheduling [`fabric/items/Fabric_IQ_Readiness_Assessment.Notebook`](./fabric/items/Fabric_IQ_Readiness_Assessment.Notebook),
+  which writes the Gold marts as Delta tables into
+  [`fabric/items/FabricIQReadiness.Lakehouse`](./fabric/items/FabricIQReadiness.Lakehouse) —
+  closing Roadmap Sprint 4.1.
+
+**Validation**
+- First live end-to-end run against a real Microsoft 365 developer tenant
+  (`tenant identity redacted`, F2 capacity), confirming the transport, the
+  Scanner normaliser, the `/admin/capacities` join, and correcting three beliefs that had
+  only been assumed — see [`docs/KNOWN_LIMITATIONS.md` §1.1](./docs/KNOWN_LIMITATIONS.md#11-what-the-first-live-validation-established).
+
+**Tests** — grown from 138 to **226 tests**, all green.
+
+### Documentation
+
+- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — Phase 1 marked done and field-validated;
+  Phase 4 marked in progress (scheduling, Delta persistence, semantic model/report and
+  CI gate delivered; trend/regression detection, Sprint 4.3, still open).
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md), [`fabric/README.md`](./fabric/README.md) —
+  updated to describe the deployed semantic model, report and installer notebook, which
+  were previously undocumented.
+- Rule count corrected from 61 to 65 wherever it appeared stale.
+
 ## [0.1.0] — 2026-09-21
 
 First working engine. Runs end to end against synthetic fixtures.

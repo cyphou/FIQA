@@ -24,10 +24,10 @@ Fabric IQ and agentic experiences — and exactly what to change, object by obje
 | Phase | Theme | Status |
 |-------|-------|--------|
 | 0 | Framing and contract | ✅ Done |
-| 1 | Inventory and live collection | 🟡 Collector + Fabric deployment field-validated; catalogue reconciliation (Sprint 1.2–1.4) ongoing |
-| 2 | Static readiness scoring | 🟡 Engine done, catalogue to harden |
+| 1 | Inventory and live collection | ✅ Done — all four sprints closed and field-validated |
+| 2 | Static readiness scoring | 🟡 Engine done (65 rules), catalogue-hardening pass (Sprint 2.1) still open |
 | 3 | Agentic readiness | 🟡 Rules done, evaluation harness missing |
-| 4 | Industrialisation | ⏳ Planned |
+| 4 | Industrialisation | 🟡 Scheduling, Delta persistence, semantic model/report and CI gate shipped; trend/regression detection (Sprint 4.3) open |
 | 5 | Fabric IQ extension | ⏳ Continuous |
 
 ---
@@ -43,7 +43,7 @@ working end-to-end skeleton on synthetic fixtures.
 - Severity caps: blocking → 39 and ineligible, major → 59, caps only lower
 - `NOT_EVALUATED` as a first-class outcome, distinct from failure and from absence of scope
 - Coverage floor: below 50% the object is not published with a score
-- 61-rule catalogue across tenant, workspace, semantic model, report and Data Agent
+- 65-rule catalogue across tenant, workspace, semantic model, report and Data Agent
 - Medallion persistence, prioritised remediation backlog, preceptorship loop
 - Multi-agent environment with enforced file ownership
 
@@ -157,7 +157,10 @@ lead can hand out on Monday.
 
 ### Sprint 2.1 — Catalogue hardening against reality (1.5 weeks)
 
-- Reconcile all 61 rules against the Sprint 1.1 availability table.
+- Reconcile all 65 rules (including the two INFO-severity Copilot-capacity advisories,
+  TEN-011 and WKS-011, added after live testing showed capacity is a recommendation
+  rather than a blocker — see `docs/KNOWN_LIMITATIONS.md` §8) against the Sprint 1.1
+  availability table.
 - Re-verify every encoded product limit and date it: 5 data sources, 25×25 result surface,
   200-character description budget, 10,000-character AI instructions, F2+/P1+ capacity.
 - **Owners.** `@tenant`, `@semantic`, `@dataagent`; documentation by `@readme`.
@@ -221,38 +224,53 @@ inspection alone.
 
 ---
 
-## Phase 4 — Industrialisation (4–6 weeks) ⏳
+## Phase 4 — Industrialisation (4–6 weeks) 🟡
 
 **Outcome.** Readiness becomes a recurring, trended programme rather than a one-off audit.
 
-### Sprint 4.1 — Scheduled runs and Delta persistence (2 weeks)
+### Sprint 4.1 — Scheduled runs and Delta persistence (2 weeks) ✅ Delivered
 
 - Fabric notebook or pipeline execution; Gold marts written as Delta with the same schema
   as the local NDJSON output, so a local run and a scheduled run stay comparable.
+- **Delivered as:** [`Fabric_IQ_Readiness_Assessment.Notebook`](../fabric/items/Fabric_IQ_Readiness_Assessment.Notebook/notebook-content.py)
+  orchestrated by [`Fabric_IQ_Readiness_Orchestration.DataPipeline`](../fabric/items/Fabric_IQ_Readiness_Orchestration.DataPipeline),
+  writing `Mart*` Delta tables into [`FabricIQReadiness.Lakehouse`](../fabric/items/FabricIQReadiness.Lakehouse)
+  — see [`fabric/README.md`](../fabric/README.md).
 - **Exit gate.** Two consecutive scheduled runs are queryable side by side by `run_id`.
 
-### Sprint 4.2 — Readiness semantic model and report (1.5 weeks)
+### Sprint 4.2 — Readiness semantic model and report (1.5 weeks) ✅ Delivered
 
 - Direct Lake model over the Gold marts; report pages: tenant posture, workspace ranking,
   blocking findings, backlog by owner, coverage and freshness.
 - The readiness model must itself pass this tool's SEM rules. Shipping an AI-readiness
   assessor whose own model is not AI-ready is not a joke we can afford twice.
-- **Exit gate.** The readiness model scores ≥ 85 under its own rules.
+- **Delivered as:** [`IsFabricReadyForIQ.SemanticModel`](../fabric/items/IsFabricReadyForIQ.SemanticModel)
+  (Direct Lake over the Lakehouse `Mart*` tables) and [`IsFabricReadyForIQ.Report`](../fabric/items/IsFabricReadyForIQ.Report)
+  (FCA/FUAM-styled pages), both deployed by the installer notebook — see
+  [`docs/INSTALL.md`](INSTALL.md).
+- **Exit gate.** The readiness model scores ≥ 85 under its own rules. *Not yet re-verified
+  against the shipped model* — re-run this tool against the deployed semantic model itself
+  before closing this gate formally.
 
-### Sprint 4.3 — Trend and regression detection (1.5 weeks)
+### Sprint 4.3 — Trend and regression detection (1.5 weeks) ⏳ Open
 
 - Score deltas per object between runs, new blocking findings, remediation burn-down.
 - Distinguish a genuine regression from a coverage change: **an object that dropped because
   we could no longer read it is a collection incident, not a quality regression.**
 - **Exit gate.** A seeded regression and a seeded coverage loss are reported differently.
 
-### Sprint 4.4 — CI gate (1 week)
+### Sprint 4.4 — CI gate (1 week) ✅ Delivered
 
 - `--fail-on-blocking` (exit 2) and `--fail-on-review` (exit 3) wired into a deployment gate.
+- **Delivered as:** CLI flags in [`assess.py`](../assess.py), exercised by
+  [`tests/test_pipeline.py`](../tests/test_pipeline.py) and wired into
+  [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 - **Exit gate.** A pipeline blocks on a blocking finding and reports the reason without
   log parsing.
 
 **Phase exit gate.** A monthly run produces a trend, a burn-down, and a gate — unattended.
+Scheduling, persistence, the semantic model/report and the CI gate are shipped; only
+Sprint 4.3 (trend/regression detection) remains to close this phase.
 
 ---
 

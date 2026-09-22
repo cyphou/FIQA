@@ -15,6 +15,9 @@ Pipeline that orchestrates and schedules it.
 | Lakehouse | `FabricIQReadiness` | Bronze / Silver / Gold medallion, HTML reports, `Mart*` Delta tables |
 | Notebook | `Fabric IQ Readiness Assessment` | Collect, score, review, publish |
 | Data Pipeline | `Fabric IQ Readiness Orchestration` | Run the notebook on a schedule and fail the run on blocking findings |
+| Semantic Model | `IsFabricReadyForIQ` | Direct Lake model over the Gold `Mart*` Delta tables — no import, no refresh to manage |
+| Report | `IsFabricReadyForIQ` | The Power BI report described below — tenant posture, workspace ranking, backlog |
+| Notebook (installer) | `Install IsFabricReadyForIQ` | One-click deploy of every item above from inside Fabric — see [Installer Notebook](#-installer-notebook) |
 
 The `fabric_iq` package itself is uploaded as plain `.py` sources to
 `Files/lib` on the Lakehouse and imported through `sys.path`. There is no wheel and no
@@ -126,6 +129,9 @@ fabric/items/
   FabricIQReadiness.Lakehouse/                    .platform
   Fabric_IQ_Readiness_Assessment.Notebook/        .platform, notebook-content.py
   Fabric_IQ_Readiness_Orchestration.DataPipeline/ .platform, pipeline-content.json
+  IsFabricReadyForIQ.SemanticModel/               .platform, definition/ (TMDL)
+  IsFabricReadyForIQ.Report/                      .platform, definition/ (report.json, pages)
+  Install_IsFabricReadyForIQ.Notebook/            .platform, notebook-content.py
 ```
 
 These are the definitions as Fabric's Git integration stores them, so the folder can
@@ -140,6 +146,54 @@ Two placeholders are bound at deployment time and must stay intact in the source
 
 Rewriting either by hand will make `deploy.py` fail loudly rather than ship a notebook
 that cannot mount its own Lakehouse.
+
+## 📈 Semantic Model & Report
+
+`IsFabricReadyForIQ.SemanticModel` is a **Direct Lake** model over the six `Mart*` Delta
+tables — there is nothing to refresh; the model reflects the Lakehouse the instant a
+run finishes writing it. `IsFabricReadyForIQ.Report` is a genuine **Power BI report**
+(`.pbir`/TMDL, not a static HTML export), deliberately styled after the [Fabric Capacity
+Metrics](https://learn.microsoft.com/fabric/enterprise/metrics-app) and
+[FUAM](https://github.com/microsoft/fabric-toolbox/tree/main/monitoring/fabric-unified-admin-monitoring)
+report conventions familiar to Fabric administrators:
+
+| Page | Answers |
+|------|---------|
+| Tenant Overview | Is the tenant switch configuration, capacity eligibility and scan coverage in order? |
+| Workspace Ranking | Which workspaces are furthest from / closest to ready, and why? |
+| Object Readiness | Score and confidence for every semantic model, report and Data Agent |
+| Blocking Findings | The "cannot ship" list — walls, not quality issues |
+| Remediation Backlog | The prioritised work, grouped by owner role |
+| Coverage & Freshness | How much of the estate could actually be observed, and when |
+
+Because the model is Direct Lake, the report needs no separate refresh schedule — only
+the pipeline's schedule (or a manual notebook run) needs to produce a new Gold write.
+
+## 📥 Installer Notebook
+
+`Install_IsFabricReadyForIQ.Notebook` is the recommended way to deploy everything above
+without leaving Fabric or running `deploy.py` locally — the same pattern used by FCA and
+FUAM installers. Import it once into any workspace, run it, and it:
+
+1. Clones [`cyphou/FIQA`](https://github.com/cyphou/FIQA) into a **temporary local
+   checkout** using an anonymous, unauthenticated `git clone` (the repository is public
+   and read-only from the notebook's point of view).
+2. Deploys every item in `fabric/items/` into the current workspace via the Fabric REST
+   API, using the notebook's own `notebookutils.credentials.getToken` identity — the
+   same delegated identity already running the notebook, never a stored secret.
+3. **Deletes the temporary checkout** before finishing, whether the run succeeds or
+   fails.
+
+**🔐 Confidentiality guarantee.** Nothing tenant-specific — no connection string,
+workspace ID, tenant ID, token, or credential — is ever written to, read from, or
+present in the `cyphou/FIQA` GitHub repository at any point in this flow. The GitHub
+checkout supplies only the open-source item *definitions*; every value that binds those
+definitions to *your* tenant (workspace ID, tenant ID, Lakehouse ID) is filled in
+locally, in the temporary clone, immediately before upload, and discarded with it. See
+[docs/INSTALL.md](../docs/INSTALL.md) for the full walkthrough and
+[`tests/test_installer.py`](../tests/test_installer.py) for the test that enforces this
+guarantee (it fails the build if a secret-shaped literal is ever committed to the
+installer notebook source).
 
 ## ⚠️ Caveats
 

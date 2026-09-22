@@ -14,7 +14,7 @@
                                       │
                                       ▼
                               ┌──────────────┐
-                              │ Rule Registry│  61 rules, 5 object types
+                              │ Rule Registry│  65 rules, 5 object types
                               └──────────────┘
                                       │
                                       ▼
@@ -27,7 +27,22 @@
              Remediation        Preceptor          Lakehouse
              backlog            review             Gold marts
                                                    + console / HTML
+                                                        │
+                                                        ▼
+                                          Direct Lake semantic model
+                                          (IsFabricReadyForIQ.SemanticModel)
+                                                        │
+                                                        ▼
+                                          Power BI report
+                                          (IsFabricReadyForIQ.Report)
 ```
+
+The last two stages are **Fabric-only** — they read the same Gold Delta tables a
+scheduled notebook run writes, so a local NDJSON run has nothing to render there. See
+[`fabric/README.md`](../fabric/README.md) for the deployed item list and
+[`docs/INSTALL.md`](INSTALL.md) for how the whole surface (Lakehouse, notebook, pipeline,
+semantic model, report) is deployed by a single installer notebook that clones
+[`cyphou/FIQA`](https://github.com/cyphou/FIQA) into the target workspace.
 
 ## Modules
 
@@ -44,6 +59,7 @@
 | `fabric_iq/remediation.py` | Prioritised backlog | `@remediation` |
 | `fabric_iq/lakehouse.py` | Medallion persistence | `@lakehouse` |
 | `fabric_iq/reporting.py` | Console and HTML output | `@lakehouse` |
+| `fabric/items/` | Deployed Fabric artifacts: Lakehouse, assessment notebook, orchestration pipeline, Direct Lake semantic model, Power BI report, installer notebook | `@lakehouse` |
 
 ## Data Model
 
