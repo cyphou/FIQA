@@ -31,6 +31,124 @@ GOLD_TABLES = (
     "MartCoverageAndFreshness",
 )
 
+#: Explicit column schema for every Gold mart, keyed by table name.
+#:
+#: A mart can legitimately have zero rows for a given run -- a clean tenant has an
+#: empty ``MartBlockingFindings``, a tenant with no scanned objects yet has an empty
+#: ``MartObjectReadiness``. Reading an *empty* NDJSON file back with Spark's schema
+#: inference yields a DataFrame with **no columns**, and creating a Delta table from
+#: that would either fail or produce an unusable table. The notebook uses this
+#: dict to build an explicit, typed empty frame instead of skipping the table
+#: entirely, so every table in :data:`GOLD_TABLES` always exists after a run --
+#: with 0 rows if nothing qualified -- rather than being silently absent and making
+#: the Direct Lake report fail with "Invalid object name". Types are the small,
+#: Spark-agnostic vocabulary consumed by the notebook: ``string``, ``double``,
+#: ``long`` and ``boolean``.
+GOLD_SCHEMAS: dict[str, tuple[tuple[str, str], ...]] = {
+    "MartTenantReadiness": (
+        ("run_id", "string"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("parent_id", "string"),
+        ("score", "double"),
+        ("raw_score", "double"),
+        ("status", "string"),
+        ("eligible", "boolean"),
+        ("confidence", "double"),
+        ("coverage", "double"),
+        ("blocking_findings", "long"),
+        ("failed_findings", "long"),
+        ("ruleset_version", "string"),
+        ("assessed_at", "string"),
+        ("dimension_scores_json", "string"),
+        ("notes_json", "string"),
+    ),
+    "MartWorkspaceReadiness": (
+        ("run_id", "string"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("parent_id", "string"),
+        ("score", "double"),
+        ("raw_score", "double"),
+        ("status", "string"),
+        ("eligible", "boolean"),
+        ("confidence", "double"),
+        ("coverage", "double"),
+        ("blocking_findings", "long"),
+        ("failed_findings", "long"),
+        ("ruleset_version", "string"),
+        ("assessed_at", "string"),
+        ("dimension_scores_json", "string"),
+    ),
+    "MartObjectReadiness": (
+        ("run_id", "string"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("parent_id", "string"),
+        ("score", "double"),
+        ("raw_score", "double"),
+        ("status", "string"),
+        ("eligible", "boolean"),
+        ("confidence", "double"),
+        ("coverage", "double"),
+        ("blocking_findings", "long"),
+        ("failed_findings", "long"),
+        ("ruleset_version", "string"),
+        ("assessed_at", "string"),
+        ("dimension_scores_json", "string"),
+    ),
+    "MartBlockingFindings": (
+        ("run_id", "string"),
+        ("rule_id", "string"),
+        ("title", "string"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("dimension", "string"),
+        ("severity", "string"),
+        ("remediation", "string"),
+        ("effort", "string"),
+        ("owner_role", "string"),
+        ("docs", "string"),
+        ("outcome_status", "string"),
+        ("outcome_score", "double"),
+        ("outcome_detail", "string"),
+        ("outcome_observed_json", "string"),
+        ("outcome_evidence_json", "string"),
+    ),
+    "MartRemediationBacklog": (
+        ("run_id", "string"),
+        ("rule_id", "string"),
+        ("title", "string"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("severity", "string"),
+        ("priority", "double"),
+        ("action", "string"),
+        ("owner_role", "string"),
+        ("effort", "string"),
+        ("estimated_days", "double"),
+        ("blocks_go_live", "boolean"),
+        ("evidence", "string"),
+        ("docs", "string"),
+    ),
+    "MartCoverageAndFreshness": (
+        ("run_id", "string"),
+        ("object_id", "string"),
+        ("object_type", "string"),
+        ("coverage", "double"),
+        ("confidence", "double"),
+        ("not_evaluated_count", "long"),
+        ("not_evaluated_rules_json", "string"),
+        ("is_published", "boolean"),
+        ("assessed_at", "string"),
+    ),
+}
+
 
 def _json_scalar(value: Any) -> str:
     """Serialize a nested value (dict/list) into a single scalar JSON string.

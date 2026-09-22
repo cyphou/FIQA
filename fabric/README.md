@@ -217,3 +217,21 @@ installer notebook source).
   workspace/semantic-model evidence was collected). If your tenant restricts that path,
   run the assessment locally with `assess.py --live` instead and copy the output into
   the Lakehouse.
+
+## 🩹 Troubleshooting
+
+**"Error fetching data for this visual: Invalid object name 'dbo.MartXxx'" in the
+report.** A mart can legitimately have zero rows for a run — a clean tenant has no
+blocking findings, a fresh scan may find no scanned objects yet. Before this fix, an
+empty mart's NDJSON file was read back by Spark with schema inference, which returns a
+DataFrame with *no columns* for an empty file; the notebook then skipped that table's
+`saveAsTable` entirely, so the Delta table never existed and Direct Lake failed the
+moment a visual queried it.
+
+The notebook now always creates every table in `GOLD_TABLES`: when the read is empty or
+fails, it falls back to an explicitly-typed empty frame built from `GOLD_SCHEMAS`
+(`fabric_iq/lakehouse.py`), then `saveAsTable`s it regardless. Every table exists after
+every run — with 0 rows if that's genuinely the case — so this error can no longer
+happen structurally. If you deployed before this fix, re-run the notebook once to
+create any table that is still missing; no redeploy of the Lakehouse item itself is
+needed.

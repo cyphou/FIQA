@@ -84,7 +84,7 @@ if library_path not in sys.path:
 import fabric_iq
 from fabric_iq import RULESET_VERSION
 from fabric_iq.collectors import FabricApiCollector, FabricApiConfig, FabricHttpTransport
-from fabric_iq.lakehouse import GOLD, GOLD_TABLES, LakehouseWriter
+from fabric_iq.lakehouse import GOLD, GOLD_SCHEMAS, GOLD_TABLES, LakehouseWriter
 from fabric_iq.preceptor import PreceptorLoop
 from fabric_iq.remediation import build_backlog
 from fabric_iq.reporting import to_console, to_html
@@ -200,28 +200,59 @@ print(f"written to {readiness_root}")
 #
 # Each run appends, so the marts keep their history and a report can trend readiness
 # over time. `run_id` is the partition key of every mart.
+#
+# A mart can legitimately have zero rows for a run (a clean tenant has no blocking
+# findings, a fresh scan may find no scanned objects yet). Reading an empty NDJSON
+# file back with schema inference yields a DataFrame with *no columns*, which used to
+# make this step skip the table entirely -- leaving it absent from the Lakehouse and
+# breaking the Direct Lake report with "Invalid object name" the moment a visual
+# queried it. Every table now always gets `saveAsTable`'d, using the explicit,
+# typed schema in `GOLD_SCHEMAS` whenever the read is empty or fails, so it exists
+# (with 0 rows if that's genuinely the case) after every run.
 
 # CELL ********************
+
+from pyspark.sql.types import (  # noqa: E402  (Fabric runtime built-in)
+    BooleanType,
+    DoubleType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+)
+
+_SPARK_TYPES = {
+    "string": StringType(),
+    "double": DoubleType(),
+    "long": LongType(),
+    "boolean": BooleanType(),
+}
+
+
+def _empty_gold_frame(table: str):
+    fields = [StructField(name, _SPARK_TYPES[dtype], True) for name, dtype in GOLD_SCHEMAS[table]]
+    return spark.createDataFrame([], StructType(fields))  # noqa: F821  (Fabric runtime built-in)
+
 
 if publish_delta:
     relative_gold = f"Files/readiness/{GOLD}"
     for table in GOLD_TABLES:
         source = f"{relative_gold}/{table}/{run_id}.jsonl"
+        frame = None
         try:
             frame = spark.read.json(source)  # noqa: F821  (Fabric runtime built-in)
         except Exception as exc:  # pragma: no cover - runtime-only path
-            print(f"  {table}: skipped ({type(exc).__name__}: {exc})")
-            continue
-        if not frame.columns:
-            print(f"  {table}: empty")
-            continue
+            print(f"  {table}: read failed ({type(exc).__name__}: {exc}); publishing empty table")
+        if frame is None or not frame.columns:
+            frame = _empty_gold_frame(table)
+        row_count = frame.count()
         (
             frame.write.format("delta")
             .mode("append")
             .option("mergeSchema", "true")
             .saveAsTable(table)
         )
-        print(f"  {table}: +{frame.count()} row(s)")
+        print(f"  {table}: +{row_count} row(s)")
 else:
     print("publish_delta is False; Delta tables were not refreshed")
 
