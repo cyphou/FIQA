@@ -123,7 +123,7 @@ Everything lands in the `FabricIQReadiness` Lakehouse.
 |------|---------|
 | `Files/readiness/bronze/**` | Raw evidence, hashed and timestamped — audit and replay |
 | `Files/readiness/silver/**` | Normalized inventory, one table per section |
-| `Files/readiness/gold/**` | The six marts as NDJSON |
+| `Files/readiness/gold/**` | The seven marts as NDJSON |
 | `Files/readiness/reports/<run_id>_readiness.html` | The human report |
 | `Files/lib/fabric_iq/**` | The uploaded package sources |
 

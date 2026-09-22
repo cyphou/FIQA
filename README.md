@@ -11,10 +11,10 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 237 tests passed — engine, rules, scoring, preceptor, deployment, installer |
+| ✅ **Tests** | 238 tests passed — engine, rules, scoring, preceptor, deployment, installer |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
-| 🎯 **Coverage** | 65 rules · 5 object types · 6 Gold marts · 13-agent environment |
+| 🎯 **Coverage** | 65 rules · 5 object types · 7 Gold marts · 13-agent environment |
 
 For every object the tool produces:
 
@@ -95,7 +95,7 @@ duplicated. The `fabric_iq` package is uploaded as plain sources to `Files/lib` 
 Lakehouse — no wheel, no `%pip install`, because it is standard library only.
 
 Results land in the `FabricIQReadiness` Lakehouse: the medallion layers under
-`Files/readiness/`, the HTML report, and the six Gold marts published as Delta tables
+`Files/readiness/`, the HTML report, and the seven Gold marts published as Delta tables
 ready for the DirectLake governance semantic model. Deployment also sets the workspace
 Spark runtime to **2.0** by default (pass `--skip-spark-runtime-upgrade` to leave it
 unchanged).
@@ -210,8 +210,9 @@ Fabric / Power BI APIs → [Collect] → Bronze evidence
                                    → [Persist] → Lakehouse Gold marts
 ```
 
-Six Gold marts feed a DirectLake readiness semantic model and report:
-`MartTenantReadiness`, `MartWorkspaceReadiness`, `MartObjectReadiness`,
+Seven Gold marts feed a DirectLake readiness semantic model and report:
+
+`MartRunSummary`, `MartTenantReadiness`, `MartWorkspaceReadiness`, `MartObjectReadiness`,
 `MartBlockingFindings`, `MartRemediationBacklog`, `MartCoverageAndFreshness`.
 The model keeps those PascalCase names for business readability, while its DirectLake
 partitions point to the Lakehouse SQL endpoint's physical lowercase table names

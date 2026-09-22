@@ -95,10 +95,15 @@ class TestPowerBiReportWriter(unittest.TestCase):
         doc = self._load_json("IsFabricReadyForIQ.pbip")
         self.assertEqual(doc["artifacts"][0]["report"]["path"], "IsFabricReadyForIQ.Report")
 
-    def test_model_bim_has_the_six_gold_mart_tables(self):
+    def test_model_bim_has_the_gold_mart_tables(self):
         bim = self._load_json("IsFabricReadyForIQ.SemanticModel", "model.bim")
         tables = {t["name"]: t for t in bim["model"]["tables"]}
         self.assertEqual(set(tables), set(GOLD_TABLES))
+
+        run_summary_columns = {c["name"] for c in tables["MartRunSummary"]["columns"]}
+        self.assertIn("run_id", run_summary_columns)
+        self.assertIn("assessed_object_count", run_summary_columns)
+        self.assertIn("average_object_confidence", run_summary_columns)
 
         object_columns = {c["name"] for c in tables["MartObjectReadiness"]["columns"]}
         self.assertIn("object_id", object_columns)
@@ -110,7 +115,7 @@ class TestPowerBiReportWriter(unittest.TestCase):
         self.assertIn("Eligible %", measure_names)
 
         # Flat marts: DirectLake reads Delta tables directly, no relationships
-        # are modeled between the six standalone marts.
+        # are modeled between the standalone marts.
         self.assertEqual(bim["model"]["relationships"], [])
 
     def test_directlake_model_uses_lakehouse_physical_table_names(self):

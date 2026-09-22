@@ -23,6 +23,7 @@ GOLD = "gold"
 
 #: Gold marts produced by a run.
 GOLD_TABLES = (
+    "MartRunSummary",
     "MartTenantReadiness",
     "MartWorkspaceReadiness",
     "MartObjectReadiness",
@@ -45,6 +46,29 @@ GOLD_TABLES = (
 #: Spark-agnostic vocabulary consumed by the notebook: ``string``, ``double``,
 #: ``long`` and ``boolean``.
 GOLD_SCHEMAS: dict[str, tuple[tuple[str, str], ...]] = {
+    "MartRunSummary": (
+        ("run_id", "string"),
+        ("tenant_id", "string"),
+        ("ruleset_version", "string"),
+        ("collector_mode", "string"),
+        ("started_at", "string"),
+        ("completed_at", "string"),
+        ("tenant_count", "long"),
+        ("workspace_count", "long"),
+        ("semantic_model_count", "long"),
+        ("report_count", "long"),
+        ("data_agent_count", "long"),
+        ("assessed_object_count", "long"),
+        ("published_object_count", "long"),
+        ("eligible_object_count", "long"),
+        ("not_evaluated_object_count", "long"),
+        ("blocking_findings_count", "long"),
+        ("failed_findings_count", "long"),
+        ("backlog_items_count", "long"),
+        ("average_object_score", "double"),
+        ("average_object_confidence", "double"),
+        ("average_object_coverage", "double"),
+    ),
     "MartTenantReadiness": (
         ("run_id", "string"),
         ("object_id", "string"),
@@ -278,6 +302,48 @@ def backlog_mart_rows(backlog: RemediationBacklog, run_id: str = "") -> list[dic
     return [{"run_id": run_id, **i.to_dict()} for i in backlog.items]
 
 
+def _average(values: Iterable[float]) -> float:
+    numbers = list(values)
+    if not numbers:
+        return 0.0
+    return round(sum(numbers) / len(numbers), 4)
+
+
+def run_summary_mart_rows(
+    run: AssessmentRun, backlog: RemediationBacklog, run_id: str = ""
+) -> list[dict[str, Any]]:
+    from fabric_iq.models import ObjectType
+
+    leaf_types = (ObjectType.SEMANTIC_MODEL, ObjectType.REPORT, ObjectType.DATA_AGENT)
+    leaf_cards = [c for c in run.scorecards if c.object_type in leaf_types]
+    published_cards = [c for c in leaf_cards if c.status is not ReadinessStatus.NOT_EVALUATED]
+    return [
+        {
+            "run_id": run_id,
+            "tenant_id": run.tenant_id,
+            "ruleset_version": run.ruleset_version,
+            "collector_mode": run.collector_mode,
+            "started_at": run.started_at,
+            "completed_at": run.completed_at,
+            "tenant_count": len(run.by_type(ObjectType.TENANT)),
+            "workspace_count": len(run.by_type(ObjectType.WORKSPACE)),
+            "semantic_model_count": len(run.by_type(ObjectType.SEMANTIC_MODEL)),
+            "report_count": len(run.by_type(ObjectType.REPORT)),
+            "data_agent_count": len(run.by_type(ObjectType.DATA_AGENT)),
+            "assessed_object_count": len(leaf_cards),
+            "published_object_count": len(published_cards),
+            "eligible_object_count": sum(1 for c in leaf_cards if c.eligible),
+            "not_evaluated_object_count": sum(1 for c in leaf_cards if c.status is ReadinessStatus.NOT_EVALUATED),
+            "blocking_findings_count": len(run.blocking_findings),
+            "failed_findings_count": sum(len(c.failed_findings) for c in run.scorecards),
+            "backlog_items_count": len(backlog.items),
+            "average_object_score": _average(c.score for c in published_cards),
+            "average_object_confidence": _average(c.confidence for c in leaf_cards),
+            "average_object_coverage": _average(c.coverage for c in leaf_cards),
+        }
+    ]
+
+
 def gold_mart_rows(
     run: AssessmentRun, backlog: RemediationBacklog, *, run_id: str = ""
 ) -> dict[str, list[dict[str, Any]]]:
@@ -288,6 +354,7 @@ def gold_mart_rows(
     needs the identical rows to populate a local/offline project).
     """
     return {
+        "MartRunSummary": run_summary_mart_rows(run, backlog, run_id),
         "MartTenantReadiness": tenant_mart_rows(run, run_id),
         "MartWorkspaceReadiness": workspace_mart_rows(run, run_id),
         "MartObjectReadiness": object_mart_rows(run, run_id),

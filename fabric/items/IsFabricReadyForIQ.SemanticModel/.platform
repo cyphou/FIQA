@@ -3,7 +3,7 @@
   "metadata": {
     "type": "SemanticModel",
     "displayName": "IsFabricReadyForIQ",
-    "description": "Fabric IQ Readiness scorecards, findings and remediation backlog -- DirectLake semantic model over the six Gold readiness marts."
+    "description": "Fabric IQ Readiness scorecards, findings and remediation backlog -- DirectLake semantic model over the seven Gold readiness marts."
   },
   "config": {
     "version": "2.0",

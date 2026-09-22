@@ -11,6 +11,7 @@ from fabric_iq.collectors.base import BronzeRecord, CollectionResult, empty_inve
 from fabric_iq.collectors.offline import OfflineCollector
 from fabric_iq.errors import CollectionError, NormalizationError, PersistenceError
 from fabric_iq.lakehouse import LakehouseWriter
+from fabric_iq.models import ObjectType
 from fabric_iq.remediation import build_backlog
 from fabric_iq.reporting import to_console, to_html
 from fabric_iq.scoring import assess
@@ -113,6 +114,26 @@ class TestLakehouseWriter(unittest.TestCase):
                 for row in rows:
                     with self.subTest(mart=name):
                         self.assertEqual(row.get("run_id"), "run_lh")
+
+    def test_run_summary_mart_has_one_ai_readable_run_row(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            writer = LakehouseWriter(root=tmp, run_id="run_lh")
+            written = writer.write_gold(self.run, self.backlog)
+            with open(written["MartRunSummary"], encoding="utf-8") as handle:
+                rows = [json.loads(line) for line in handle if line.strip()]
+
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["run_id"], "run_lh")
+        self.assertEqual(row["tenant_id"], self.run.tenant_id)
+        self.assertEqual(row["ruleset_version"], self.run.ruleset_version)
+        leaf_count = sum(
+            len(self.run.by_type(object_type))
+            for object_type in (ObjectType.SEMANTIC_MODEL, ObjectType.REPORT, ObjectType.DATA_AGENT)
+        )
+        self.assertEqual(row["assessed_object_count"], leaf_count)
+        self.assertEqual(row["blocking_findings_count"], len(self.run.blocking_findings))
+        self.assertEqual(row["backlog_items_count"], len(self.backlog.items))
 
     def test_reruns_are_idempotent_per_run_id(self):
         with tempfile.TemporaryDirectory() as tmp:
