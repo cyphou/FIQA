@@ -11,10 +11,10 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 214 tests passed — engine, rules, scoring, preceptor, deployment, installer |
+| ✅ **Tests** | 226 tests passed — engine, rules, scoring, preceptor, deployment, installer |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
-| 🎯 **Coverage** | 62 rules · 5 object types · 6 Gold marts · 13-agent environment |
+| 🎯 **Coverage** | 65 rules · 5 object types · 6 Gold marts · 13-agent environment |
 
 For every object the tool produces:
 
@@ -157,12 +157,12 @@ parity with the run) but the visual rendering itself is unverified.
 
 ## 📚 Rule Catalogue
 
-62 rules, ruleset version `2026.09.1`.
+65 rules, ruleset version `2026.09.1`.
 
 | Object | Rules | Blocking | Prefix |
 |--------|-------|----------|--------|
-| Tenant | 10 | 4 | `TEN-` |
-| Workspace | 10 | 4 | `WKS-` |
+| Tenant | 12 | 4 | `TEN-` |
+| Workspace | 11 | 5 | `WKS-` |
 | Semantic model | 17 | 5 | `SEM-` |
 | Report | 10 | 1 | `REP-` |
 | Data Agent | 15 | 10 | `AGT-` |

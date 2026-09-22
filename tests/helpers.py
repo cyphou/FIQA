@@ -69,6 +69,8 @@ def ready_tenant(**overrides):
         "labelled_item_ratio": 0.95,
         "owners": {"platform": "a", "security": "b", "business": "c"},
         "audit_log_enabled": True,
+        "copilot_capacity_designation_enabled": True,
+        "purview_dlp_reviewed": True,
     }
     subject.update(overrides)
     return subject

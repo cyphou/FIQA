@@ -18,10 +18,27 @@ DOCS_SCANNER = "https://learn.microsoft.com/fabric/governance/metadata-scanning-
 ELIGIBLE_FABRIC_SKUS = {"F2", "F4", "F8", "F16", "F32", "F64", "F128", "F256", "F512", "F1024", "F2048"}
 ELIGIBLE_PREMIUM_SKUS = {"P1", "P2", "P3", "P4", "P5"}
 
+#: F-capacity-unit equivalence for Premium SKUs, per Microsoft's published mapping.
+_PREMIUM_SKU_F_UNITS = {"P1": 64, "P2": 128, "P3": 256, "P4": 512, "P5": 1024}
+
+#: Below this many F-capacity-units, Copilot workloads and Data Agents only run
+#: for users assigned to a designated Fabric Copilot capacity.
+COPILOT_NATIVE_F_UNITS = 64
+
 
 def _sku_is_eligible(sku: str) -> bool:
     normalized = (sku or "").strip().upper()
     return normalized in ELIGIBLE_FABRIC_SKUS or normalized in ELIGIBLE_PREMIUM_SKUS
+
+
+def _sku_f_units(sku: str) -> int:
+    """Return the F-capacity-unit equivalent of a SKU, or 0 if unrecognised."""
+    normalized = (sku or "").strip().upper()
+    if normalized in _PREMIUM_SKU_F_UNITS:
+        return _PREMIUM_SKU_F_UNITS[normalized]
+    if normalized.startswith("F") and normalized[1:].isdigit():
+        return int(normalized[1:])
+    return 0
 
 
 @registry.add(
@@ -319,4 +336,64 @@ def tenant_ownership(subject: dict) -> RuleOutcome:
         f"owners defined: {', '.join(present) or 'none'}; audit log enabled: {subject['audit_log_enabled']}",
         observed={"missing_owners": [r for r in required if r not in present]},
         ev=evidence("governance_register", "owners"),
+    )
+
+
+@registry.add(
+    "TEN-011",
+    "Capacities can be designated as Fabric Copilot capacities",
+    T,
+    Dimension.AI_READINESS,
+    Severity.MAJOR,
+    "Re-enable the 'Capacities can be designated as Fabric Copilot capacities' tenant setting, scoped to the "
+    "capacity administrators who need it, so that capacities smaller than F64 can still be covered for Copilot "
+    "and Data Agent workloads.",
+    effort=Effort.S,
+    owner_role="Fabric Administrator",
+    docs=DOCS_COPILOT + "#capacities-can-be-designated-as-copilot-in-fabric-capacities",
+)
+def copilot_capacity_designation_enabled(subject: dict) -> RuleOutcome:
+    gap = require(subject, "copilot_capacity_designation_enabled")
+    if gap:
+        return gap
+    if subject["copilot_capacity_designation_enabled"]:
+        return RuleOutcome.passed(
+            "Capacity administrators can designate Fabric Copilot capacities",
+            evidence=evidence("tenant_settings", "settings.copilot_capacity_designation"),
+        )
+    return RuleOutcome.failed(
+        "The tenant setting is off, so no capacity smaller than F64 can ever be covered for Copilot or Data "
+        "Agent workloads, whatever its SKU or workspace configuration",
+        evidence=evidence("tenant_settings", "settings.copilot_capacity_designation"),
+    )
+
+
+@registry.add(
+    "TEN-012",
+    "Microsoft Purview governance policies are reviewed for agent-accessible data",
+    T,
+    Dimension.GOVERNANCE,
+    Severity.MAJOR,
+    "Review Purview data loss prevention policies for Fabric Data Warehouse (GA) and access restriction "
+    "policies for KQL Database, SQL Database and Data Warehouse (preview) covering every source a Data Agent "
+    "can query, and tighten workspace or OneLake permissions directly where those policies do not apply: an "
+    "agent runs under the requesting user's effective permissions, so DLP and sensitivity labels alone do not "
+    "restrict what it can surface.",
+    effort=Effort.M,
+    owner_role="Compliance Officer",
+    docs="https://learn.microsoft.com/fabric/data-science/concept-data-agent#prerequisites",
+)
+def purview_governance_reviewed(subject: dict) -> RuleOutcome:
+    gap = require(subject, "purview_dlp_reviewed")
+    if gap:
+        return gap
+    if subject["purview_dlp_reviewed"]:
+        return RuleOutcome.passed(
+            "Purview DLP and access restriction policies were reviewed for agent-accessible data",
+            evidence=evidence("governance_register", "purview.dlp_review"),
+        )
+    return RuleOutcome.failed(
+        "No record that Purview DLP or access restriction policies were reviewed for the data sources agents "
+        "can query; agents inherit the requesting user's permissions, so this is not covered by policy alone",
+        evidence=evidence("governance_register", "purview.dlp_review"),
     )

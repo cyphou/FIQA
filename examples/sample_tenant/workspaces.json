@@ -49,6 +49,7 @@
     "id": "ws-lab",
     "name": "Data Science Lab",
     "capacity_sku": "F2",
+    "copilot_capacity_assigned": false,
     "region": "westeurope",
     "source_regions": ["westeurope"],
     "cross_geo_approved": false,

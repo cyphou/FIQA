@@ -219,6 +219,8 @@ Every hard limit encoded in the catalogue is a dated fact:
 | Description budget read by Copilot | 200 characters | `SEM-006`, `SEM-007` |
 | AI instructions maximum | 10,000 characters | `SEM-011` |
 | Capacity floor | F2+ / P1+ | `TEN-004`, `WKS-001` |
+| Native Copilot/Data Agent capacity floor | F64+ / P1+ (smaller SKUs need explicit Copilot capacity designation) | `TEN-011`, `WKS-011` |
+| Purview access restriction policies (KQL DB, SQL DB, Data Warehouse) | Preview at time of writing | `TEN-012` |
 | Scanner `getInfo` | 500/hour, 16 concurrent, 100 workspaces/request | collector |
 | Activity Events | 1 UTC day/request, 28-day retention, 200/hour | collector |
 
@@ -227,6 +229,23 @@ a **Trial** SKU is not an eligible host, so `WKS-001` fails on a trial-backed wo
 — that is a true positive, not noise. Separately, a **Fabric Copilot capacity** (F2+/P1+)
 can carry Copilot billing for usage originating in another workspace. The two facts
 coexist: the workspace still needs an eligible host of its own.
+
+A second nuance: capacities smaller than F64 (or below P1) do not get Copilot and Data
+Agent workloads for free. They only work when a tenant administrator has re-enabled the
+**"Capacities can be designated as Fabric Copilot capacities"** setting (`TEN-011`) *and*
+the workspace's users are actually assigned to one such capacity (`WKS-011`). Absent
+either condition, the workspace is architecturally blocked regardless of every other
+readiness signal.
+
+Finally, **Microsoft Purview data loss prevention (DLP) policies and access restriction
+policies do not override effective permissions**. A Data Agent runs under the requesting
+user's own permissions, so DLP/sensitivity labels reduce visibility only where a policy
+exists and applies; `TEN-012` checks that this review happened, not that it is sufficient
+on its own — workspace and OneLake permissions must still be tightened directly wherever
+Purview does not reach. Access restriction policies for KQL Database, SQL Database and
+Data Warehouse were in **preview** at the time this rule was written; Data Warehouse DLP
+policies were **generally available**. Re-check current status before relying on this
+table — these limits age, per the header of this section.
 
 `RULESET_VERSION` pins what was believed true when a score was produced. **Scores are
 only comparable across runs with the same ruleset version**; the trend view must refuse
