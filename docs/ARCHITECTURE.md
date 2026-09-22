@@ -44,6 +44,14 @@ scheduled notebook run writes, so a local NDJSON run has nothing to render there
 semantic model, report) is deployed by a single installer notebook that clones
 [`cyphou/FIQA`](https://github.com/cyphou/FIQA) into the target workspace.
 
+Every deploy also reconciles the workspace's default Spark runtime toward
+`DEFAULT_SPARK_RUNTIME_VERSION` (Spark 4.1 / Delta Lake 4.2 as of Runtime 2.0), via an
+idempotent `GET`-then-`PATCH` against `workspaces/{id}/spark/settings` — the notebook has
+no runtime-specific code, so it always benefits from the newest generally-available
+runtime. `fabric/deploy.py --skip-spark-runtime-upgrade` opts out. See
+[`fabric/README.md`](../fabric/README.md#-spark-runtime-auto-upgrade) for the exact flags
+and output.
+
 ## Modules
 
 | Module | Responsibility | Owner |
@@ -59,6 +67,7 @@ semantic model, report) is deployed by a single installer notebook that clones
 | `fabric_iq/remediation.py` | Prioritised backlog | `@remediation` |
 | `fabric_iq/lakehouse.py` | Medallion persistence | `@lakehouse` |
 | `fabric_iq/reporting.py` | Console and HTML output | `@lakehouse` |
+| `fabric_iq/deployment.py` | Deploy/update the Fabric item surface (Lakehouse, notebook, pipeline, semantic model, report) and the workspace's default Spark runtime | `@lakehouse` |
 | `fabric/items/` | Deployed Fabric artifacts: Lakehouse, assessment notebook, orchestration pipeline, Direct Lake semantic model, Power BI report, installer notebook | `@lakehouse` |
 
 ## Data Model

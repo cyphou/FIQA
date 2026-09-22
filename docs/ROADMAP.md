@@ -236,6 +236,10 @@ inspection alone.
   orchestrated by [`Fabric_IQ_Readiness_Orchestration.DataPipeline`](../fabric/items/Fabric_IQ_Readiness_Orchestration.DataPipeline),
   writing `Mart*` Delta tables into [`FabricIQReadiness.Lakehouse`](../fabric/items/FabricIQReadiness.Lakehouse)
   — see [`fabric/README.md`](../fabric/README.md).
+- Deploy also reconciles the workspace's default Spark runtime toward the newest
+  generally-available version (Runtime 2.0 = Spark 4.1 / Delta Lake 4.2) via an
+  idempotent `GET`-then-`PATCH`, so scheduled runs pick up engine improvements without a
+  manual trip through Workspace settings. `--skip-spark-runtime-upgrade` opts out.
 - **Exit gate.** Two consecutive scheduled runs are queryable side by side by `run_id`.
 
 ### Sprint 4.2 — Readiness semantic model and report (1.5 weeks) ✅ Delivered

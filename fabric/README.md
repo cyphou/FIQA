@@ -68,6 +68,25 @@ Useful flags:
 | `--pipeline-name` | `Fabric IQ Readiness Orchestration` | Rename the pipeline |
 | `--token-env` | `FABRIC_TOKEN` | Environment variable holding the Fabric token |
 | `--onelake-token-env` | `ONELAKE_TOKEN` | Environment variable holding the OneLake token |
+| `--spark-runtime-version` | `2.0` | Workspace default Spark runtime to set (Spark 4.1 / Delta Lake 4.2). Pass `""` to leave the workspace setting untouched |
+| `--skip-spark-runtime-upgrade` | off | Shortcut for `--spark-runtime-version ""` — never touch the workspace's Spark runtime setting |
+
+### 🔧 Spark runtime auto-upgrade
+
+The deployed notebook is plain PySpark with no runtime-specific code, so it always
+benefits from the newest generally-available Fabric Spark runtime. Every deploy checks
+the workspace's default Spark runtime (`GET /workspaces/{id}/spark/settings`) and, if it
+differs from the target, updates it with a single `PATCH` — no per-notebook setting, no
+manual trip through *Workspace settings → Data Engineering/Science → Spark settings*.
+It's a no-op on repeat deploys once the workspace is already on the target version, and
+`--skip-spark-runtime-upgrade` opts out entirely if you manage this setting yourself.
+`deploy.py` prints one of three outcomes after each run:
+
+```text
+Workspace Spark runtime updated: 1.3 -> 2.0.
+Workspace Spark runtime already 2.0; no change needed.
+Spark runtime upgrade skipped (--skip-spark-runtime-upgrade or empty version).
+```
 
 ## ▶️ Run
 

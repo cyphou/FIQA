@@ -50,6 +50,10 @@ LIBRARY_PREFIX = "Files/lib"
 #: Default schema the Lakehouse's SQL analytics endpoint exposes Delta tables under.
 DIRECTLAKE_SCHEMA = "dbo"
 
+#: Newest generally-available Fabric Spark runtime (Spark 4.1, Delta Lake 4.2) as of
+#: this writing. See docs/ROADMAP.md for the upgrade rationale.
+DEFAULT_SPARK_RUNTIME_VERSION = "2.0"
+
 MAX_LRO_SECONDS = 600
 LRO_POLL_SECONDS = 5
 
@@ -87,6 +91,9 @@ class DeploymentConfig:
     items_root: str = field(default_factory=lambda: os.path.join(_repo_root(), "fabric", "items"))
     package_root: str = field(default_factory=lambda: os.path.join(_repo_root(), "fabric_iq"))
     directlake_schema: str = DIRECTLAKE_SCHEMA
+    #: Workspace-default Spark runtime to set before creating the notebook. Empty
+    #: string leaves the workspace's current setting untouched.
+    spark_runtime_version: str = DEFAULT_SPARK_RUNTIME_VERSION
 
     def validate(self) -> "DeploymentConfig":
         if not self.workspace_id:
@@ -288,6 +295,44 @@ def get_lakehouse_sql_endpoint(
                 f"(last status: {status or 'unknown'})"
             )
         sleep(poll_seconds)
+
+
+def ensure_workspace_spark_runtime(
+    client: FabricRestClient,
+    workspace_id: str,
+    runtime_version: str,
+) -> dict[str, Any]:
+    """Set the workspace's default Spark runtime, only if it differs.
+
+    The notebook this solution deploys reads/writes Delta tables with plain
+    PySpark and has no runtime-specific code, so it always benefits from
+    running on the newest generally-available runtime (more recent Spark and
+    Delta Lake versions, bug fixes, performance work). Rather than asking
+    every operator to flip this by hand in Workspace settings -> Data
+    Engineering/Science -> Spark settings, deployment sets it via the
+    ``PATCH /workspaces/{id}/spark/settings`` API. Passing ``runtime_version=""``
+    (or ``deploy.py --skip-spark-runtime-upgrade``) skips this entirely and
+    leaves whatever the workspace already has.
+    """
+    if not runtime_version:
+        return {"changed": False, "runtime_version": None, "skipped": True}
+
+    _, _, current = client.request("GET", f"workspaces/{workspace_id}/spark/settings")
+    current_version = ((current or {}).get("environment") or {}).get("runtimeVersion")
+    if current_version == runtime_version:
+        return {"changed": False, "runtime_version": runtime_version, "skipped": False}
+
+    client.request(
+        "PATCH",
+        f"workspaces/{workspace_id}/spark/settings",
+        body={"environment": {"runtimeVersion": runtime_version}},
+    )
+    return {
+        "changed": True,
+        "runtime_version": runtime_version,
+        "previous_version": current_version,
+        "skipped": False,
+    }
 
 
 def build_semantic_model_parts(
@@ -531,6 +576,10 @@ def deploy(
     config.validate()
     workspace_id = config.workspace_id
 
+    spark_runtime = ensure_workspace_spark_runtime(
+        fabric_client, workspace_id, config.spark_runtime_version
+    )
+
     lakehouse_id, lakehouse_state = upsert_item(
         fabric_client,
         workspace_id,
@@ -612,6 +661,7 @@ def deploy(
 
     return {
         "workspace_id": workspace_id,
+        "spark_runtime": spark_runtime,
         "lakehouse": {"id": lakehouse_id, "name": config.lakehouse_name, "state": lakehouse_state},
         "notebook": {"id": notebook_id, "name": config.notebook_name, "state": notebook_state},
         "pipeline": {"id": pipeline_id, "name": config.pipeline_name, "state": pipeline_state},

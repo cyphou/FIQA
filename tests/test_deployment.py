@@ -6,6 +6,7 @@ import os
 import unittest
 
 from fabric_iq.deployment import (
+    DEFAULT_SPARK_RUNTIME_VERSION,
     NOTEBOOK_ITEM,
     NOTEBOOK_SOURCE,
     PIPELINE_ITEM,
@@ -17,6 +18,7 @@ from fabric_iq.deployment import (
     build_pipeline_content,
     build_report_parts,
     build_semantic_model_parts,
+    ensure_workspace_spark_runtime,
     get_lakehouse_sql_endpoint,
     inline_part,
     library_files,
@@ -190,9 +192,11 @@ class _SequencedClient:
     def __init__(self, payloads):
         self._payloads = payloads
         self.calls = 0
+        self.requests: list[tuple[str, str, object]] = []
 
     def request(self, method, path, body=None, *, headers=None):
         self.calls += 1
+        self.requests.append((method, path, body))
         payload = self._payloads[min(self.calls - 1, len(self._payloads) - 1)]
         return 200, {}, payload
 
@@ -301,6 +305,38 @@ class LakehouseSqlEndpointTests(unittest.TestCase):
             get_lakehouse_sql_endpoint(
                 client, "ws-1", "lh-1", max_seconds=0, poll_seconds=0.01, sleep=lambda _: None
             )
+
+
+class WorkspaceSparkRuntimeTests(unittest.TestCase):
+    """Deploying should upgrade a stale workspace Spark runtime, and only when needed."""
+
+    def test_default_config_targets_the_newest_runtime(self):
+        self.assertEqual(DeploymentConfig(workspace_id="ws-1").spark_runtime_version, DEFAULT_SPARK_RUNTIME_VERSION)
+
+    def test_patches_when_the_current_runtime_is_older(self):
+        client = _SequencedClient([{"environment": {"runtimeVersion": "1.3"}}])
+        result = ensure_workspace_spark_runtime(client, "ws-1", "2.0")
+
+        self.assertEqual(result, {"changed": True, "runtime_version": "2.0", "previous_version": "1.3", "skipped": False})
+        methods = [method for method, _, _ in client.requests]
+        self.assertEqual(methods, ["GET", "PATCH"])
+        patch_method, patch_path, patch_body = client.requests[1]
+        self.assertEqual(patch_path, "workspaces/ws-1/spark/settings")
+        self.assertEqual(patch_body, {"environment": {"runtimeVersion": "2.0"}})
+
+    def test_no_patch_when_already_on_the_target_runtime(self):
+        client = _SequencedClient([{"environment": {"runtimeVersion": "2.0"}}])
+        result = ensure_workspace_spark_runtime(client, "ws-1", "2.0")
+
+        self.assertEqual(result, {"changed": False, "runtime_version": "2.0", "skipped": False})
+        self.assertEqual([method for method, _, _ in client.requests], ["GET"])
+
+    def test_empty_version_skips_without_any_request(self):
+        client = _SequencedClient([{}])
+        result = ensure_workspace_spark_runtime(client, "ws-1", "")
+
+        self.assertEqual(result, {"changed": False, "runtime_version": None, "skipped": True})
+        self.assertEqual(client.requests, [])
 
 
 class SemanticModelPartsTests(unittest.TestCase):

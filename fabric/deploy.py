@@ -21,6 +21,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fabric_iq.deployment import (  # noqa: E402
+    DEFAULT_SPARK_RUNTIME_VERSION,
     DeploymentConfig,
     FabricRestClient,
     deploy,
@@ -49,6 +50,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report-name", default="IsFabricReadyForIQ")
     parser.add_argument("--token-env", default="FABRIC_TOKEN", help="env var holding the Fabric API token")
     parser.add_argument("--onelake-token-env", default="ONELAKE_TOKEN", help="env var holding the storage token")
+    parser.add_argument(
+        "--spark-runtime-version",
+        default=DEFAULT_SPARK_RUNTIME_VERSION,
+        help=(
+            "workspace-default Spark runtime to set before deploying the notebook "
+            f"(default: {DEFAULT_SPARK_RUNTIME_VERSION}); pass an empty string to leave "
+            "the workspace's current setting untouched"
+        ),
+    )
+    parser.add_argument(
+        "--skip-spark-runtime-upgrade",
+        action="store_true",
+        help="do not touch the workspace's Spark runtime setting at all",
+    )
     args = parser.parse_args(argv)
 
     config = DeploymentConfig(
@@ -59,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         semantic_model_name=args.semantic_model_name,
         report_name=args.report_name,
         default_tenant_id=args.tenant_id,
+        spark_runtime_version="" if args.skip_spark_runtime_upgrade else args.spark_runtime_version,
     )
 
     try:
@@ -72,6 +88,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(json.dumps(summary, indent=2))
+    spark_runtime = summary.get("spark_runtime") or {}
+    if spark_runtime.get("skipped"):
+        print("\nSpark runtime upgrade skipped (--skip-spark-runtime-upgrade or empty version).")
+    elif spark_runtime.get("changed"):
+        print(
+            f"\nWorkspace Spark runtime updated: "
+            f"{spark_runtime.get('previous_version') or 'unset'} -> {spark_runtime['runtime_version']}."
+        )
+    else:
+        print(f"\nWorkspace Spark runtime already {spark_runtime.get('runtime_version')}; no change needed.")
     print(
         f"\nRun the pipeline '{summary['pipeline']['name']}' "
         f"or open the notebook '{summary['notebook']['name']}' and supply tenant_id."
