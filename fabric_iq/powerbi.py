@@ -66,95 +66,100 @@ class Column:
     dax_type: str  # TMSL/AS dataType
     format_string: str | None = None
     summarize_by: str = "none"
+    #: Plain-English meaning, surfaced in Power BI Desktop's field list and
+    #: read by Copilot / Fabric Data Agents when scoping a question to this
+    #: column. Kept under ~200 characters so the meaning-bearing text is
+    #: never truncated (see docs/RULES.md, "descriptions" dimension).
+    description: str | None = None
 
 
 #: Base readiness columns shared by the Tenant/Workspace/Object marts --
 #: matches :func:`fabric_iq.lakehouse._base_row` field for field.
 _BASE_READINESS_COLUMNS: tuple[Column, ...] = (
-    Column("run_id", "type text", "string"),
-    Column("object_id", "type text", "string"),
-    Column("object_name", "type text", "string"),
-    Column("object_type", "type text", "string"),
-    Column("parent_id", "type text", "string"),
-    Column("score", "type number", "double", "0.0"),
-    Column("raw_score", "type number", "double", "0.0"),
-    Column("status", "type text", "string"),
-    Column("eligible", "type logical", "boolean"),
-    Column("confidence", "type number", "double", "0%"),
-    Column("coverage", "type number", "double", "0%"),
-    Column("blocking_findings", "Int64.Type", "int64", "0"),
-    Column("failed_findings", "Int64.Type", "int64", "0"),
-    Column("ruleset_version", "type text", "string"),
-    Column("assessed_at", "type text", "string"),
+    Column("run_id", "type text", "string", description="ID of the assessment run that produced this row. Join key across every Mart table."),
+    Column("object_id", "type text", "string", description="Unique ID of the assessed object (tenant, workspace, semantic model, report or data agent)."),
+    Column("object_name", "type text", "string", description="Human-readable name of the assessed object, as shown in the Fabric portal."),
+    Column("object_type", "type text", "string", description="Kind of object assessed: tenant, workspace, semantic_model, report, or data_agent."),
+    Column("parent_id", "type text", "string", description="ID of the parent object (e.g. the workspace a semantic model lives in), for drill-up."),
+    Column("score", "type number", "double", "0.0", description="Final readiness score from 0 to 100. Capped at 39 if any blocking finding failed, regardless of other metrics."),
+    Column("raw_score", "type number", "double", "0.0", description="Uncapped weighted score from 0 to 100, before the blocking-finding cap is applied. Use [score] for reporting."),
+    Column("status", "type text", "string", description="Assessment outcome: ready, needs_attention, not_ready, or not_evaluated (insufficient evidence collected)."),
+    Column("eligible", "type logical", "boolean", description="True if no blocking (structurally disqualifying) finding failed for this object."),
+    Column("confidence", "type number", "double", "0%", description="How much of the evidence needed to score this object was actually observed, from 0% to 100%."),
+    Column("coverage", "type number", "double", "0%", description="Share of applicable readiness rules that could be evaluated for this object, from 0% to 100%."),
+    Column("blocking_findings", "Int64.Type", "int64", "0", description="Count of failed blocking findings for this object -- any value above 0 means the object is not eligible."),
+    Column("failed_findings", "Int64.Type", "int64", "0", description="Total count of failed findings for this object, blocking and non-blocking combined."),
+    Column("ruleset_version", "type text", "string", description="Version of the readiness rule catalogue used to produce this score, for auditability."),
+    Column("assessed_at", "type text", "string", description="UTC timestamp (ISO 8601) when this object was assessed."),
 )
 
 #: ``MartTenantReadiness`` -- one row per tenant scorecard.
 TENANT_COLUMNS: tuple[Column, ...] = _BASE_READINESS_COLUMNS + (
-    Column("dimension_scores_json", "type text", "string"),
-    Column("notes_json", "type text", "string"),
+    Column("dimension_scores_json", "type text", "string", description="Per-dimension score breakdown (e.g. governance, security) as a JSON object string. Not directly queryable in DAX."),
+    Column("notes_json", "type text", "string", description="Free-form assessor notes for this tenant run, as a JSON array string."),
 )
 
 #: ``MartWorkspaceReadiness`` -- one row per workspace scorecard.
 WORKSPACE_COLUMNS: tuple[Column, ...] = _BASE_READINESS_COLUMNS + (
-    Column("dimension_scores_json", "type text", "string"),
+    Column("dimension_scores_json", "type text", "string", description="Per-dimension score breakdown (e.g. governance, security) as a JSON object string. Not directly queryable in DAX."),
 )
 
 #: ``MartObjectReadiness`` -- one row per semantic model / report / data agent scorecard.
 OBJECT_COLUMNS: tuple[Column, ...] = _BASE_READINESS_COLUMNS + (
-    Column("dimension_scores_json", "type text", "string"),
+    Column("dimension_scores_json", "type text", "string", description="Per-dimension score breakdown (e.g. metadata, security, AI readiness) as a JSON object string. Not directly queryable in DAX."),
 )
 
 #: ``MartBlockingFindings`` -- every blocking (severity=blocking, failed) finding in the run.
 BLOCKING_COLUMNS: tuple[Column, ...] = (
-    Column("run_id", "type text", "string"),
-    Column("rule_id", "type text", "string"),
-    Column("title", "type text", "string"),
-    Column("object_id", "type text", "string"),
-    Column("object_name", "type text", "string"),
-    Column("object_type", "type text", "string"),
-    Column("dimension", "type text", "string"),
-    Column("severity", "type text", "string"),
-    Column("remediation", "type text", "string"),
-    Column("effort", "type text", "string"),
-    Column("owner_role", "type text", "string"),
-    Column("docs", "type text", "string"),
-    Column("outcome_status", "type text", "string"),
-    Column("outcome_score", "type number", "double", "0.0"),
-    Column("outcome_detail", "type text", "string"),
-    Column("outcome_observed_json", "type text", "string"),
-    Column("outcome_evidence_json", "type text", "string"),
+    Column("run_id", "type text", "string", description="ID of the assessment run that produced this finding. Join key across every Mart table."),
+    Column("rule_id", "type text", "string", description="ID of the readiness rule that failed, matching docs/RULES.md."),
+    Column("title", "type text", "string", description="Short human-readable title of the failed rule."),
+    Column("object_id", "type text", "string", description="ID of the object this finding was raised against."),
+    Column("object_name", "type text", "string", description="Human-readable name of the object this finding was raised against."),
+    Column("object_type", "type text", "string", description="Kind of object this finding was raised against: tenant, workspace, semantic_model, report, or data_agent."),
+    Column("dimension", "type text", "string", description="Readiness dimension the rule belongs to, e.g. governance, security, metadata, AI readiness."),
+    Column("severity", "type text", "string", description="Finding severity. Always 'blocking' in this table -- structurally disqualifying, not a quality issue."),
+    Column("remediation", "type text", "string", description="Plain-English description of the fix required to clear this finding."),
+    Column("effort", "type text", "string", description="Rough remediation effort: low, medium, or high."),
+    Column("owner_role", "type text", "string", description="Role best placed to fix this finding, e.g. tenant_admin, workspace_admin, model_owner."),
+    Column("docs", "type text", "string", description="Link or reference to further documentation for this rule."),
+    Column("outcome_status", "type text", "string", description="Result of re-checking this finding after remediation was attempted, if tracked."),
+    Column("outcome_score", "type number", "double", "0.0", description="Score observed at the last outcome check, if tracked."),
+    Column("outcome_detail", "type text", "string", description="Free-text detail of the last outcome check, if tracked."),
+    Column("outcome_observed_json", "type text", "string", description="Raw observed values from the last outcome check, as a JSON object string. Not directly queryable in DAX."),
+    Column("outcome_evidence_json", "type text", "string", description="Supporting evidence from the last outcome check, as a JSON array string. Not directly queryable in DAX."),
 )
 
 #: ``MartRemediationBacklog`` -- the prioritized remediation backlog.
 BACKLOG_COLUMNS: tuple[Column, ...] = (
-    Column("run_id", "type text", "string"),
-    Column("rule_id", "type text", "string"),
-    Column("title", "type text", "string"),
-    Column("object_id", "type text", "string"),
-    Column("object_name", "type text", "string"),
-    Column("object_type", "type text", "string"),
-    Column("severity", "type text", "string"),
-    Column("priority", "type number", "double", "0.0"),
-    Column("action", "type text", "string"),
-    Column("owner_role", "type text", "string"),
-    Column("effort", "type text", "string"),
-    Column("estimated_days", "type number", "double", "0.0"),
-    Column("blocks_go_live", "type logical", "boolean"),
-    Column("evidence", "type text", "string"),
-    Column("docs", "type text", "string"),
+    Column("run_id", "type text", "string", description="ID of the assessment run that produced this backlog item. Join key across every Mart table."),
+    Column("rule_id", "type text", "string", description="ID of the readiness rule behind this backlog item, matching docs/RULES.md."),
+    Column("title", "type text", "string", description="Short human-readable title of the backlog item."),
+    Column("object_id", "type text", "string", description="ID of the object this backlog item applies to."),
+    Column("object_name", "type text", "string", description="Human-readable name of the object this backlog item applies to."),
+    Column("object_type", "type text", "string", description="Kind of object this backlog item applies to: tenant, workspace, semantic_model, report, or data_agent."),
+    Column("severity", "type text", "string", description="Underlying finding severity: blocking or non-blocking quality issue."),
+    Column("priority", "type number", "double", "0.0", description="Backlog ranking score -- higher means fix sooner. Combines severity, effort and blast radius."),
+    Column("action", "type text", "string", description="Plain-English recommended action to resolve this backlog item."),
+    Column("owner_role", "type text", "string", description="Role best placed to action this item, e.g. tenant_admin, workspace_admin, model_owner."),
+    Column("effort", "type text", "string", description="Rough remediation effort: low, medium, or high."),
+    Column("estimated_days", "type number", "double", "0.0", description="Rough person-days estimated to complete this item."),
+    Column("blocks_go_live", "type logical", "boolean", description="True if this item must be resolved before the object can go live with Fabric IQ / Copilot."),
+    Column("evidence", "type text", "string", description="Evidence supporting why this item was raised."),
+    Column("docs", "type text", "string", description="Link or reference to further documentation for this item."),
 )
 
 #: ``MartCoverageAndFreshness`` -- coverage/confidence per assessed object.
 COVERAGE_COLUMNS: tuple[Column, ...] = (
-    Column("run_id", "type text", "string"),
-    Column("object_id", "type text", "string"),
-    Column("object_type", "type text", "string"),
-    Column("coverage", "type number", "double", "0%"),
-    Column("confidence", "type number", "double", "0%"),
-    Column("not_evaluated_count", "Int64.Type", "int64", "0"),
-    Column("not_evaluated_rules_json", "type text", "string"),
-    Column("is_published", "type logical", "boolean"),
-    Column("assessed_at", "type text", "string"),
+    Column("run_id", "type text", "string", description="ID of the assessment run. Join key across every Mart table."),
+    Column("object_id", "type text", "string", description="ID of the assessed object."),
+    Column("object_type", "type text", "string", description="Kind of object assessed: tenant, workspace, semantic_model, report, or data_agent."),
+    Column("coverage", "type number", "double", "0%", description="Share of applicable readiness rules that could be evaluated for this object, from 0% to 100%."),
+    Column("confidence", "type number", "double", "0%", description="How much of the evidence needed to score this object was actually observed, from 0% to 100%."),
+    Column("not_evaluated_count", "Int64.Type", "int64", "0", description="Count of readiness rules that could not be evaluated for this object due to missing evidence."),
+    Column("not_evaluated_rules_json", "type text", "string", description="IDs of the rules that could not be evaluated, as a JSON array string. Not directly queryable in DAX."),
+    Column("is_published", "type logical", "boolean", description="True if this object's readiness scorecard was published (visible in the report), false if held back."),
+    Column("assessed_at", "type text", "string", description="UTC timestamp (ISO 8601) when this object was assessed."),
 )
 
 #: Table name -> its Column spec, in Gold-mart order.
@@ -165,6 +170,18 @@ MART_COLUMNS: dict[str, tuple[Column, ...]] = {
     "MartBlockingFindings": BLOCKING_COLUMNS,
     "MartRemediationBacklog": BACKLOG_COLUMNS,
     "MartCoverageAndFreshness": COVERAGE_COLUMNS,
+}
+
+#: Table name -> plain-English description, surfaced in the semantic model
+#: and read by Copilot / Fabric Data Agents to decide whether this table is
+#: relevant to a question. Each one states grain (one row per what) first.
+MART_DESCRIPTIONS: dict[str, str] = {
+    "MartTenantReadiness": "One row per assessed tenant, per run. The overall Fabric IQ / Copilot readiness scorecard at tenant level.",
+    "MartWorkspaceReadiness": "One row per assessed workspace, per run. Readiness scorecard for a single Fabric/Power BI workspace.",
+    "MartObjectReadiness": "One row per assessed semantic model, report, or data agent, per run. Object-level readiness scorecard.",
+    "MartBlockingFindings": "One row per blocking (structurally disqualifying) finding raised during a run. These must be fixed before an object is eligible.",
+    "MartRemediationBacklog": "One row per prioritized remediation action across all findings in a run, grouped by owner role.",
+    "MartCoverageAndFreshness": "One row per assessed object, per run. How much evidence could be collected (coverage) and how confident the score is.",
 }
 
 
@@ -224,6 +241,8 @@ def _tmsl_column(column: Column) -> dict[str, Any]:
     }
     if column.format_string:
         payload["formatString"] = column.format_string
+    if column.description:
+        payload["description"] = column.description
     return payload
 
 
@@ -247,6 +266,8 @@ def _tmsl_table(
             }
         ],
     }
+    if name in MART_DESCRIPTIONS:
+        table["description"] = MART_DESCRIPTIONS[name]
     if measures:
         table["measures"] = measures
     return table
@@ -285,15 +306,24 @@ def _tmsl_table_directlake(
             }
         ],
     }
+    if name in MART_DESCRIPTIONS:
+        table["description"] = MART_DESCRIPTIONS[name]
     if measures:
         table["measures"] = measures
     return table
 
 
-def _measure(name: str, expression: str, format_string: str | None = None) -> dict[str, Any]:
+def _measure(
+    name: str,
+    expression: str,
+    format_string: str | None = None,
+    description: str | None = None,
+) -> dict[str, Any]:
     payload: dict[str, Any] = {"name": name, "expression": expression}
     if format_string:
         payload["formatString"] = format_string
+    if description:
+        payload["description"] = description
     return payload
 
 
@@ -302,51 +332,85 @@ def _measure(name: str, expression: str, format_string: str | None = None) -> di
 #: mirrors a figure already surfaced in the HTML/console report so the
 #: Power BI numbers can be cross-checked against those artifacts.
 OBJECT_MEASURES = [
-    _measure("Objects Assessed", "COUNTROWS(MartObjectReadiness)", "0"),
-    _measure("Avg Score", "AVERAGE(MartObjectReadiness[score])", "0.0"),
-    _measure("Avg Confidence", "AVERAGE(MartObjectReadiness[confidence])", "0%"),
+    _measure(
+        "Objects Assessed", "COUNTROWS(MartObjectReadiness)", "0",
+        description="Total number of semantic models, reports, and data agents assessed in the selected run(s).",
+    ),
+    _measure(
+        "Avg Score", "AVERAGE(MartObjectReadiness[score])", "0.0",
+        description="Average readiness score (0-100) across assessed objects.",
+    ),
+    _measure(
+        "Avg Confidence", "AVERAGE(MartObjectReadiness[confidence])", "0%",
+        description="Average evidence confidence across assessed objects -- how much of the needed evidence was actually observed.",
+    ),
     _measure(
         "Eligible Count",
         "CALCULATE(COUNTROWS(MartObjectReadiness), MartObjectReadiness[eligible] = TRUE)",
         "0",
+        description="Number of assessed objects with no failed blocking finding, i.e. structurally eligible for Fabric IQ / Copilot.",
     ),
-    _measure("Eligible %", "DIVIDE([Eligible Count], COUNTROWS(MartObjectReadiness))", "0%"),
+    _measure(
+        "Eligible %", "DIVIDE([Eligible Count], COUNTROWS(MartObjectReadiness))", "0%",
+        description="Share of assessed objects that are eligible (no failed blocking finding).",
+    ),
     _measure(
         "Not Evaluated Count",
         'CALCULATE(COUNTROWS(MartObjectReadiness), MartObjectReadiness[status] = "not_evaluated")',
         "0",
+        description="Number of assessed objects that could not be scored due to insufficient collected evidence.",
     ),
 ]
 
 #: DAX measures on the MartWorkspaceReadiness table.
 WORKSPACE_MEASURES = [
-    _measure("Workspaces Assessed", "COUNTROWS(MartWorkspaceReadiness)", "0"),
-    _measure("Avg Workspace Score", "AVERAGE(MartWorkspaceReadiness[score])", "0.0"),
+    _measure(
+        "Workspaces Assessed", "COUNTROWS(MartWorkspaceReadiness)", "0",
+        description="Total number of workspaces assessed in the selected run(s).",
+    ),
+    _measure(
+        "Avg Workspace Score", "AVERAGE(MartWorkspaceReadiness[score])", "0.0",
+        description="Average workspace-level readiness score (0-100) across assessed workspaces.",
+    ),
 ]
 
 #: DAX measures on the MartTenantReadiness table.
 TENANT_MEASURES = [
-    _measure("Tenant Score", "AVERAGE(MartTenantReadiness[score])", "0.0"),
+    _measure(
+        "Tenant Score", "AVERAGE(MartTenantReadiness[score])", "0.0",
+        description="Overall tenant-level Fabric IQ / Copilot readiness score (0-100).",
+    ),
     _measure(
         "Tenant Eligible Count",
         "CALCULATE(COUNTROWS(MartTenantReadiness), MartTenantReadiness[eligible] = TRUE)",
         "0",
+        description="Number of assessed tenants with no failed blocking finding at tenant level.",
     ),
 ]
 
 #: DAX measures on the MartBlockingFindings table -- already pre-filtered to
 #: blocking (severity=blocking AND failed) findings, so every row counts.
 BLOCKING_MEASURES = [
-    _measure("Blocking Findings", "COUNTROWS(MartBlockingFindings)", "0"),
+    _measure(
+        "Blocking Findings", "COUNTROWS(MartBlockingFindings)", "0",
+        description="Total number of structurally disqualifying findings across all assessed objects. Fix these first.",
+    ),
 ]
 
 BACKLOG_MEASURES = [
-    _measure("Backlog Items", "COUNTROWS(MartRemediationBacklog)", "0"),
-    _measure("Total Estimated Days", "SUM(MartRemediationBacklog[estimated_days])", "0.0"),
+    _measure(
+        "Backlog Items", "COUNTROWS(MartRemediationBacklog)", "0",
+        description="Total number of prioritized remediation actions across all findings in the selected run(s).",
+    ),
+    _measure(
+        "Total Estimated Days", "SUM(MartRemediationBacklog[estimated_days])", "0.0",
+        description="Total estimated effort, in person-days, to close every backlog item.",
+    ),
     _measure(
         "Blocking Backlog Items",
         "CALCULATE(COUNTROWS(MartRemediationBacklog), MartRemediationBacklog[blocks_go_live] = TRUE)",
         "0",
+        description="Number of backlog items that must be resolved before the object can go live with Fabric IQ / Copilot.",
     ),
 ]
 
