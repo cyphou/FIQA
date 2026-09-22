@@ -136,18 +136,6 @@ class TestTenantRules(unittest.TestCase):
         subject = ready_tenant(capacities=[{"id": "c", "name": "n", "sku": "F8", "state": None}])
         self.assertIs(self._run("TEN-005", subject).status, RuleStatus.PASSED)
 
-    def test_copilot_capacity_designation_disabled_fails(self):
-        subject = ready_tenant(copilot_capacity_designation_enabled=False)
-        self.assertIs(self._run("TEN-011", subject).status, RuleStatus.FAILED)
-
-    def test_copilot_capacity_designation_missing_is_not_evaluated(self):
-        subject = ready_tenant(copilot_capacity_designation_enabled=None)
-        self.assertIs(self._run("TEN-011", subject).status, RuleStatus.NOT_EVALUATED)
-
-    def test_copilot_capacity_designation_enabled_passes(self):
-        subject = ready_tenant(copilot_capacity_designation_enabled=True)
-        self.assertIs(self._run("TEN-011", subject).status, RuleStatus.PASSED)
-
     def test_purview_review_missing_fails(self):
         subject = ready_tenant(purview_dlp_reviewed=False)
         self.assertIs(self._run("TEN-012", subject).status, RuleStatus.FAILED)
@@ -178,35 +166,6 @@ class TestWorkspaceCapacityState(unittest.TestCase):
 
     def test_unobserved_state_is_not_a_pass(self):
         outcome = self._run({"capacity_sku": "F8", "capacity_state": None})
-        self.assertIs(outcome.status, RuleStatus.NOT_EVALUATED)
-
-
-class TestWorkspaceCopilotCapacityCoverage(unittest.TestCase):
-    def _run(self, subject):
-        return registry.get("WKS-011").evaluate(subject)
-
-    def test_ineligible_sku_is_not_applicable(self):
-        outcome = self._run({"capacity_sku": "A1"})
-        self.assertIs(outcome.status, RuleStatus.NOT_APPLICABLE)
-
-    def test_f64_or_larger_is_not_applicable_without_needing_the_assignment_field(self):
-        outcome = self._run({"capacity_sku": "F64"})
-        self.assertIs(outcome.status, RuleStatus.NOT_APPLICABLE)
-
-    def test_premium_p1_is_treated_as_f64_equivalent(self):
-        outcome = self._run({"capacity_sku": "P1"})
-        self.assertIs(outcome.status, RuleStatus.NOT_APPLICABLE)
-
-    def test_sub_f64_without_copilot_capacity_assignment_fails(self):
-        outcome = self._run({"capacity_sku": "F8", "copilot_capacity_assigned": False})
-        self.assertIs(outcome.status, RuleStatus.FAILED)
-
-    def test_sub_f64_with_copilot_capacity_assignment_passes(self):
-        outcome = self._run({"capacity_sku": "F8", "copilot_capacity_assigned": True})
-        self.assertIs(outcome.status, RuleStatus.PASSED)
-
-    def test_sub_f64_missing_assignment_evidence_is_not_evaluated(self):
-        outcome = self._run({"capacity_sku": "F8", "copilot_capacity_assigned": None})
         self.assertIs(outcome.status, RuleStatus.NOT_EVALUATED)
 
 
