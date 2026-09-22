@@ -231,6 +231,11 @@ def _m_expression(csv_path: str, columns: tuple[Column, ...]) -> list[str]:
     return lines
 
 
+def _directlake_entity_name(table_name: str) -> str:
+    """Return the Lakehouse SQL endpoint entity name for a Gold mart table."""
+    return table_name.lower()
+
+
 def _tmsl_column(column: Column) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "name": column.name,
@@ -550,42 +555,42 @@ def build_model_bim_directlake(
         _tmsl_table_directlake(
             "MartTenantReadiness",
             TENANT_COLUMNS,
-            entity_name="MartTenantReadiness",
+            entity_name=_directlake_entity_name("MartTenantReadiness"),
             schema_name=schema_name,
             measures=TENANT_MEASURES,
         ),
         _tmsl_table_directlake(
             "MartWorkspaceReadiness",
             WORKSPACE_COLUMNS,
-            entity_name="MartWorkspaceReadiness",
+            entity_name=_directlake_entity_name("MartWorkspaceReadiness"),
             schema_name=schema_name,
             measures=WORKSPACE_MEASURES,
         ),
         _tmsl_table_directlake(
             "MartObjectReadiness",
             OBJECT_COLUMNS,
-            entity_name="MartObjectReadiness",
+            entity_name=_directlake_entity_name("MartObjectReadiness"),
             schema_name=schema_name,
             measures=OBJECT_MEASURES,
         ),
         _tmsl_table_directlake(
             "MartBlockingFindings",
             BLOCKING_COLUMNS,
-            entity_name="MartBlockingFindings",
+            entity_name=_directlake_entity_name("MartBlockingFindings"),
             schema_name=schema_name,
             measures=BLOCKING_MEASURES,
         ),
         _tmsl_table_directlake(
             "MartRemediationBacklog",
             BACKLOG_COLUMNS,
-            entity_name="MartRemediationBacklog",
+            entity_name=_directlake_entity_name("MartRemediationBacklog"),
             schema_name=schema_name,
             measures=BACKLOG_MEASURES,
         ),
         _tmsl_table_directlake(
             "MartCoverageAndFreshness",
             COVERAGE_COLUMNS,
-            entity_name="MartCoverageAndFreshness",
+            entity_name=_directlake_entity_name("MartCoverageAndFreshness"),
             schema_name=schema_name,
         ),
     ]

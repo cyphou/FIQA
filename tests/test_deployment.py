@@ -369,8 +369,12 @@ class SemanticModelPartsTests(unittest.TestCase):
         for partition in partitions:
             self.assertEqual(partition["mode"], "directLake")
             self.assertEqual(partition["source"]["type"], "entity")
+            self.assertEqual(partition["source"]["entityName"], partition["source"]["entityName"].lower())
         self.assertNotIn("AzureStorage.DataLake", json.dumps(model_bim))
         self.assertIn("endpoint-guid", json.dumps(model_bim))
+        for table in model_bim["model"]["tables"]:
+            self.assertTrue(table.get("description"))
+            self.assertTrue(all(column.get("description") for column in table["columns"]))
 
 
 class ReportPartsTests(unittest.TestCase):

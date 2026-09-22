@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from fabric_iq.lakehouse import GOLD_TABLES
-from fabric_iq.powerbi import PowerBiReportWriter, build_definition_pbir_live
+from fabric_iq.powerbi import PowerBiReportWriter, build_definition_pbir_live, build_model_bim_directlake
 from fabric_iq.remediation import build_backlog
 from fabric_iq.scoring import assess
 from tests.helpers import minimal_inventory, ready_model
@@ -112,6 +112,23 @@ class TestPowerBiReportWriter(unittest.TestCase):
         # Flat marts: DirectLake reads Delta tables directly, no relationships
         # are modeled between the six standalone marts.
         self.assertEqual(bim["model"]["relationships"], [])
+
+    def test_directlake_model_uses_lakehouse_physical_table_names(self):
+        bim = build_model_bim_directlake(
+            "example.datawarehouse.fabric.microsoft.com",
+            "00000000-0000-0000-0000-000000000000",
+        )
+        tables = {t["name"]: t for t in bim["model"]["tables"]}
+        self.assertEqual(set(tables), set(GOLD_TABLES))
+
+        for table_name, table in tables.items():
+            with self.subTest(table_name=table_name):
+                source = table["partitions"][0]["source"]
+                self.assertEqual(source["type"], "entity")
+                self.assertEqual(source["schemaName"], "dbo")
+                self.assertEqual(source["entityName"], table_name.lower())
+                self.assertTrue(table.get("description"))
+                self.assertTrue(all(column.get("description") for column in table["columns"]))
 
     def test_report_json_has_six_pages(self):
         report = self._load_json("IsFabricReadyForIQ.Report", "report.json")
