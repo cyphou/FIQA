@@ -27,7 +27,7 @@ Fabric IQ and agentic experiences — and exactly what to change, object by obje
 | 1 | Inventory and live collection | ✅ Done — all four sprints closed and field-validated |
 | 2 | Static readiness scoring | 🟡 Engine done (65 rules), catalogue-hardening pass (Sprint 2.1) still open |
 | 3 | Agentic readiness | 🟡 Rules done, evaluation harness missing |
-| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary and CI gate shipped; trend/regression detection (Sprint 4.3) open |
+| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression foundation and CI gate shipped; trend mart/report still open |
 | 5 | Fabric IQ extension | ⏳ Continuous |
 
 ---
@@ -269,15 +269,22 @@ inspection alone.
 - **Exit gate.** The readiness model scores ≥ 85 under its own rules; then close this
   sprint formally.
 
-### Sprint 4.3 — Trend and regression detection (1.5 weeks) ⏳ Open
+### Sprint 4.3 — Trend and regression detection (1.5 weeks) 🟡 Foundation shipped
 
 - Score deltas per object between runs, new blocking findings, remediation burn-down.
 - Distinguish a genuine regression from a coverage change: **an object that dropped because
   we could no longer read it is a collection incident, not a quality regression.**
+- **Delivered foundation.** [`fabric_iq.trends`](../fabric_iq/trends.py) compares two
+  `AssessmentRun` instances and classifies object movement as `quality_regression`,
+  `coverage_loss`, `coverage_gain`, `improved`, `unchanged`, `new_object`,
+  `removed_object`, or `ruleset_changed`. Seeded tests verify that a score drop with
+  comparable coverage is a quality regression while a score drop caused by lost coverage
+  is treated as a collection incident.
 - Build this from medallion run history first, not by turning the operational report back
   into an append-only table. Candidate output: `MartRunTrend` / `MartRegressionFindings`
   or a separate trend model/report page that explicitly handles ruleset-version changes.
-- **Exit gate.** A seeded regression and a seeded coverage loss are reported differently.
+- **Remaining exit gate.** Persist the trend output from medallion history and expose it in
+  a dedicated trend mart/report page.
 
 ### Sprint 4.4 — CI gate (1 week) ✅ Delivered
 
@@ -289,9 +296,9 @@ inspection alone.
   log parsing.
 
 **Phase exit gate.** A monthly run produces a trend, a burn-down, and a gate — unattended.
-Scheduling, snapshot persistence, AI-readable run summary, the semantic model/report and
-the CI gate are shipped; Sprint 4.3 (trend/regression detection) and the formal
-self-assessment of the readiness semantic model remain to close this phase.
+Scheduling, snapshot persistence, AI-readable run summary, the semantic model/report, the
+trend/regression comparison foundation and the CI gate are shipped; the trend mart/report
+and the formal self-assessment of the readiness semantic model remain to close this phase.
 
 ---
 

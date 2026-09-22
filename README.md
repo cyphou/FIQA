@@ -11,7 +11,7 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 238 tests passed — engine, rules, scoring, preceptor, deployment, installer |
+| ✅ **Tests** | 244 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 7 Gold marts · 13-agent environment |

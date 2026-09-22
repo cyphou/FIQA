@@ -12,6 +12,7 @@ number a director will quote in a steering committee. Treat it accordingly.
 
 - `fabric_iq/scoring.py` — scoring engine, weights, caps, rollups
 - `fabric_iq/models.py` — enums, `RuleOutcome`, `Finding`, `Scorecard`, `AssessmentRun`
+- `fabric_iq/trends.py` — run-to-run score, confidence, and coverage comparison
 - `fabric_iq/rules/base.py` — `Rule`, `RuleRegistry`, rule helpers
 - `fabric_iq/rules/__init__.py` — registry assembly
 

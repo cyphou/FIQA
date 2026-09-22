@@ -63,6 +63,7 @@ and output.
 | `fabric_iq/rules/*_rules.py` | The catalogue | `@tenant`, `@semantic`, `@dataagent` |
 | `fabric_iq/models.py` | Shared data model | `@scorer` |
 | `fabric_iq/scoring.py` | Scoring engine and rollups | `@scorer` |
+| `fabric_iq/trends.py` | Run-to-run regression and coverage-change classification | `@scorer` |
 | `fabric_iq/preceptor.py` | Preceptorship review loop | `@preceptor` |
 | `fabric_iq/remediation.py` | Prioritised backlog | `@remediation` |
 | `fabric_iq/lakehouse.py` | Medallion persistence | `@lakehouse` |
@@ -132,6 +133,14 @@ latest snapshot (`delta_publish_mode = "overwrite"`) so the report remains intel
 and does not duplicate objects across historical runs. Set `delta_publish_mode =
 "append"` only for deliberate trend experiments; the medallion JSONL files remain the
 authoritative run history either way.
+
+Trend analysis starts from the medallion run history, not from append-only operational
+Delta tables. `fabric_iq.trends.compare_runs()` compares two `AssessmentRun` instances and
+classifies score movement separately from observability movement: a lower score with
+stable coverage is a quality regression, while a lower score with materially lower
+coverage is a collection incident that should be fixed before blaming the object owner.
+Ruleset-version changes are flagged as incompatible for score trending instead of being
+plotted as if the scale were unchanged.
 
 ## Error Handling
 
