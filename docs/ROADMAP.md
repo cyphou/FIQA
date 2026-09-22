@@ -27,7 +27,7 @@ Fabric IQ and agentic experiences — and exactly what to change, object by obje
 | 1 | Inventory and live collection | ✅ Done — all four sprints closed and field-validated |
 | 2 | Static readiness scoring | 🟡 Engine done (65 rules), catalogue-hardening pass (Sprint 2.1) still open |
 | 3 | Agentic readiness | 🟡 Rules done, evaluation harness missing |
-| 4 | Industrialisation | 🟡 Scheduling, Delta persistence, semantic model/report and CI gate shipped; trend/regression detection (Sprint 4.3) open |
+| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary and CI gate shipped; trend/regression detection (Sprint 4.3) open |
 | 5 | Fabric IQ extension | ⏳ Continuous |
 
 ---
@@ -236,31 +236,47 @@ inspection alone.
   orchestrated by [`Fabric_IQ_Readiness_Orchestration.DataPipeline`](../fabric/items/Fabric_IQ_Readiness_Orchestration.DataPipeline),
   writing `Mart*` Delta tables into [`FabricIQReadiness.Lakehouse`](../fabric/items/FabricIQReadiness.Lakehouse)
   — see [`fabric/README.md`](../fabric/README.md).
+- DirectLake Delta publication now defaults to `delta_publish_mode = "overwrite"`:
+  the report shows the latest assessment snapshot without duplicate rows. The
+  medallion JSONL files under `Files/readiness/gold/**` still keep every run by
+  `run_id`; setting `delta_publish_mode = "append"` is reserved for explicit trend
+  experiments.
 - Deploy also reconciles the workspace's default Spark runtime toward the newest
   generally-available version (Runtime 2.0 = Spark 4.1 / Delta Lake 4.2) via an
   idempotent `GET`-then-`PATCH`, so scheduled runs pick up engine improvements without a
   manual trip through Workspace settings. `--skip-spark-runtime-upgrade` opts out.
-- **Exit gate.** Two consecutive scheduled runs are queryable side by side by `run_id`.
+- **Exit gate.** A scheduled run completes, the report reads one current snapshot, and
+  the medallion layer preserves each run by `run_id`.
 
 ### Sprint 4.2 — Readiness semantic model and report (1.5 weeks) ✅ Delivered
 
 - Direct Lake model over the Gold marts; report pages: tenant posture, workspace ranking,
   blocking findings, backlog by owner, coverage and freshness.
+- `MartRunSummary` is now part of the Gold model: one AI-readable row per assessment run
+  with run metadata, object counts, blocking findings, backlog size and average score /
+  confidence / coverage. This prevents Copilot or a Data Agent from having to infer
+  "what run am I looking at?" from object-level tables.
 - The readiness model must itself pass this tool's SEM rules. Shipping an AI-readiness
   assessor whose own model is not AI-ready is not a joke we can afford twice.
 - **Delivered as:** [`IsFabricReadyForIQ.SemanticModel`](../fabric/items/IsFabricReadyForIQ.SemanticModel)
   (Direct Lake over the Lakehouse `Mart*` tables) and [`IsFabricReadyForIQ.Report`](../fabric/items/IsFabricReadyForIQ.Report)
   (FCA/FUAM-styled pages), both deployed by the installer notebook — see
   [`docs/INSTALL.md`](INSTALL.md).
-- **Exit gate.** The readiness model scores ≥ 85 under its own rules. *Not yet re-verified
-  against the shipped model* — re-run this tool against the deployed semantic model itself
-  before closing this gate formally.
+- **Current validation.** The deployed model is queryable, all business columns/measures
+  carry descriptions, DirectLake table names resolve against the Lakehouse SQL endpoint,
+  and `MartRunSummary` returns one current run row. The self-assessment score of the
+  readiness model itself is still the remaining formal gate.
+- **Exit gate.** The readiness model scores ≥ 85 under its own rules; then close this
+  sprint formally.
 
 ### Sprint 4.3 — Trend and regression detection (1.5 weeks) ⏳ Open
 
 - Score deltas per object between runs, new blocking findings, remediation burn-down.
 - Distinguish a genuine regression from a coverage change: **an object that dropped because
   we could no longer read it is a collection incident, not a quality regression.**
+- Build this from medallion run history first, not by turning the operational report back
+  into an append-only table. Candidate output: `MartRunTrend` / `MartRegressionFindings`
+  or a separate trend model/report page that explicitly handles ruleset-version changes.
 - **Exit gate.** A seeded regression and a seeded coverage loss are reported differently.
 
 ### Sprint 4.4 — CI gate (1 week) ✅ Delivered
@@ -273,8 +289,9 @@ inspection alone.
   log parsing.
 
 **Phase exit gate.** A monthly run produces a trend, a burn-down, and a gate — unattended.
-Scheduling, persistence, the semantic model/report and the CI gate are shipped; only
-Sprint 4.3 (trend/regression detection) remains to close this phase.
+Scheduling, snapshot persistence, AI-readable run summary, the semantic model/report and
+the CI gate are shipped; Sprint 4.3 (trend/regression detection) and the formal
+self-assessment of the readiness semantic model remain to close this phase.
 
 ---
 

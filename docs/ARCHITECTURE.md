@@ -112,6 +112,7 @@ any field inside an object is present. Absent fields are the normal case, handle
 
 | Mart | Grain |
 |------|-------|
+| `MartRunSummary` | run |
 | `MartTenantReadiness` | tenant × run |
 | `MartWorkspaceReadiness` | workspace × run |
 | `MartObjectReadiness` | model / report / agent × run |
@@ -119,12 +120,18 @@ any field inside an object is present. Absent fields are the normal case, handle
 | `MartRemediationBacklog` | backlog item × run |
 | `MartCoverageAndFreshness` | object × run |
 
-Every row carries `run_id`. Writes append; a re-run of the same `run_id` is idempotent.
-The value of the third assessment is that it can be compared to the first, so history is
-never overwritten.
+Every row carries `run_id`. `MartRunSummary` is intentionally one row per run and gives
+Copilot, Fabric IQ and Data Agents a simple entry point for the current assessment:
+tenant id, ruleset version, run timestamps, object counts, blocking findings, backlog
+size and average object score/confidence/coverage.
 
-NDJSON is the development format; Delta is the Fabric target. The schema is identical so
-that a local run and a scheduled notebook run remain comparable.
+NDJSON is the durable development and medallion format: every run is written under its
+own `run_id`, and re-running the same `run_id` is idempotent. Delta is the Fabric
+DirectLake target. By default the deployed notebook overwrites the Delta marts with the
+latest snapshot (`delta_publish_mode = "overwrite"`) so the report remains intelligible
+and does not duplicate objects across historical runs. Set `delta_publish_mode =
+"append"` only for deliberate trend experiments; the medallion JSONL files remain the
+authoritative run history either way.
 
 ## Error Handling
 
