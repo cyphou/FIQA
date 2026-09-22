@@ -70,6 +70,7 @@ def ready_tenant(**overrides):
         "owners": {"platform": "a", "security": "b", "business": "c"},
         "audit_log_enabled": True,
         "purview_dlp_reviewed": True,
+        "copilot_capacity_designation_enabled": True,
     }
     subject.update(overrides)
     return subject

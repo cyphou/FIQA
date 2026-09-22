@@ -234,10 +234,16 @@ earlier revision of this catalogue asserted that capacities below F64 needed the
 **"Capacities can be designated as Fabric Copilot capacities"** setting explicitly
 re-enabled, and the workspace's users assigned to such a capacity, before Data Agents
 would function — that assertion was tested directly against a live F2-capacity tenant
-and found to be false, so the corresponding rules (`TEN-011`, `WKS-011`) were removed.
-The "Capacities can be designated as Fabric Copilot capacities" setting is a distinct
-billing/attribution mechanism (it lets Copilot usage on one workspace bill against a
-different, designated capacity); it is unrelated to whether Data Agents can run.
+and found to be false, so both rules (`TEN-011`, `WKS-011`) were removed entirely.
+
+The tenant-level setting was subsequently reintroduced as `TEN-011`, but reframed as an
+**advisory recommendation, not a requirement**: `Severity.INFO`, uncapped (an `INFO`
+finding never lowers a score the way `BLOCKING`/`MAJOR` findings do), low weight (0.5).
+It exists purely to flag a cost/attribution nicety — designating a capacity as a Copilot
+capacity lets Copilot usage on one workspace bill against a different, designated
+capacity — with no bearing on whether Data Agents or Copilot actually function.
+`WKS-011` (the workspace-level, sub-F64-gating nuance) stays removed, since the live
+test specifically disproved that gating claim.
 
 Finally, **Microsoft Purview data loss prevention (DLP) policies and access restriction
 policies do not override effective permissions**. A Data Agent runs under the requesting

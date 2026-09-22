@@ -327,6 +327,39 @@ def tenant_ownership(subject: dict) -> RuleOutcome:
 
 
 @registry.add(
+    "TEN-011",
+    "Capacities can be designated as Fabric Copilot capacities (recommended, not required)",
+    T,
+    Dimension.OPERATIONS,
+    Severity.INFO,
+    "Consider re-enabling the 'Capacities can be designated as Fabric Copilot capacities' tenant setting so that "
+    "Copilot usage on Pro/PPU workspaces can be billed against a designated capacity. This is a cost-attribution "
+    "convenience, not a functional requirement: Fabric Data Agents already run on any eligible F2+/P1+ capacity "
+    "without it.",
+    weight=0.5,
+    effort=Effort.S,
+    owner_role="Fabric Administrator",
+    docs=DOCS_COPILOT + "#capacities-can-be-designated-as-copilot-in-fabric-capacities",
+)
+def copilot_capacity_designation_enabled(subject: dict) -> RuleOutcome:
+    gap = require(subject, "copilot_capacity_designation_enabled")
+    if gap:
+        return gap
+    if subject["copilot_capacity_designation_enabled"]:
+        return RuleOutcome.passed(
+            "Capacity administrators can designate Fabric Copilot capacities for cost attribution",
+            evidence=evidence("tenant_settings", "settings.copilot_capacity_designation"),
+        )
+    return RuleOutcome.partial(
+        0.5,
+        "The tenant setting is off. This is only a recommendation: Data Agents and Copilot already work on any "
+        "eligible F2+/P1+ capacity without it; enabling it just lets Pro/PPU workspace Copilot usage be billed "
+        "against a designated capacity instead of failing outright.",
+        evidence=evidence("tenant_settings", "settings.copilot_capacity_designation"),
+    )
+
+
+@registry.add(
     "TEN-012",
     "Microsoft Purview governance policies are reviewed for agent-accessible data",
     T,

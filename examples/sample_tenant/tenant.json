@@ -19,5 +19,6 @@
   "labelled_item_ratio": 0.72,
   "owners": { "platform": "alex.platform", "security": "sam.security", "business": null },
   "audit_log_enabled": true,
-  "purview_dlp_reviewed": false
+  "purview_dlp_reviewed": false,
+  "copilot_capacity_designation_enabled": false
 }

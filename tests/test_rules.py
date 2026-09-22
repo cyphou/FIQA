@@ -136,6 +136,23 @@ class TestTenantRules(unittest.TestCase):
         subject = ready_tenant(capacities=[{"id": "c", "name": "n", "sku": "F8", "state": None}])
         self.assertIs(self._run("TEN-005", subject).status, RuleStatus.PASSED)
 
+    def test_copilot_capacity_designation_enabled_passes(self):
+        subject = ready_tenant(copilot_capacity_designation_enabled=True)
+        self.assertIs(self._run("TEN-011", subject).status, RuleStatus.PASSED)
+
+    def test_copilot_capacity_designation_disabled_is_only_partial_not_failed(self):
+        # This is a recommendation, not a requirement: it must never fail outright,
+        # and it must never cap the score the way a BLOCKING/MAJOR rule would.
+        subject = ready_tenant(copilot_capacity_designation_enabled=False)
+        outcome = self._run("TEN-011", subject)
+        self.assertIs(outcome.status, RuleStatus.PARTIAL)
+        rule = registry.get("TEN-011")
+        self.assertIs(rule.severity, Severity.INFO)
+
+    def test_copilot_capacity_designation_not_recorded_is_not_evaluated(self):
+        subject = ready_tenant(copilot_capacity_designation_enabled=None)
+        self.assertIs(self._run("TEN-011", subject).status, RuleStatus.NOT_EVALUATED)
+
     def test_purview_review_missing_fails(self):
         subject = ready_tenant(purview_dlp_reviewed=False)
         self.assertIs(self._run("TEN-012", subject).status, RuleStatus.FAILED)
