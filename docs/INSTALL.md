@@ -1,4 +1,4 @@
-# One-Notebook Install
+# 📦 One-Notebook Install
 
 Like FCA (Fabric Capacity Metrics) and FUAM, this project ships a single installer
 notebook. Import it once into the workspace where you want the solution to live, run
@@ -9,7 +9,7 @@ The installer notebook lives at
 [`fabric/items/Install_IsFabricReadyForIQ.Notebook/notebook-content.py`](../fabric/items/Install_IsFabricReadyForIQ.Notebook/notebook-content.py)
 in the public repo [github.com/cyphou/FIQA](https://github.com/cyphou/FIQA).
 
-## What it does
+## 🔍 What It Does
 
 Exactly two things:
 
@@ -29,7 +29,7 @@ Exactly two things:
 Re-running the installer is safe: every item is matched by display name and updated in
 place, never duplicated. Re-run it after a new release to pick up rule/report updates.
 
-## Prerequisites
+## ✅ Prerequisites
 
 Same as a manual deploy — see [`fabric/README.md`](../fabric/README.md#prerequisites):
 
@@ -39,7 +39,7 @@ Same as a manual deploy — see [`fabric/README.md`](../fabric/README.md#prerequ
 - Outbound HTTPS access to `github.com` from the Fabric runtime (default in most
   tenants; some network-restricted capacities disallow it — see Troubleshooting below).
 
-## Steps
+## 🚀 Steps
 
 1. **Import the notebook.**
    In the target workspace: **New item ▸ Notebook ▸ Import notebook**, then point it at
@@ -71,7 +71,7 @@ Same as a manual deploy — see [`fabric/README.md`](../fabric/README.md#prerequ
    assess, and run it. Once it publishes the Gold Delta tables, open the
    `IsFabricReadyForIQ` report to see scores, findings, and the remediation backlog.
 
-## Confidentiality guarantees
+## 🔐 Confidentiality Guarantees
 
 This was a hard requirement for the installer and is enforced by its design, not just
 its documentation:
@@ -101,7 +101,7 @@ its documentation:
   `access_token`, `api_key`, `connection_string`, …) is ever hardcoded into the notebook
   source.
 
-## Troubleshooting
+## 🩹 Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
@@ -110,7 +110,7 @@ its documentation:
 | Deployment fails with a permissions error | The identity running the notebook lacks Contributor+ on the target workspace | Grant Contributor (or above) and re-run — the installer is idempotent |
 | Report/model show no data after install | Expected — the installer only deploys empty items | Run `Fabric_IQ_Readiness_Assessment` (or the pipeline) at least once with a real `tenant_id` |
 
-## Manual / scripted alternative
+## 🛠️ Manual / Scripted Alternative
 
 If you prefer not to import a notebook from GitHub (for example in an air-gapped
 tenant), the same five items can be deployed from a local clone with `fabric/deploy.py`

@@ -1,30 +1,47 @@
-# IsFabricReadyForIQ
+<p align="center">
+  <img src="docs/images/logo-fabric-iq-readiness.svg" alt="IsFabricReadyForIQ" width="180"/>
+</p>
 
-Assess whether a Power BI / Microsoft Fabric tenant and its objects are ready for
-**Fabric IQ** and agentic experiences.
+# 🧠 IsFabricReadyForIQ
 
-For every object — tenant, workspace, semantic model, report, Fabric Data Agent — the
-tool produces:
+**Fabric IQ & Agentic Readiness Assessment** — score whether a Power BI / Microsoft
+Fabric tenant and its objects (tenant, workspace, semantic model, report, Fabric Data
+Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswork.
+
+| | |
+|---|---|
+| 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
+| ✅ **Tests** | 214 tests passed — engine, rules, scoring, preceptor, deployment, installer |
+| 🐍 **Python** | 3.12+ · zero external dependencies |
+| 📜 **License** | Internal — see repository settings |
+| 🎯 **Coverage** | 62 rules · 5 object types · 6 Gold marts · 13-agent environment |
+
+For every object the tool produces:
 
 | Result | Question it answers |
 |--------|--------------------|
-| **Eligibility** | Does anything make this object structurally impossible to use? |
-| **Readiness score** (0–100) | How well prepared is it, across weighted dimensions? |
-| **Confidence** | How much of it could we actually observe? |
-| **Remediation backlog** | What to change, who owns it, how long it takes |
+| 🚧 **Eligibility** | Does anything make this object structurally impossible to use? |
+| 📈 **Readiness score** (0–100) | How well prepared is it, across weighted dimensions? |
+| 🔍 **Confidence** | How much of it could we actually observe? |
+| 🛠️ **Remediation backlog** | What to change, who owns it, how long it takes |
 
-These are **three separate results**. A high score with low confidence is a statement
-about blind spots, not an endorsement — and the tool refuses to merge them into one
-reassuring number.
+> [!IMPORTANT]
+> These are **three separate results**. A high score with low confidence is a statement
+> about blind spots, not an endorsement — the tool refuses to merge them into one
+> reassuring number.
 
-## Why This Exists
+---
+
+## 💡 Why This Exists
 
 The building blocks exist — Scanner APIs, Semantic Link Labs, the Fabric Data Agent SDK,
 Microsoft's "prepare data for AI" guidance. What is missing is the layer that walks the
 whole chain, from tenant switch to agent answer, and produces a consolidated, explainable
 verdict with an owned remediation list. That is this project.
 
-## Quick Start
+---
+
+## ⚡ Quick Start
 
 ```bash
 # Score the synthetic sample tenant, with preceptorship review
@@ -42,7 +59,7 @@ python scripts/check_agent_ownership.py
 
 No dependencies. Python 3.12+ standard library only.
 
-### Exit Codes
+### 🚦 Exit Codes
 
 | Code | Meaning |
 |------|---------|
@@ -54,7 +71,13 @@ No dependencies. Python 3.12+ standard library only.
 Codes 2 and 3 are pipeline signals, not crashes: a CI gate can tell "the tool broke"
 from "the tenant is not ready" without parsing output.
 
-## Deploy To Fabric
+> [!TIP]
+> Wire `--fail-on-blocking` into a scheduled pipeline so a tenant that regresses below
+> eligibility fails the build loudly, instead of quietly publishing a stale "READY".
+
+---
+
+## 🚀 Deploy To Fabric
 
 The whole assessment also ships as a native Fabric solution — a Lakehouse, a notebook
 and a Data Pipeline — so it can run on a schedule inside the estate it evaluates
@@ -77,7 +100,7 @@ ready for a governance semantic model.
 
 Full instructions, prerequisites and caveats: [`fabric/README.md`](fabric/README.md).
 
-### One-Notebook Install (Recommended)
+### 📦 One-Notebook Install (Recommended)
 
 The easiest way to get the whole solution into a workspace: import a single notebook
 from GitHub, run it, done. No local Python, no `az` CLI, no service principal.
@@ -94,7 +117,13 @@ from GitHub, run it, done. No local Python, no `az` CLI, no service principal.
 Full walkthrough, parameter reference and the confidentiality guarantees this notebook
 upholds: [docs/INSTALL.md](docs/INSTALL.md).
 
-## Power BI Report
+> [!NOTE]
+> The installer never stores a secret. It only ever holds the delegated bearer token
+> `notebookutils.credentials.getToken(...)` hands it, in memory, for the run's duration.
+
+---
+
+## 📊 Power BI Report
 
 `assess.py --powerbi <folder>` generates a hand-authored `.pbip` project styled after
 the FUAM / Fabric Capacity Metrics visual language: a dark KPI band, status-colored
@@ -124,7 +153,9 @@ Desktop and must be browsed in manually. Because this environment cannot open Po
 Desktop, the JSON structure is validated (schema shape, page/visual counts, CSV row
 parity with the run) but the visual rendering itself is unverified.
 
-## Rule Catalogue
+---
+
+## 📚 Rule Catalogue
 
 62 rules, ruleset version `2026.09.1`.
 
@@ -138,7 +169,9 @@ parity with the run) but the visual rendering itself is unverified.
 
 See [docs/RULES.md](./docs/RULES.md) for the full catalogue.
 
-## Scoring Contract
+---
+
+## 🧮 Scoring Contract
 
 - A **blocking** failure caps the score at **39** and revokes eligibility.
 - A **major** failure caps the score at **59**.
@@ -157,7 +190,9 @@ See [docs/RULES.md](./docs/RULES.md) for the full catalogue.
 
 Details in [docs/SCORING.md](./docs/SCORING.md).
 
-## Architecture
+---
+
+## 🏗️ Architecture
 
 ```
 Fabric / Power BI APIs → [Collect] → Bronze evidence
@@ -179,16 +214,30 @@ through the notebook in [`fabric/items/`](./fabric/items). Both call the identic
 `fabric_iq` package, so a local run and a scheduled workspace run produce the same
 scorecards.
 
-## Multi-Agent Environment
+---
+
+## 🤖 Multi-Agent Environment
 
 The repository ships a 13-agent environment under [.github/agents/](./.github/agents).
 Each agent owns a declared set of files; ownership drift fails the build.
 
-`@orchestrator` `@collector` `@scorer` `@tenant` `@semantic` `@dataagent`
-`@preceptor` `@remediation` `@lakehouse` `@tester` `@readme` `@roadmap-planner`
-`@security`
+| Agent | Owns |
+|-------|------|
+| 🎼 `@orchestrator` | End-to-end run, CLI surface, exit codes |
+| 🔎 `@collector` | Evidence acquisition, Silver inventory normalization |
+| 🧮 `@scorer` | Scoring engine, dimension weights, rule registry |
+| 🏢 `@tenant` | Tenant & workspace-level rules |
+| 📐 `@semantic` | Semantic model & report rules |
+| 🕵️ `@dataagent` | Fabric Data Agent readiness rules |
+| 🎓 `@preceptor` | Reviews the assessment itself — the preceptorship loop |
+| 🛠️ `@remediation` | Backlog prioritization, owner routing |
+| 🏛️ `@lakehouse` | Gold marts, persistence, Power BI model & report |
+| 🧪 `@tester` | Fixtures, regression coverage, ownership enforcement |
+| 📖 `@readme` | Documentation accuracy |
+| 🗺️ `@roadmap-planner` | Phase sequencing, release gates |
+| 🔐 `@security` | Privacy, least-privilege, secret handling |
 
-### The Preceptorship Loop
+### 🔁 The Preceptorship Loop
 
 `@preceptor` reviews the **assessment itself**, not the tenant:
 
@@ -209,13 +258,17 @@ acted on.
 
 See [docs/AGENTS.md](./docs/AGENTS.md).
 
-## Safety Properties
+---
+
+## 🛡️ Safety Properties
 
 - **Strictly read-only.** The tool never modifies a tenant, under any flag.
 - **Synthetic fixtures only.** No tenant-derived data in the repository.
 - **Auditable.** Every finding traces to a hashed, timestamped API payload.
 
-## Status and Limits
+---
+
+## 📌 Status and Limits
 
 The engine, rule catalogue, scoring, review loop and persistence run against offline
 fixtures. Phase 1 also supplies a stdlib-only, read-only live collection foundation:
@@ -232,8 +285,14 @@ Live API field coverage has not yet been verified against a tenant; see
 [docs/KNOWN_LIMITATIONS.md](./docs/KNOWN_LIMITATIONS.md) before quoting any result as
 a tenant assessment.
 
+> [!WARNING]
+> This tool never reports a score without eligibility and confidence alongside it —
+> a high score at low confidence is a blind spot, not a passing grade.
+
 Roadmap and release gates: [docs/ROADMAP.md](./docs/ROADMAP.md).
 
-## License
+---
+
+## 📜 License
 
 Internal project. See repository settings.

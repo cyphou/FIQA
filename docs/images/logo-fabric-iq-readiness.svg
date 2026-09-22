@@ -1,0 +1,45 @@
+<svg width="360" height="180" viewBox="0 0 360 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IsFabricReadyForIQ logo">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F2A43"/>
+      <stop offset="100%" stop-color="#12395C"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2FD3C7"/>
+      <stop offset="100%" stop-color="#3E8BFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="360" height="180" rx="20" fill="url(#bg)"/>
+
+  <!-- readiness gauge -->
+  <g transform="translate(66,90)">
+    <circle r="46" fill="none" stroke="#1E4A70" stroke-width="10"/>
+    <path d="M 0 -46 A 46 46 0 1 1 -46 0" fill="none" stroke="url(#ring)"
+          stroke-width="10" stroke-linecap="round"/>
+    <!-- needle -->
+    <path d="M 0 0 L 26 -30" stroke="#F5F7FA" stroke-width="4" stroke-linecap="round"/>
+    <circle r="6" fill="#F5F7FA"/>
+    <!-- brain/circuit hint -->
+    <circle cx="-18" cy="-8" r="3" fill="#2FD3C7"/>
+    <circle cx="14" cy="18" r="3" fill="#3E8BFF"/>
+    <circle cx="0" cy="24" r="3" fill="#2FD3C7"/>
+  </g>
+
+  <text x="140" y="76" font-family="Segoe UI, Arial, sans-serif" font-size="30"
+        font-weight="700" fill="#F5F7FA">IsFabricReadyForIQ</text>
+  <text x="140" y="102" font-family="Segoe UI, Arial, sans-serif" font-size="14"
+        fill="#9FC7E8">Fabric IQ &amp; Agentic Readiness Assessment</text>
+
+  <!-- three-result chips: eligibility / score / confidence -->
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600">
+    <rect x="140" y="118" width="66" height="24" rx="12" fill="#173B5C"/>
+    <text x="173" y="134" fill="#7CE0D6" text-anchor="middle">ELIGIBLE</text>
+
+    <rect x="214" y="118" width="52" height="24" rx="12" fill="#173B5C"/>
+    <text x="240" y="134" fill="#7CB4FF" text-anchor="middle">SCORE</text>
+
+    <rect x="274" y="118" width="66" height="24" rx="12" fill="#173B5C"/>
+    <text x="307" y="134" fill="#F2C879" text-anchor="middle">CONFIDENCE</text>
+  </g>
+</svg>

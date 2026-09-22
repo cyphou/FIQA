@@ -1,4 +1,4 @@
-# Deploy Fabric IQ Readiness Into A Fabric Workspace
+# 🚀 Deploy Fabric IQ Readiness Into A Fabric Workspace
 
 This folder packages the whole assessment as a native Fabric solution: a Lakehouse that
 stores the medallion output, a notebook that runs the assessment on Spark, and a Data
@@ -8,7 +8,7 @@ Pipeline that orchestrates and schedules it.
 > admin Scanner and Fabric read APIs only. The only writes it performs are into its own
 > Lakehouse, in the workspace you deploy it to.
 
-## What Gets Deployed
+## 📦 What Gets Deployed
 
 | Item | Name | Role |
 |------|------|------|
@@ -25,7 +25,7 @@ runtime.
 > same thing from inside Fabric itself, using your own delegated identity and no
 > secrets — see [`docs/INSTALL.md`](../docs/INSTALL.md).
 
-## Prerequisites
+## ✅ Prerequisites
 
 - A Fabric workspace on an **F2+ or P1+ capacity**. A Pro workspace cannot host this.
 - **Contributor or above** on that workspace, to create items.
@@ -35,7 +35,7 @@ runtime.
 - The tenant setting *Service principals can call Fabric public APIs* enabled if you run
   the pipeline under a workspace identity or service principal.
 
-## Deploy
+## 🚀 Deploy
 
 The deployment needs two tokens, because Fabric items and OneLake files sit behind
 different audiences.
@@ -66,7 +66,7 @@ Useful flags:
 | `--token-env` | `FABRIC_TOKEN` | Environment variable holding the Fabric token |
 | `--onelake-token-env` | `ONELAKE_TOKEN` | Environment variable holding the OneLake token |
 
-## Run
+## ▶️ Run
 
 ### From the pipeline
 
@@ -93,7 +93,7 @@ line.
 Open **Fabric IQ Readiness Assessment**, set `tenant_id` in the parameters cell, and run
 all. Same output, plus the console report inline.
 
-## Output
+## 📊 Output
 
 Everything lands in the `FabricIQReadiness` Lakehouse.
 
@@ -119,7 +119,7 @@ Read them in that order. **Blocking findings first** — they are walls, not qua
 issues. Then coverage, so you know how much of the estate the scores actually describe.
 Then the scores, always next to their confidence. The backlog last.
 
-## Item Sources
+## 🗂️ Item Sources
 
 ```
 fabric/items/
@@ -141,7 +141,7 @@ Two placeholders are bound at deployment time and must stay intact in the source
 Rewriting either by hand will make `deploy.py` fail loudly rather than ship a notebook
 that cannot mount its own Lakehouse.
 
-## Caveats
+## ⚠️ Caveats
 
 - **Field-validated**: a real deployment (`deploy.py`) followed by a direct notebook
   run against a live tenant completed successfully — items created, `Files/lib`
