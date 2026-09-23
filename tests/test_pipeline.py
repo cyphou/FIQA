@@ -12,9 +12,15 @@ from fabric_iq.collectors.base import BronzeRecord, CollectionResult, empty_inve
 from fabric_iq.collectors.offline import OfflineCollector
 from fabric_iq.errors import CollectionError, NormalizationError, PersistenceError
 from fabric_iq.lakehouse import LakehouseWriter, gold_mart_rows, select_latest_baseline_run
-from fabric_iq.models import Effort, ObjectType
+from fabric_iq.models import Effort, ObjectType, ReadinessStatus
 from fabric_iq.remediation import build_backlog
-from fabric_iq.reporting import to_console, to_html
+from fabric_iq.reporting import (
+    INTERPRETATION_GUIDE,
+    ORIENTATION_HTML_TITLE,
+    ORIENTATION_TITLE,
+    to_console,
+    to_html,
+)
 from fabric_iq.scoring import assess
 from tests.helpers import REPO_ROOT, SAMPLE_TENANT
 
@@ -370,6 +376,78 @@ class TestReporting(unittest.TestCase):
         html = to_html(self.run, self.backlog)
         self.assertNotIn("<script>alert(1)</script>", html)
         self.assertIn("&lt;script&gt;", html)
+
+
+class TestReportOrientation(unittest.TestCase):
+    """The CLI must orient a first-time operator without any external context.
+
+    The Skill and the agent instructions are not available to a human running
+    `assess.py`; these assertions are what keeps the standalone output honest.
+    """
+
+    def setUp(self):
+        inventory = OfflineCollector(SAMPLE_TENANT).collect().validate().inventory
+        self.run = assess(inventory, run_id="run_orient")
+        self.backlog = build_backlog(self.run)
+        self.not_evaluated = sum(
+            1 for c in self.run.scorecards
+            if c.status is ReadinessStatus.NOT_EVALUATED
+        )
+
+    def test_console_orientation_states_the_reading_order(self):
+        text = to_console(self.run, self.backlog)
+        self.assertIn(ORIENTATION_TITLE, text)
+        self.assertIn(f"Blocking findings ({len(self.run.blocking_findings)})", text)
+        self.assertIn("walls, not quality issues", text)
+        self.assertIn(f"NOT EVALUATED ({self.not_evaluated})", text)
+        self.assertIn("never by re-scoring", text)
+        self.assertIn("coverage and confidence", text)
+        self.assertIn(INTERPRETATION_GUIDE, text)
+
+    def test_console_orientation_precedes_the_numbers_it_explains(self):
+        text = to_console(self.run, self.backlog)
+        self.assertLess(text.index(ORIENTATION_TITLE), text.index("TENANT ("))
+        self.assertLess(
+            text.index(ORIENTATION_TITLE), text.index("BLOCKING FINDINGS (")
+        )
+
+    def test_console_orientation_stays_short(self):
+        text = to_console(self.run, self.backlog)
+        block = text.split(ORIENTATION_TITLE, 1)[1].split("TENANT (", 1)[0]
+        self.assertLessEqual(
+            len([line for line in block.splitlines() if line.strip()]), 10,
+            "orientation is turning into a manual; it must stay a few lines",
+        )
+
+    def test_console_orientation_does_not_move_a_single_value(self):
+        with_orientation = to_console(self.run, self.backlog)
+        block = with_orientation.split(ORIENTATION_TITLE, 1)[1].split("TENANT (", 1)[0]
+        body = with_orientation.replace(block, "")
+        for card in self.run.scorecards:
+            with self.subTest(object_name=card.object_name):
+                self.assertIn(f"{card.coverage:>4.0%} {card.confidence:>5.0%}", body)
+                if card.status is not ReadinessStatus.NOT_EVALUATED:
+                    self.assertIn(f"{card.score:5.1f}", body)
+
+    def test_html_orientation_leads_the_report_and_is_escaped(self):
+        html_text = to_html(self.run, self.backlog)
+        self.assertIn(ORIENTATION_HTML_TITLE, html_text)
+        self.assertIn(INTERPRETATION_GUIDE, html_text)
+        self.assertIn("walls, not quality issues", html_text)
+        self.assertIn("never by re-scoring", html_text)
+        self.assertLess(
+            html_text.index('id="sec-orientation"'),
+            html_text.index('id="sec-blocking"'),
+        )
+        self.assertIn(f"<code>{INTERPRETATION_GUIDE}</code>", html_text)
+
+    def test_orientation_reports_a_clean_run_without_inventing_walls(self):
+        clean = replace(self.run, scorecards=[
+            card for card in self.run.scorecards if not card.blocking_findings
+        ])
+        text = to_console(clean, build_backlog(clean))
+        self.assertIn("Blocking findings (0)", text)
+        self.assertIn("no object is structurally excluded", text)
 
 
 class TestCli(unittest.TestCase):

@@ -37,6 +37,11 @@ PACKAGE_DIR = os.path.join(REPO_ROOT, "fabric_iq")
 REQUIRED_DOCS: dict[str, str] = {
     # Names which identities are read, where they land, and how long they are kept.
     "docs/IDENTITY_AND_RETENTION.md": "readme",
+    # Tells an operator how to act on a verdict, and it is the path the console and
+    # the HTML report hardcode (fabric_iq.reporting.INTERPRETATION_GUIDE). It is the
+    # human-facing home of guidance the Skill only routes to, so if it goes stale or
+    # disappears the tool stops standing on its own and every run prints a dead path.
+    "docs/INTERPRETING_RESULTS.md": "readme",
     # Tells an operator where evidence is written and which paths stay untracked.
     "docs/INSTALL.md": "orchestrator",
     # Publishes the tool's own readiness evidence and its retention.
@@ -175,6 +180,24 @@ def audit_docs(
     return unclaimed, duplicated, misassigned
 
 
+def missing_docs(
+    repo_root: str = REPO_ROOT, required_docs: dict[str, str] | None = None
+) -> list[str]:
+    """Required documents that no longer exist on disk.
+
+    An owner for a file that is gone is not ownership, it is a stale promise --
+    and `docs/INTERPRETING_RESULTS.md` is the path the console and the HTML report
+    hardcode, so its absence ships a dead pointer to every operator.
+    """
+    if required_docs is None:
+        required_docs = REQUIRED_DOCS
+    return sorted(
+        doc
+        for doc in required_docs
+        if not os.path.exists(os.path.join(repo_root, doc.replace("/", os.sep)))
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quiet", action="store_true", help="suppress the report")
@@ -182,6 +205,7 @@ def main() -> int:
 
     unclaimed, duplicated = audit()
     doc_unclaimed, doc_duplicated, doc_misassigned = audit_docs()
+    doc_missing = missing_docs()
 
     if not args.quiet:
         print(f"Modules under fabric_iq/: {len(package_modules())}")
@@ -212,10 +236,17 @@ def main() -> int:
             print("\nDocumentation claimed by an agent other than the accountable one:")
             for doc, agents in doc_misassigned.items():
                 print(f"  - {doc}: claimed by {', '.join(agents)}, expected @{REQUIRED_DOCS[doc]}")
-        if not (doc_unclaimed or doc_duplicated or doc_misassigned):
+        if doc_missing:
+            print("\nRequired documentation that does not exist:")
+            for doc in doc_missing:
+                print(f"  - {doc}  (accountable owner @{REQUIRED_DOCS[doc]} must restore it)")
+        if not (doc_unclaimed or doc_duplicated or doc_misassigned or doc_missing):
             print("Documentation ownership is clean: every required document is claimed once.")
 
-    drifted = bool(unclaimed or duplicated or doc_unclaimed or doc_duplicated or doc_misassigned)
+    drifted = bool(
+        unclaimed or duplicated or doc_unclaimed or doc_duplicated or doc_misassigned
+        or doc_missing
+    )
     return 1 if drifted else 0
 
 
