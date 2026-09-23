@@ -57,6 +57,41 @@ _FLAG_EXAMPLE = re.compile(r"--(" + "|".join(OUTPUT_FLAGS) + r")[= ]+([^\s`\"'|)
 #: Only real documentation and code document a command; .gitignore describes rules.
 _DOC_SUFFIXES = (".md", ".py", ".yml", ".yaml")
 
+#: Top-level folders a writer actually roots its output at. A bare word after an
+#: output flag is only a destination if it is one of these; otherwise the flag was
+#: being discussed in prose ("--out default folder") rather than demonstrated.
+SINK_ROOTS = frozenset({"artifacts", "lakehouse", "powerbi_report", "bronze", "silver", "gold"})
+
+#: Extensions the writers emit. A bare word carrying one of these is a file, not prose.
+SINK_SUFFIXES = (".json", ".jsonl", ".csv", ".html", ".pbip", ".bim", ".tmp")
+
+
+def _is_plausible_destination(candidate: str) -> bool:
+    """True when a scraped value can be a filesystem destination rather than prose.
+
+    ``--out`` appears in running text as often as it appears in a command, and the
+    regex cannot tell ``--out artifacts`` from ``--out default folder``. Requiring
+    one positive signal of a path keeps documentation examples in scope while the
+    English word following the flag drops out:
+
+    * a path separator (``artifacts/live-checkpoint.json``)
+    * an explicit relative prefix (``./powerbi_report``)
+    * an extension a writer emits (``run.jsonl``)
+    * a known writer root (``artifacts``)
+
+    The cost is deliberate: documenting a brand-new *bare* root (``--out evidence``)
+    also requires adding it to :data:`SINK_ROOTS`, or writing it as ``./evidence``.
+    A missed root is caught by review; a prose word treated as a sink fails the gate
+    on every run and trains readers to ignore it.
+    """
+    if candidate.startswith("./") or candidate.startswith(".\\"):
+        return True
+    if "/" in candidate.strip("/") or "\\" in candidate.strip("\\"):
+        return True
+    if candidate.rstrip("/").lower().endswith(SINK_SUFFIXES):
+        return True
+    return candidate.strip("/") in SINK_ROOTS
+
 # ── identifier scanning ──────────────────────────────────────────────────────
 
 _GUID = re.compile(r"\b[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\b")
@@ -199,6 +234,12 @@ def documented_sinks(repo_root: str) -> list[tuple[str, str]]:
 
     A README example is an instruction. If it names a path the ignore rules do
     not cover, the documentation is telling a user to commit tenant evidence.
+
+    Only values that look like a filesystem destination are kept: the same flag
+    appears in prose ("wherever ``--out`` is pointed"), and treating the next
+    English word as a folder invents destinations no writer can reach. See
+    :func:`_is_plausible_destination`. No file is exempt from the scan -- a real
+    example is a real example wherever it is written, including in this script.
     """
     found: dict[str, str] = {}
     for path in tracked_files(repo_root):
@@ -219,6 +260,8 @@ def documented_sinks(repo_root: str) -> list[tuple[str, str]]:
                 continue
             if os.path.isabs(candidate) or candidate.startswith("/") or ":" in candidate:
                 continue
+            if not _is_plausible_destination(candidate):
+                continue  # prose, not a path
             candidate = candidate[2:] if candidate.startswith("./") else candidate
             if not candidate or candidate.startswith(".."):
                 continue
@@ -229,7 +272,16 @@ def documented_sinks(repo_root: str) -> list[tuple[str, str]]:
 
 
 def check_sinks(repo_root: str, sinks: list[tuple[str, str]]) -> list[str]:
-    """Report every writer destination that version control would accept."""
+    """Report every writer destination that version control would accept.
+
+    A match is only protection when it comes from a committed ``.gitignore`` *and*
+    carries a real pattern. A ``.gitignore`` checked out with CRLF endings (git
+    stores LF, ``core.autocrlf=true`` writes CRLF) turns every blank line into a
+    lone ``\\r``: git reports it as a match, with an empty pattern, for any path
+    ending in ``/``. Trusting that match makes this gate vacuous for every
+    directory destination on Windows while it still fails honestly on Linux, so an
+    empty or whitespace-only pattern counts as no rule at all.
+    """
     problems: list[str] = []
     matches = check_ignore(repo_root, [path for path, _ in sinks])
     for path, why in sinks:
@@ -238,7 +290,12 @@ def check_sinks(repo_root: str, sinks: list[tuple[str, str]]) -> list[str]:
             problems.append(f"{path} - no ignore rule matches ({why})")
             continue
         source, lineno, pattern = rule
-        if pattern.startswith("!"):
+        if not pattern.strip():
+            problems.append(
+                f"{path} - matched only by a blank pattern at {source}:{lineno}, which is not a "
+                f"real rule (a CRLF .gitignore matches every directory this way) ({why})"
+            )
+        elif pattern.startswith("!"):
             problems.append(
                 f"{path} - re-included by negation rule {source}:{lineno}:{pattern} ({why})"
             )

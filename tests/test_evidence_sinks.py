@@ -24,7 +24,9 @@ from scripts.check_evidence_sinks import (
     ALLOWED_EMAIL_DOMAINS,
     GOLD_TABLES,
     _is_placeholder_guid,
+    _is_plausible_destination,
     audit,
+    check_ignore,
     check_sinks,
     check_tracked_not_shadowed,
     documented_sinks,
@@ -47,6 +49,17 @@ def tenant_shaped_upn() -> str:
 
 def tenant_shaped_host() -> str:
     return "fabrikam" + ".onmicrosoft.com"
+
+
+def flag_example(flag: str, value: str) -> str:
+    """Build a ``--flag value`` example at runtime.
+
+    Written literally, these fixtures would be scraped out of *this* tracked file
+    by ``documented_sinks`` and checked against the real ignore rules -- the file
+    would document destinations nobody writes to. Same discipline as the
+    identifier helpers above: assemble, never spell out.
+    """
+    return "--" + flag + " " + value
 
 
 def _git(root, *args):
@@ -82,6 +95,11 @@ class TempRepoCase(unittest.TestCase):
 
     def ignore(self, *rules):
         _write(self.root, ".gitignore", "\n".join(rules) + "\n")
+        _git(self.root, "add", "--", ".gitignore")
+
+    def ignore_bytes(self, raw):
+        """Write .gitignore byte-for-byte, so line endings are part of the fixture."""
+        _write(self.root, ".gitignore", raw, mode="wb")
         _git(self.root, "add", "--", ".gitignore")
 
 
@@ -143,6 +161,167 @@ class SinkCheckTests(TempRepoCase):
 
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("not a committed .gitignore", problems[0])
+
+
+class BlankIgnorePatternTests(TempRepoCase):
+    """Regression: a blank line in a CRLF .gitignore is not protection.
+
+    Git stores .gitignore with LF, but ``core.autocrlf=true`` checks it out with
+    CRLF. Git then reads each blank line as a lone ``\\r`` and reports it as a
+    match -- with an empty pattern -- for any path ending in ``/``. Every
+    directory destination in this gate then looked protected on Windows while the
+    same tree failed honestly on Linux, so removing a real directory rule went
+    undetected on the maintainer's own machine.
+
+    The fixture writes .gitignore byte-for-byte, so these tests read the same on
+    both platforms regardless of the local autocrlf setting.
+    """
+
+    def test_a_destination_protected_only_by_a_blank_crlf_pattern_is_unprotected(self):
+        for blank in (b"\r\n", b"   \r\n", b"\t\r\n"):
+            with self.subTest(blank=blank):
+                self.ignore_bytes(b"artifacts/\r\n" + blank + b"*.jsonl\r\n")
+
+                problems = check_sinks(self.root, [("powerbi_report/", "--powerbi root")])
+
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn("powerbi_report/", problems[0])
+                rule = check_ignore(self.root, ["powerbi_report/"])["powerbi_report/"]
+                if rule is None:
+                    # A git that drops the blank line entirely: no match at all.
+                    self.assertIn("no ignore rule", problems[0])
+                else:
+                    self.assertEqual(rule[2].strip(), "", rule)
+                    self.assertIn("blank pattern", problems[0])
+
+    def test_the_same_tree_with_lf_endings_reaches_the_same_verdict(self):
+        # The platform must not change the answer: unprotected either way.
+        self.ignore_bytes(b"artifacts/\n\n*.jsonl\n")
+
+        problems = check_sinks(self.root, [("powerbi_report/", "--powerbi root")])
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("powerbi_report/", problems[0])
+        self.assertIn("no ignore rule", problems[0])
+
+    def test_a_real_rule_in_a_crlf_gitignore_still_protects(self):
+        # The fix rejects blank patterns only; a genuine CRLF rule is still a rule.
+        self.ignore_bytes(b"artifacts/\r\n\r\npowerbi_report/\r\n\r\n*.jsonl\r\n")
+
+        problems = check_sinks(
+            self.root,
+            [
+                ("powerbi_report/", "--powerbi root"),
+                ("artifacts/", "--out default folder"),
+                ("anywhere/run.jsonl", "NDJSON mart"),
+            ],
+        )
+
+        self.assertEqual(problems, [])
+
+    def test_a_file_destination_was_never_covered_by_the_blank_pattern(self):
+        # Why the defect hid: only directory-form destinations were made vacuous,
+        # so the file-form negative tests kept passing and looked like proof.
+        self.ignore_bytes(b"artifacts/\r\n\r\n")
+
+        problems = check_sinks(self.root, [("powerbi_report/data/MartRunSummary.csv", "marts")])
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("no ignore rule", problems[0])
+
+
+class PlausibleDestinationTests(unittest.TestCase):
+    """Regression: an English word after an output flag is prose, not a folder."""
+
+    def test_a_prose_word_is_not_a_destination(self):
+        for word in ("default", "documented", "is", "pointed", "folder", "the", "example"):
+            with self.subTest(word=word):
+                self.assertFalse(_is_plausible_destination(word))
+
+    def test_every_path_shape_the_docs_use_is_a_destination(self):
+        for value in (
+            "./powerbi_report",
+            "./lakehouse",
+            "artifacts",
+            "artifacts/",
+            "artifacts/live-checkpoint.json",
+            "lakehouse/gold/MartRunSummary/run.jsonl",
+            "run.jsonl",
+            "elsewhere/data/MartRunSummary.csv",
+            "IsFabricReadyForIQ.pbip",
+        ):
+            with self.subTest(value=value):
+                self.assertTrue(_is_plausible_destination(value))
+
+
+class DocumentedSinkScrapeTests(TempRepoCase):
+    """Regression: the scraper matched prose, including its own reason strings."""
+
+    #: Shapes taken from this checker's own literals and comments, which is where
+    #: the false positives `default/`, `documented/` and `is/` came from. Every
+    #: example is assembled at runtime -- see `flag_example`.
+    PROSE = (
+        f'("artifacts/", "{flag_example("out", "default")} folder"),\n'
+        f'("artifacts/live-checkpoint.json", "{flag_example("checkpoint", "documented")} example"),\n'
+        f'("lakehouse/", "{flag_example("lakehouse", "documented")} root"),\n'
+        f"# ignored wherever {flag_example('out', 'is')} pointed, not only in artifacts/.\n"
+    )
+
+    def test_a_prose_word_after_an_output_flag_is_not_a_destination(self):
+        self.track("scripts/check_evidence_sinks.py", self.PROSE)
+
+        self.assertEqual(dict(documented_sinks(self.root)), {})
+
+    def test_a_genuine_example_in_the_same_file_is_still_caught(self):
+        # No file is exempt: the fix filters by shape, not by filename.
+        self.track(
+            "scripts/check_evidence_sinks.py",
+            self.PROSE + f"#     python assess.py {flag_example('out', './evidence_dump')}\n",
+        )
+        self.track(
+            "README.md",
+            f"python assess.py {flag_example('checkpoint', 'artifacts/live-checkpoint.json')}\n",
+        )
+        self.track(
+            "assess.py",
+            "# python assess.py "
+            f"{flag_example('powerbi', './powerbi_report')} {flag_example('out', 'artifacts')}\n",
+        )
+
+        found = dict(documented_sinks(self.root))
+
+        self.assertEqual(
+            set(found),
+            {"evidence_dump/", "artifacts/live-checkpoint.json", "powerbi_report/", "artifacts/"},
+            found,
+        )
+        self.assertIn("scripts/check_evidence_sinks.py", found["evidence_dump/"])
+
+    def test_a_genuine_unignored_example_still_fails_the_gate(self):
+        # Non-vacuity of the scraper: a documented path with no rule is a finding.
+        self.track(
+            "README.md", f"python assess.py {flag_example('out', './tenant_dump/run.json')}\n"
+        )
+        self.ignore("artifacts/")
+
+        problems = check_sinks(self.root, documented_sinks(self.root))
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("tenant_dump/run.json", problems[0])
+        self.assertIn("no ignore rule", problems[0])
+
+    def test_placeholders_and_remote_destinations_are_still_skipped(self):
+        self.track(
+            "docs/guide.md",
+            "python assess.py "
+            f"{flag_example('out', '<folder>')} {flag_example('lakehouse', '$HOME/lake')}\n",
+        )
+        self.track(
+            "docs/more.md",
+            f"python assess.py {flag_example('powerbi', 'https://example.invalid/x')}\n",
+        )
+
+        self.assertEqual(dict(documented_sinks(self.root)), {})
 
 
 class ShadowedTrackedFileTests(TempRepoCase):
@@ -270,6 +449,24 @@ class RealTreeTests(unittest.TestCase):
         for expected in ("artifacts/", "powerbi_report/", "lakehouse/"):
             with self.subTest(path=expected):
                 self.assertIn(expected, found)
+
+    def test_the_documented_scan_invents_no_prose_destination(self):
+        # Every scraped value must look like a path, not like the next English
+        # word after the flag. `default/`, `documented/` and `is/` all came from
+        # reason strings in the checker itself.
+        for path, why in documented_sinks(REPO_ROOT):
+            with self.subTest(path=path):
+                self.assertTrue(_is_plausible_destination(path), why)
+
+    def test_no_destination_is_protected_only_by_a_blank_ignore_pattern(self):
+        # If .gitignore is checked out CRLF, a blank line matches every directory
+        # and this gate goes vacuous for exactly the destinations that matter.
+        sinks = writer_sinks() + documented_sinks(REPO_ROOT)
+        matches = check_ignore(REPO_ROOT, [path for path, _ in sinks])
+        vacuous = sorted(
+            path for path, rule in matches.items() if rule is not None and not rule[2].strip()
+        )
+        self.assertEqual(vacuous, [])
 
     def test_every_gold_mart_is_covered_by_a_checked_destination(self):
         paths = " ".join(path for path, _ in writer_sinks())

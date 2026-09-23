@@ -18,6 +18,28 @@ lifecycle: one assessment, start to finish, with a defensible verdict at the end
 - `fabric/` — Fabric item definitions (Lakehouse, Notebook, Data Pipeline) and `deploy.py`
 - `docs/INSTALL.md` — install and deployment surface: what the installer runs as, where
   run evidence lands, and which paths stay untracked
+- `.gitattributes` — repository line-ending policy, so that what a contributor has
+  checked out means the same thing as what is committed
+
+## Repository Hygiene
+
+`.gitattributes` is run-lifecycle infrastructure: it decides whether the ignore rules
+that keep tenant evidence out of the repository are parsed as written. Under
+`core.autocrlf=true` a CRLF blank line in the ignore file is read as an *empty*
+pattern, which matches every path ending in `/` — every directory reports as ignored,
+and the deletion of a real directory rule becomes undetectable on Windows. Pinning the
+ignore file to LF removes that misparse.
+
+Keep the file narrow. There is no blanket `* text=auto`: 95 of 97 tracked files are
+checked out CRLF here, and renormalising all of them would bury a targeted fix in a
+whole-repository diff and churn fixtures and test expectations. Add a rule only for a
+file whose behaviour demonstrably changes with its line endings.
+
+Ownership here is documentation, not a gate: the ownership audit covers modules under
+the package directory plus an explicit required-documents map, and it only recognises
+backticked tokens that contain a path separator or end in `.py`/`.md`. A root config
+file matches none of those, so nothing fails the build if this claim is dropped. Treat
+the claim as a statement of who to route a line-ending question to.
 
 ## Read-Only Access
 

@@ -1,0 +1,19 @@
+# Line endings — deliberately narrow.
+#
+# There is no blanket `* text=auto` here on purpose. With core.autocrlf=true on
+# Windows, 95 of this repository's 97 tracked files are checked out CRLF; a
+# blanket rule would renormalise all of them and bury a targeted fix under a
+# whole-repository diff, with real churn risk in fixtures and test expectations.
+# Add a rule below only for a file whose behaviour demonstrably changes with its
+# line endings, and say what breaks.
+#
+# .gitignore: git's ignore parser does not strip a trailing CR (verified against
+# git 2.55.0.windows.3). A blank line checked out as "\r\n" is therefore read as
+# an EMPTY pattern, and an empty pattern matches every path ending in "/". Every
+# directory then reports as ignored — `git check-ignore -v zzz_random/` exits 0
+# and blames a blank line — so deleting a real directory rule such as
+# `powerbi_report/` is undetectable on Windows, and `git add` / `git status`
+# misbehave for every Windows contributor. Ordinary files are unaffected; only
+# directories. Keeping the file LF in the working tree removes the misparse.
+# See scripts/check_evidence_sinks.py, which gates evidence destinations on it.
+.gitignore text eol=lf
