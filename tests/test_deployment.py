@@ -215,20 +215,24 @@ class UploadLibraryTests(unittest.TestCase):
     resolves to the wrong (or a nonexistent) location.
     """
 
+    # An obviously synthetic GUID: the assertion needs a well-formed item id, and a
+    # random-looking one is indistinguishable from a real tenant's in a committed file.
+    LAKEHOUSE_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
     def test_paths_use_the_lakehouse_item_id_not_its_display_name(self):
         client = _RecordingClient()
         written = upload_library(
             client,
             workspace_id="ws-1",
-            lakehouse_id="6a9e1b02-6c42-4644-9d25-06826d34a43e",
+            lakehouse_id=self.LAKEHOUSE_ID,
             files=[("fabric_iq/scoring.py", b"print('x')")],
         )
 
         self.assertEqual(
-            written, ["ws-1/6a9e1b02-6c42-4644-9d25-06826d34a43e/Files/lib/fabric_iq/scoring.py"]
+            written, [f"ws-1/{self.LAKEHOUSE_ID}/Files/lib/fabric_iq/scoring.py"]
         )
         for _, url in client.requests:
-            self.assertIn("6a9e1b02-6c42-4644-9d25-06826d34a43e", url)
+            self.assertIn(self.LAKEHOUSE_ID, url)
             self.assertNotIn("FabricIQReadiness", url)
 
     def test_dfs_create_append_flush_sequence_is_issued_for_each_file(self):

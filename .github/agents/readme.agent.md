@@ -17,6 +17,10 @@ in writing must be reproducible by someone who runs the commands.
 - `docs/RULES.md`
 - `docs/AGENTS.md`
 - `docs/KNOWN_LIMITATIONS.md`
+- `docs/IDENTITY_AND_RETENTION.md` — identity, scopes and retention: which identity runs
+  the collector, what it may touch, where the evidence lands and how long it is kept.
+  **@security** audits this document but owns no file by design, so the accountable
+  documentation owner is here.
 
 `docs/ROADMAP.md` is owned by **@roadmap-planner**.
 
@@ -42,8 +46,10 @@ A stale claim blocks the change until the owning agent reconciles it.
 assessor that does not state what it cannot see is asking to be over-trusted. Current
 limitations that must stay visible:
 
-- `FabricApiCollector` defines the contract and normalization; HTTP transport is injected
-  and not yet implemented
+- `FabricHttpTransport` is implemented and live-validated: the transport, the Scanner
+  normaliser and selected field mappings have been confirmed against a real tenant. The
+  complete endpoint-to-field matrix is **not** confirmed for every field or every SKU, so
+  a live run is auditable partial evidence, never a complete tenant inventory
 - Data Agent definition and Prep-for-AI metadata coverage via API is unconfirmed and
   requires a proof of concept
 - Agent evaluation requires a human-curated corpus; the tool measures, it does not author

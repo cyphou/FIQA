@@ -38,6 +38,9 @@ jobs:
       - name: Check agent file ownership
         run: python scripts/check_agent_ownership.py
 
+      - name: Check evidence sinks stay untracked and identifier-free
+        run: python scripts/check_evidence_sinks.py
+
       - name: Check rule documentation is current
         run: python scripts/build_rules_doc.py --check
 

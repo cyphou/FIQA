@@ -2,45 +2,66 @@
 
 Thirteen agents under [.github/agents/](../.github/agents), each owning a declared set of
 files. Ownership is enforced: `python scripts/check_agent_ownership.py` reports drift and
-`tests/test_agents.py` fails the build on it.
+`tests/test_agents.py` fails the build on it. The audit covers **two** populations — every
+module under `fabric_iq/`, and every document that asserts a privacy, identity or
+retention claim.
 
 ## Roster
 
 | Agent | Domain | Owns |
 |-------|--------|------|
-| `@orchestrator` | Run lifecycle, CLI, exit codes | `assess.py`, `__init__.py`, `errors.py` |
+| `@orchestrator` | Run lifecycle, CLI, exit codes | `assess.py`, `__init__.py`, `errors.py`, `deployment.py`, `fabric/`, `docs/INSTALL.md` |
 | `@collector` | Evidence acquisition, quotas, fixtures | `collectors/`, `examples/` |
 | `@scorer` | Scoring maths, data model, rule primitives | `scoring.py`, `models.py`, `rules/base.py` |
 | `@tenant` | Tenant and workspace rules | `rules/tenant_rules.py`, `rules/workspace_rules.py` |
 | `@semantic` | Model and report rules | `rules/semantic_model_rules.py`, `rules/report_rules.py` |
 | `@dataagent` | Data Agent rules, evaluation corpus | `rules/data_agent_rules.py` |
-| `@preceptor` | Assessment quality review | `preceptor.py` |
+| `@preceptor` | Assessment quality review | `preceptor.py`, `docs/SELF_ASSESSMENT.md` |
 | `@remediation` | Backlog, priority, effort | `remediation.py` |
 | `@lakehouse` | Persistence and reporting | `lakehouse.py`, `reporting.py` |
-| `@tester` | Tests, fixtures, ownership script | `tests/`, `scripts/check_agent_ownership.py` |
-| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/KNOWN_LIMITATIONS.md` |
+| `@tester` | Tests, fixtures, ownership and evidence-sink gates | `tests/`, `scripts/check_agent_ownership.py`, `scripts/check_evidence_sinks.py` |
+| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/IDENTITY_AND_RETENTION.md` |
 | `@roadmap-planner` | Sequencing and gates | `docs/ROADMAP.md` |
 | `@security` | Privacy, scopes, retention | *(nothing — read-only by design)* |
 
 `@security` deliberately owns no module. A reviewer who can edit the code they review
-eventually reviews their own edits.
+eventually reviews their own edits. That is why the privacy documentation it audits is
+owned by another agent: the review stays independent, and the claim still has a name
+against it.
 
-### Known ownership gap — unclaimed documentation
+### Documentation ownership — privacy, identity and retention
 
-`python scripts/check_agent_ownership.py` audits modules under `fabric_iq/` only. It says
-nothing about Markdown, and four documents are currently claimed by **no** agent:
+A promise about which identity is used, where evidence lands, and how long it is kept is
+a promise to a customer. `REQUIRED_DOCS` in `scripts/check_agent_ownership.py` names the
+accountable owner of each such document, and the check fails if one is unclaimed, claimed
+twice, or claimed by an agent other than the one named:
 
-| Unclaimed file | Consequence |
-|----------------|-------------|
-| `docs/IDENTITY_AND_RETENTION.md` | Privacy and retention claims have no owner to reconcile them when persistence changes |
-| `docs/INSTALL.md` | Installer confidentiality guarantees drift silently when the notebook changes |
-| `docs/SELF_ASSESSMENT.md` | Self-assessment gate description has no owner |
-| `fabric/README.md` | Deployed-item inventory has no owner |
+| Document | Accountable owner | Why it carries a claim |
+|----------|-------------------|------------------------|
+| `docs/IDENTITY_AND_RETENTION.md` | `@readme` | Names which identities are read, where they land, and how long they are kept |
+| `docs/INSTALL.md` | `@orchestrator` | Tells an operator where evidence is written and which paths stay untracked |
+| `docs/SELF_ASSESSMENT.md` | `@preceptor` | Publishes the tool's own readiness evidence and its retention |
+| `fabric/README.md` | `@orchestrator` | Deployment surface: workspace items, lakehouse destination, run evidence — covered by the `fabric/` claim |
 
-Until an agent claims them, changes to these files are unrouted: edits land wherever the
-current task happens to point, and the documentation gate cannot block on them. Assigning
-an owner is a decision for the user, not a gap `@readme` may quietly close by editing
-files it does not own.
+The list is explicit rather than inferred. A heuristic that guessed which file "looks
+like" a privacy claim would let the gate widen or narrow itself without a review.
+
+### Two Executable Gates
+
+Both are Phase 5 release-gate criteria, and both are runnable rather than asserted:
+
+```bash
+python scripts/check_agent_ownership.py   # criterion 10: modules and privacy docs have exactly one owner
+python scripts/check_evidence_sinks.py    # criterion 9: evidence sinks are ignored, tracked files are clean
+```
+
+`check_evidence_sinks.py` answers three questions against the real repository: does every
+writer destination — including the output examples documented in Markdown — resolve to a
+rule in a committed `.gitignore`; is any tracked file shadowed by those rules (a pattern
+broad enough to catch every mart is broad enough to hide a fixture); and does any tracked
+file carry a real tenant GUID, UPN, email or `onmicrosoft` host. Both checks are
+heuristic gates. They reduce, and never replace, the mandatory pre-push privacy audit in
+[shared.instructions.md](../.github/agents/shared.instructions.md).
 
 ## Why Ownership Is Enforced
 
@@ -117,8 +138,10 @@ value of having a review at all.
 ## Working With The Agents
 
 ```bash
-python scripts/check_agent_ownership.py   # who owns what
+python scripts/check_agent_ownership.py   # who owns what (modules and privacy docs)
+python scripts/check_evidence_sinks.py    # evidence sinks stay ignored, tracked files stay clean
 python -m unittest tests.test_agents      # roster and ownership integrity
+python -m unittest tests.test_evidence_sinks  # evidence-sink hygiene as a test
 python scripts/build_rules_doc.py         # regenerate docs/RULES.md after a rule change
 ```
 

@@ -16,6 +16,8 @@ lifecycle: one assessment, start to finish, with a defensible verdict at the end
 - `fabric_iq/errors.py` — domain error hierarchy
 - `fabric_iq/deployment.py` — packaging the solution into a Fabric workspace
 - `fabric/` — Fabric item definitions (Lakehouse, Notebook, Data Pipeline) and `deploy.py`
+- `docs/INSTALL.md` — install and deployment surface: what the installer runs as, where
+  run evidence lands, and which paths stay untracked
 
 ## Read-Only Access
 

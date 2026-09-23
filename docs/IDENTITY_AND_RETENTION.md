@@ -1,6 +1,12 @@
 # Identity, Scopes and Retention
 
-Owner: **@security**. This document is the Sprint 1.4 deliverable required by
+Documentation owner: **@readme**, who reconciles every claim below against the code.
+Reviewed by **@security**, which audits privacy, scopes and retention but owns no file by
+design — a reviewer who can edit what it reviews eventually reviews its own edits.
+`python scripts/check_agent_ownership.py` enforces that this document has exactly one
+accountable owner.
+
+This document is the Sprint 1.4 deliverable required by
 [`ROADMAP.md`](./ROADMAP.md) Phase 1: *"a written scope and retention decision; no write
 scope anywhere; the privacy audit passes on a real run's artifacts."*
 
@@ -106,10 +112,43 @@ Every upstream call produces one immutable `BronzeRecord`
 (`fabric_iq/collectors/base.py`): `endpoint`, `collected_at`, `status_code`,
 `duration_ms`, `correlation_id`, `identity`, `payload`, `schema_version`. These are the
 Bronze layer described in [`ARCHITECTURE.md`](./ARCHITECTURE.md); Silver (normalised
-inventory) and Gold (scored rollups, remediation backlog) are derived from them and
-persisted the same way, typically to a Fabric Lakehouse when run through the
-`fabric/` Fabric-native deployment, or to local NDJSON/HTML artifacts when run with
-`assess.py --out artifacts`.
+inventory) and Gold (scored rollups, remediation backlog) are derived from them.
+
+A run writes to **four** destinations, and each one is opt-in except `--out`. Naming only
+the medallion output would understate the footprint, so every sink is listed here with
+what it actually contains, verified against the writers:
+
+| Flag | Destination on disk | What lands there | Written by |
+|---|---|---|---|
+| `--out` (default `artifacts`) | `<out>/<run_id>_assessment.json`, `_backlog.json`, `_backlog.csv`, `_readiness.html` (unless `--no-html`), `_review.json` (with `--review`) | Scorecards and findings: object and workspace **names**, scores, eligibility, confidence, coverage, remediation text. No raw Bronze payloads. | `assess.py` via `AssessmentRun.to_json` / `RemediationBacklog` / `fabric_iq/reporting.py` |
+| `--lakehouse` | `<root>/{bronze,silver,gold}/<table>/<run_id>.jsonl` — newline-delimited JSON, one row per line | Bronze: full `BronzeRecord` dicts including `identity`, `content_hash` and the raw upstream `payload`. Silver: normalised inventory sections. Gold: the nine `GOLD_TABLES` marts. | `fabric_iq/lakehouse.py::LakehouseWriter._write_ndjson` |
+| `--powerbi` | `<folder>/data/Mart*.csv` (nine marts) plus `IsFabricReadyForIQ.Report/`, `.SemanticModel/`, `.pbip`, `FabricIQ_Theme.json`, a generated `README.md` | Tenant-derived CSV marts: `tenant_id` (in `MartRunSummary`), object and workspace **names**, scores, blocking findings, backlog remediation text. `model.bim` additionally embeds the absolute local path of `data/`. | `fabric_iq/powerbi.py::PowerBiReportWriter.write_run` |
+| `--checkpoint` | the single JSON file at the given path (plus a transient `.tmp` during an atomic replace) | `tenant_id`, the completed-call index, and the **raw Bronze records** — `identity` and unredacted API payloads, including workspace role assignments when `getArtifactUsers` is on. The most identity-dense file a run produces. | `fabric_iq/collectors/fabric_api.py::FabricApiCollector._save_checkpoint` |
+
+The medallion writer emits newline-delimited JSON with the extension **`.jsonl`**, not
+`.ndjson`. The distinction matters here because the protection is a filename pattern:
+`.gitignore` carries `*.jsonl` precisely because an `*.ndjson`-only rule would have left
+every Bronze evidence file trackable.
+
+In a Fabric-native run the same layers are written to a Lakehouse through the `fabric/`
+deployment instead of to local paths; the contents are identical, and retention then
+follows the workspace's policy rather than the operator's filesystem.
+
+**Ignore-rule coverage is executable, not a convention.** Every destination above,
+including the documented examples in this file, must resolve to a rule in a committed
+`.gitignore`; no tracked file may be shadowed by those rules; and no tracked file may
+carry a real tenant GUID, UPN, email or `onmicrosoft` host:
+
+```bash
+python scripts/check_evidence_sinks.py
+```
+
+That check is a heuristic gate over the repository. It reduces — and never replaces — the
+mandatory pre-push privacy audit in
+[`.github/agents/shared.instructions.md`](../.github/agents/shared.instructions.md), and
+it says nothing about a path outside the repository: pointing `--out`, `--lakehouse`,
+`--powerbi` or `--checkpoint` at a synced folder, a network share, or a ticket attachment
+moves the evidence beyond anything this repository can defend.
 
 ### 3.2 What the payloads actually contain
 
@@ -133,9 +172,15 @@ metadata authored by the tenant's own staff, not third-party or customer data.
   runs no scheduled deletion — it is the responsibility of whoever owns the output
   Lakehouse/workspace/artifact store, using their existing Fabric/Purview retention
   tooling.
-- **Recommended default: align Bronze retention with the shortest useful audit window**
-  (the KNOWN_LIMITATIONS.md-documented default reference is 30–90 days), long enough to
-  explain a score to a steering committee, short enough that stale evidence is not
+- **The `--checkpoint` file outlives the run that created it.** It exists to let a
+  throttled scan resume, so nothing deletes it when the run completes — and it holds the
+  tenant ID next to unredacted Bronze payloads. Delete it once the run it resumes has
+  finished, and treat a surviving checkpoint as live evidence, not as scratch.
+- **Recommended default: align Bronze retention with the shortest useful audit window.**
+  This document recommends 30–90 days as a starting point; it is an operational judgement
+  made here, not a Microsoft product limit and not a figure sourced from
+  [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md). Long enough to explain a score to a
+  steering committee, short enough that stale evidence is not
   mistaken for a current tenant state. A Gold-layer scorecard is a point-in-time
   assessment, not a live dashboard; it should carry an explicit `collected_at` and be
   treated as expired advice past its retention window rather than being re-published.

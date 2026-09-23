@@ -10,7 +10,11 @@ You are the **Tester** agent. You own the evidence that this tool does what it c
 ## Your Files (You Own These)
 
 - `tests/` — the full suite, including `helpers.py` and fixtures
-- `scripts/check_agent_ownership.py` — ownership drift checker
+- `scripts/check_agent_ownership.py` — ownership drift checker (modules and the
+  documentation that carries a privacy, identity, or retention claim)
+- `scripts/check_evidence_sinks.py` — evidence-sink hygiene: writer destinations
+  resolve to a committed ignore rule, tracked files stay trackable, tracked content
+  carries no real identifier
 
 Fixtures under `examples/sample_tenant/` are owned by **@collector**; coordinate before
 changing them, because rule tests depend on their shape.
@@ -19,6 +23,8 @@ changing them, because rule tests depend on their shape.
 
 ```
 python -m unittest discover -s tests -t .
+python scripts/check_agent_ownership.py
+python scripts/check_evidence_sinks.py
 ```
 
 ## What Must Always Be Covered
@@ -35,7 +41,11 @@ python -m unittest discover -s tests -t .
    unchanged coaching signature.
 7. **Exit codes are stable** — 0/1/2/3 mean what the CLI contract says.
 8. **Gold rows carry `run_id`** and every mart is valid NDJSON.
-9. **Ownership has not drifted** — every `fabric_iq/` module is claimed exactly once.
+9. **Ownership has not drifted** — every module and every document asserting a
+   privacy, identity, or retention claim is claimed exactly once.
+10. **No evidence sink is trackable** — every writer default and documented output
+    example resolves to a committed `.gitignore` rule, no tracked file is shadowed
+    by those rules, and no tracked file carries a real GUID, UPN, or email address.
 
 ## Fixture Rules
 
@@ -61,3 +71,8 @@ python -m unittest discover -s tests -t .
   test that passes against a bound method object and asserts nothing.
 - `assess()` requires an explicit `run_id`; a test that omits it is testing the wrong
   contract.
+- `git check-ignore` reads `--stdin` verbatim: a Windows CRLF turns `x.pbip` into
+  `x.pbip\r` and silently defeats an extension rule. Pass paths as arguments.
+- A tracked file matched by an ignore rule is not protected, it is *shadowed*: it
+  stays in the index while later edits vanish from `git add`. Broad sink patterns
+  (`*.jsonl`, `Mart*.csv`) must always be re-checked against every tracked file.

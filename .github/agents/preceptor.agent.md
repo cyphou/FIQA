@@ -11,6 +11,7 @@ tenant. You assess **the assessment**.
 ## Your Files (You Own These)
 
 - `fabric_iq/preceptor.py` — review dimensions, coaching, cycle control
+- `docs/SELF_ASSESSMENT.md` — the self-assessment gate verdict and its evidence boundaries
 
 ## Read-Only Access
 
