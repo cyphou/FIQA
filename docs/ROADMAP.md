@@ -28,6 +28,10 @@ Every increment and release gate preserves these constraints:
   ignored location, including at values a user supplies.
 - API-dependent work starts with a real-tenant proof of the read surface. Collection
   gaps are not hidden by scoring or presentation changes.
+- The tool is fully usable without the agent Skill. The CLI and the human documentation
+  stand alone; agent-facing files route to them and are never load-bearing. Anything an
+  operator must know to act on a verdict lives in human documentation, and any engine
+  value an AI-facing file restates is held to the constant by an executable check.
 
 ## Evidence-Based Development State
 
@@ -37,7 +41,7 @@ records, not earlier roadmap labels.
 | Area | Delivered evidence | Remaining gap | Status |
 |------|--------------------|---------------|--------|
 | Contract and offline pipeline | Scoring, rollups, remediation, preceptorship, medallion output, and CLI run end to end on `examples/sample_tenant`; scoring regressions cover caps, coverage, and independent results. | None for the synthetic/offline scope. | ✅ Delivered |
-| Rule catalogue | `python assess.py --list-rules` reports 65 rules: tenant 12, workspace 11, semantic model 17, report 10, Data Agent 15. | Encoded product limits do not yet all carry a source and exact re-verification date. | 🟡 Partially evidenced |
+| Rule catalogue | `python assess.py --list-rules` runs clean; the ruleset, rule total, and per-type breakdown are recorded once in **Verified Repository Baseline** below. | Encoded product limits do not yet all carry a source and exact re-verification date. | 🟡 Partially evidenced |
 | Live collection | `FabricHttpTransport`, Scanner `getInfo`, pagination, bounded 429 retry, Bronze evidence, checkpoint resume, and read-only request validation are implemented and tested. Recorded live runs validate the transport, Scanner normalisation, capacity join, and both pipeline gate branches. | Complete field coverage is not validated. Prep-for-AI, AI instructions, verified answers, Data Agent definition/source fields, relationships, and some capacity signals remain unconfirmed or unavailable. Live Scanner evidence evaluates roughly 8 of 17 semantic-model rules. | 🟡 Partial field coverage |
 | Scale and incrementality | Synthetic tests cover proactive per-process quota handling, interrupted-run resume, and honest partial coverage for 500 workspaces. | Scans are sequential; quota state is not tenant-wide; `modified_since_days` is not wired to incremental scanning. These are explicit limitations, not delivered capabilities. | 🟡 Bounded |
 | Scoring and backlog | Explainable scorecards, CSV/JSON backlog, owner role, effort, trend classification, and remediation burn-down are implemented and tested. | Weights and thresholds have not been calibrated against independently labelled real objects. Product-limit verification remains open. | 🟡 Calibration open |
@@ -49,23 +53,27 @@ records, not earlier roadmap labels.
 
 At this review the documentation gate reported:
 
-- ruleset `2026.09.1`, **65 rules** across five object types;
-- **295** passing unit tests;
+- ruleset `2026.09.1`, **65 rules** across five object types — tenant 12, workspace 11,
+  semantic model 17, report 10, Data Agent 15;
+- **345** passing unit tests;
 - clean generated rule documentation, internal links, and synthetic self-assessment gate;
-- `python scripts/check_agent_ownership.py` exit 0 — 22 modules under `fabric_iq/`
-  claimed exactly once, and the **4** documents asserting a privacy, identity, or
-  retention claim each claimed by exactly one agent through an explicit `REQUIRED_DOCS`
-  map;
+- `python scripts/check_agent_ownership.py` exit 0 — **22** modules under `fabric_iq/`
+  claimed exactly once, and the **6** documents and skills asserting a privacy,
+  identity, or retention claim — or read by a model as instruction — each claimed by
+  exactly one agent through an explicit `REQUIRED_DOCS` map;
 - `python scripts/check_evidence_sinks.py` exit 0 — **61 writer destinations** and
-  documented output examples each resolve to a committed `.gitignore` rule, all **95
+  documented output examples each resolve to a committed `.gitignore` rule, all **101
   tracked files** remain trackable (none shadowed by a broad pattern such as `*.jsonl`
   or `Mart*.csv`), and no tracked file carries a real tenant identifier, UPN, email, or
-  non-placeholder GUID.
+  non-placeholder GUID. The tracked-file figure moves whenever work is staged; it is a
+  property of the current index, not a stable total.
 
 Both checks were shown to be non-vacuous by deliberate negative tests on 2026-09-23:
 removing the `powerbi_report/` ignore rule, planting a UPN in a tracked file, and
 removing a documentation ownership claim each fail with exit 1 and name the unprotected
-path, the host and address, or the required owner. A gate that cannot fail is not a gate.
+path, the host and address, or the required owner. A gate that cannot fail is not a gate
+— and, as Sprint 5.0.1 found, neither is one that cannot see the file it is meant to
+cover.
 
 These counts describe the current revision only. They are not release-quality evidence
 for unconfirmed live API fields, scheduling, calibration, or real-agent behaviour.
@@ -92,7 +100,7 @@ classification, with unsupported evidence producing `NOT_EVALUATED`.
 
 ## Phase 2 — Static Readiness Scoring 🟡
 
-The engine, 65-rule catalogue, actionable backlog, and output formats are delivered.
+The engine, rule catalogue, actionable backlog, and output formats are delivered.
 Product-limit sourcing and practitioner calibration remain open and move to Sprint 5.3.
 
 **Exit gate.** Open: every encoded limit has a public source and exact verification
@@ -141,7 +149,7 @@ for one authorised workspace and record a redacted field matrix:
 `available / partial / absent / permission-blocked / preview-only`. No customer payload
 is committed.
 
-**Exit gate.** All ten criteria in **Release Gate for Phase 5** are met; in particular,
+**Exit gate.** All eleven criteria in **Release Gate for Phase 5** are met; in particular,
 unsupported evidence remains `NOT_EVALUATED`, no output path can place tenant-derived
 evidence under version control, and two compatible unattended runs prove the complete
 re-measurement loop.
@@ -170,16 +178,20 @@ One retention decision remains open; it is a user decision, not sprint work.
    - (a) Ignore rules, CLI help warnings, and forward redaction fixed and verified.
    - (b) `scripts/check_evidence_sinks.py` (`@tester`, claimed in `tester.agent.md`)
      makes release-gate criterion 9 executable rather than a manual command sequence: it
-     asserts that 61 writer destinations and documented output examples each resolve to a
-     committed `.gitignore` rule, that all 95 tracked files remain trackable, and that no
+     asserts that every writer destination and documented output example resolves to a
+     committed `.gitignore` rule, that every tracked file remains trackable, and that no
      tracked file contains a real tenant identifier, UPN, email, or non-placeholder GUID.
+     The counts it reports move with the repository and are recorded only in
+     **Verified Repository Baseline** above, so they cannot go stale here.
    - (c) `scripts/check_agent_ownership.py` extended with an explicit `REQUIRED_DOCS`
      map, making criterion 10 executable: `docs/INSTALL.md` and `fabric/README.md` →
      `@orchestrator`; `docs/SELF_ASSESSMENT.md` → `@preceptor`;
      `docs/IDENTITY_AND_RETENTION.md` → `@readme`. `@security` still owns no file by
      design, so each privacy claim is owned by the agent accountable for the surface it
      describes. The set is explicit, not inferred — guessing which file makes a privacy
-     claim is how such a check silently stops covering one.
+     claim is how such a check silently stops covering one. It held four entries at
+     closure; Sprint 5.0.1 grew it to six and fixed the parser defect that let a
+     dot-directory entry match nothing.
    - (d) `docs/IDENTITY_AND_RETENTION.md` reconciled with the code: all four sinks
      documented, `.jsonl` corrected, and an unsourced "30–90 day" retention figure
      removed rather than rationalised after the fact.
@@ -197,10 +209,13 @@ One retention decision remains open; it is a user decision, not sprint work.
    sprint: no writer may be introduced whose default or documented path is trackable, and
    any new document asserting a privacy, identity, or retention claim must be added to
    `REQUIRED_DOCS` in the same change.
-5. **Validation performed** — `python scripts/check_evidence_sinks.py` exit 0 (61
-   destinations, 95 tracked files); `python scripts/check_agent_ownership.py` exit 0 (22
-   modules, 4 required documents); full suite **295 tests** passing, up from 256;
-   `python scripts/build_rules_doc.py --check` clean at ruleset `2026.09.1`, 65 rules.
+5. **Validation performed** — `python scripts/check_evidence_sinks.py` exit 0; `python
+   scripts/check_agent_ownership.py` exit 0 (22 modules, 4 required documents at
+   closure); the full suite green at **295 tests**, up from 256; `python
+   scripts/build_rules_doc.py --check` clean at ruleset `2026.09.1`, 65 rules.
+   Those are point-in-time closure figures. The current revision's counts live in
+   **Verified Repository Baseline**, which is the single place this roadmap keeps live
+   counts.
    Three independent negative tests proved the gates are not vacuous: removing the
    `powerbi_report/` ignore rule fails with exit 1 naming the unprotected paths; planting
    a UPN in a tracked file fails naming the host and address; removing a documentation
@@ -225,7 +240,109 @@ One retention decision remains open; it is a user decision, not sprint work.
    The `artifacts/` disposition produces no commit, and the history resolution produced
    none either — it was a repository-level user action.
 
-### Sprint 5.1 — Close the API Reality Matrix (3–5 days) ← next actionable sprint
+### Sprint 5.0.1 — Standalone Operability and Skill Claim Integrity ✅ Delivered 2026-09-23
+
+Numbered `5.0.1`, not `5.1a` or a new sprint of its own rank, on purpose. This is
+assurance and hygiene over surfaces Sprint 5.0 created — it adds no assessment
+capability, no rule, no collected field, and no scoring behaviour. It is a follow-on to
+5.0 because it repairs and extends the very ownership gate 5.0 delivered. Sprint 5.1
+remains the next actionable sprint and its rank is unchanged.
+
+1. **Outcome** — Delivered. The tool is usable without the agent Skill: the CLI output
+   and the human documentation carry the interpretation knowledge, and the Skill routes
+   to them rather than being the only place they exist. Where the Skill does restate an
+   engine value, that value is now held to the constant by an executable check and the
+   file has a named owner. **The Skill is never load-bearing.**
+2. **Originating evidence** — Three separate findings, all against the user requirement
+   that the tool stand alone:
+   - `.github/skills/fabric-iq-readiness/SKILL.md` was claimed by no agent and checked
+     only for existence by `tests/test_docs.py`, while restating engine constants as
+     hand-written prose. Unlike `docs/RULES.md` it is not generated, so a changed
+     constant would have left a model quoting last release's number as authoritative
+     instruction at prompt time.
+   - The operational interpretation knowledge — blocking-first reading order, the
+     `NOT_EVALUATED` do-not-re-score rule, the triage table, and the non-obvious domain
+     rules — existed **only** in AI-facing files. A human running `assess.py` with no
+     agent present could read the numbers and not know which to act on first.
+   - The claim parser in `scripts/check_agent_ownership.py` could not begin a path with
+     a dot, so a `.github/...` entry matched nothing and the Skill would have been read
+     as permanently unclaimed. The gate was **failing open** — the most expensive
+     failure mode a gate has, because it reports success.
+3. **Delivered slices** —
+   - (a) `.github/skills/fabric-iq-readiness/SKILL.md` added to `REQUIRED_DOCS` under
+     `@readme`; `docs/INTERPRETING_RESULTS.md` added under `@readme` as well. The map now
+     covers instruction-bearing files, not only
+     privacy/identity/retention ones.
+   - (b) `tests/test_skill_drift.py` (`@tester`) asserts that every value the Skill
+     states equals the imported engine constant. It matches on the **claim sentence**
+     with the value captured, not on a bare substring, and asserts over *every*
+     occurrence — so a contradictory second statement elsewhere in the file cannot pass.
+     Ten claim sentences cover nine engine constants (`MAX_DATA_SOURCES`,
+     `MAX_RESULT_ROWS`, `MAX_RESULT_COLUMNS`, `DESCRIPTION_BUDGET`,
+     `AI_INSTRUCTIONS_MAX`, `MIN_ACCURACY`, `MIN_CRITICAL_ACCURACY`,
+     `MIN_COVERAGE_TO_PUBLISH`, and `SEVERITY_SCORE_CAP` for both the blocking and major
+     caps). The module also self-tests the comparison against synthetic stale,
+     contradictory, and line-wrapped text, so the drift check is not decoration.
+   - (c) The claim-parser regex now permits a leading dot, with two regression tests
+     (`test_a_dot_directory_path_is_recognised_as_a_claim` and
+     `test_a_dot_directory_style_claim_covers_the_files_inside_it`) pinning the
+     behaviour. The fix is worth more than the entry it enabled: it closed a gate that
+     reported clean while covering nothing under a dot-directory.
+   - (d) [`docs/INTERPRETING_RESULTS.md`](INTERPRETING_RESULTS.md) now carries the
+     interpretation knowledge for humans, `README.md` links it, and the Skill routes to
+     it. Direction matters: human documentation is the source and the AI-facing file is
+     the pointer, never the reverse.
+   - (e) The console and HTML reports gained a `HOW TO READ THIS` orientation block with
+     live blocking and `NOT_EVALUATED` counts and a pointer to the guide, so the reading
+     order travels with the output rather than depending on the reader having the docs
+     open. Tests assert that it precedes the numbers it explains, stays short, reports a
+     clean run without inventing walls, is HTML-escaped, and **does not move a single
+     scored value** — presentation must not become a third result.
+   - (f) `tests/test_standalone_guidance.py` (`@tester`) makes the non-dependence
+     property itself executable, which is what turns this sprint from an intention into
+     a gate. It asserts that the guide path the reports hardcode resolves to a real,
+     non-stub, repo-relative human document that somebody owns and that is not a Skill;
+     that `@readme` has actually claimed it and the ownership audit reports it; and that
+     every operational concept is explained in the **human** corpus with AI-facing files
+     explicitly excluded from that corpus. It is negative-tested from both directions:
+     an empty corpus, unrelated prose, scattered keywords, a deleted guide, and a single
+     stripped concept each fail, while a reasonable rewording still passes — so the gate
+     tracks meaning rather than an exact phrase, and cannot be satisfied by a stray
+     sentence.
+4. **Dependencies** — `@readme` owned the Skill reconciliation, the human guide, and the
+   ownership declarations; `@tester` owned the drift check, the parser regression tests,
+   the orientation assertions, and the standalone-guidance gate; `@lakehouse` owned the
+   report orientation block.
+   Standing constraint for every later sprint: any new AI-facing file that restates an
+   engine constant must arrive with an owner in `REQUIRED_DOCS` and a drift assertion in
+   the same change, and no operator guidance may live only in an agent-facing file.
+5. **Validation performed at closure** — `python -m unittest discover -s tests -t .` →
+   **345** tests OK; `python scripts/check_agent_ownership.py` exit 0 (22 modules, 6
+   required documents and skills); `python scripts/check_evidence_sinks.py` exit 0 (61
+   writer destinations, 99 tracked files); `python scripts/build_rules_doc.py --check`
+   clean at ruleset `2026.09.1`, 65 rules. Those are point-in-time closure figures,
+   taken while this sprint's own new files were still untracked — which is why the
+   tracked-file count read 99 here and reads higher once the work is staged. **Verified
+   Repository Baseline** holds the current counts. New release-gate criterion **11**
+   records the non-dependence property and is met at this revision.
+6. **Still open, and non-goals** — Nothing in this sprint is left open. What it does
+   **not** claim matters more than what it does: the gates assert that the Skill cannot
+   silently contradict the engine and cannot be the only home of operator guidance —
+   they do not assert that the Skill, the guide, or the orientation block is *good*.
+   Concept coverage is a presence-and-meaning check over human documentation, not a
+   readability or accuracy review; a human still owns whether the guidance is correct.
+   Non-goals: this sprint added no rule, changed no score, weight, cap, threshold or
+   coverage floor, collected no new field, and did not let the orientation block move a
+   single scored value.
+7. **Commit boundary** — Four boundaries. The Skill ownership entry, the parser fix and
+   its regression tests, and `tests/test_skill_drift.py` form the assurance boundary.
+   The human guide, its README link, and the Skill's routing change form the
+   documentation boundary. The report orientation block and its assertions form the
+   reporting boundary. `tests/test_standalone_guidance.py` is the fourth and must stay
+   separate from the three it gates — a gate reviewed in the same commit as the thing it
+   gates is reviewed once, not twice.
+
+
 
 **Blocked on one prerequisite that is not repository work:** an authorised test tenant
 and service principal with read-only scope. Every slice below is an evidence-acquisition
@@ -235,7 +352,7 @@ Sprint 5.0 has cleared the gating condition: no writer default or documented out
 is trackable, so a proof run can now be performed without risking a commit of
 tenant-derived evidence.
 
-1. **Outcome** — Every field consumed by the 65-rule catalogue has a current,
+1. **Outcome** — Every field consumed by the rule catalogue has a current,
    reproducible availability classification, including the fields still unconfirmed
    after the first live run.
 2. **Current evidence** — Live evidence validates the transport, Scanner normaliser,
@@ -397,24 +514,47 @@ The phase closes only when all of the following are executable or evidenced:
    ignore pattern, and that tracked content carries no tenant identifier, workspace or
    capacity GUID, UPN, or email outside synthetic placeholders. No CLI output flag steers
    a user toward a trackable location at its documented value. The check runs in CI as
-   its own named step. **Met at this revision** (61 destinations, 95 tracked files,
-   negative-tested). It remains a heuristic that supplements, never replaces, the
+   its own named step. **Met at this revision**, negative-tested; the destination and
+   tracked-file counts are held in **Verified Repository Baseline**. It remains a
+   heuristic that supplements, never replaces, the
    mandatory pre-push privacy audit.
-10. Every documentation file that makes a privacy, identity, or retention claim is
-    claimed by exactly one agent, enforced by the explicit `REQUIRED_DOCS` map in
-    `python scripts/check_agent_ownership.py`. **Met at this revision** (4 documents,
-    exit 0, negative-tested): adding or un-claiming such a document fails the build and
-    names the required owner.
+10. Every documentation file that makes a privacy, identity, or retention claim — and
+    every file a model reads as instruction, including a Skill — is claimed by exactly
+    one agent, enforced by the explicit `REQUIRED_DOCS` map in
+    `python scripts/check_agent_ownership.py`. **Met at this revision** (exit 0,
+    negative-tested; the count is held in **Verified Repository Baseline**): adding or
+    un-claiming such a file fails the build
+    and names the required owner. The parser must be able to see the paths it is given;
+    a dot-directory entry that matches nothing is a gate failing open, not a pass.
+11. **No release-gate claim rests on an AI-facing file alone, and agent-facing
+    instructions are never the sole source of operator guidance.** The tool is usable
+    with no agent and no Skill present: the CLI output and human documentation stand on
+    their own. Concretely — (a) every operational concept an operator needs to act on a
+    verdict (reading order, the `NOT_EVALUATED` do-not-re-score rule, triage, and the
+    non-obvious domain rules) exists in human documentation, not only in a Skill or
+    agent file; (b) any AI-facing file that restates an engine constant is claimed in
+    `REQUIRED_DOCS` and held to that constant by an executable drift check that matches
+    the claim sentence, so a contradictory restatement cannot pass; (c) any guide path
+    hardcoded by the CLI or the reports resolves to a file that exists and has an owner.
+    **Met at this revision**, negative-tested: `tests/test_skill_drift.py` holds every
+    value the Skill states to its engine constant, and `tests/test_standalone_guidance.py`
+    holds the pointer, the owner, and the concepts — failing when the guide is deleted,
+    stubbed, unclaimed, moved to a Skill, or stripped of a single concept, while a
+    reasonable rewording still passes.
 
 ## Sequencing and Release Policy
 
-`5.0 evidence-sink hygiene ✅ → 5.1 API proof (next) → 5.2 evidence reconciliation
-→ 5.3 facts/calibration → 5.4 agent proof → 5.5 operational re-measurement`
+`5.0 evidence-sink hygiene ✅ → 5.0.1 standalone operability ✅ → 5.1 API proof (next)
+→ 5.2 evidence reconciliation → 5.3 facts/calibration → 5.4 agent proof
+→ 5.5 operational re-measurement`
 
 - Sprint 5.0 is closed. It gated the live-tenant sprints: no proof run against a real
   tenant starts before every writer default and documented output path is confirmed
   ignored, and that condition is now asserted by `scripts/check_evidence_sinks.py` on
   every change rather than by a one-off review.
+- Sprint 5.0.1 is closed. It is assurance over 5.0's surfaces, not a capability
+  increment, and it does not displace 5.1 or shorten its work. It carries no external
+  blocker, which is precisely why it could be done while 5.1 waits.
 - Sprint 5.1 is therefore the next actionable sprint. Its only blocker is external: an
   authorised test tenant and read-only service principal. Until that exists, 5.1 cannot
   be started and no later sprint may substitute for it by assuming a field.
@@ -442,6 +582,9 @@ The phase closes only when all of the following are executable or evidenced:
 | Unowned documentation carries unaccountable privacy claims | Closed by Sprint 5.0. `scripts/check_agent_ownership.py` now audits `fabric_iq/` modules **and** an explicit `REQUIRED_DOCS` set, so `docs/IDENTITY_AND_RETENTION.md` (@readme), `docs/INSTALL.md` and `fabric/README.md` (@orchestrator), and `docs/SELF_ASSESSMENT.md` (@preceptor) each have exactly one owner, and an unowned required document fails the build. Any new document asserting a privacy, identity, or retention claim must be added to that map in the same change; the set is explicit precisely so that coverage cannot lapse silently. |
 | Data already pushed cannot be un-ignored | Hardened ignore rules protect the future only. The 2026-09-23 exposure was resolved by the user deleting and recreating the public repository: the orphaned commit returns 404 and the republished history is 21 commits with 0 occurrences. Any *future* pushed identifier again requires an authorised human decision — record it as open rather than describing the repository as clean. |
 | Local evidence outlives the run that produced it | `artifacts/checkpoint.json` from the 2026-09-21 live run still holds 33 non-placeholder GUIDs. Git-ignored, so not a push risk, but retention is an authorised-human decision that no check can close. Open. |
+| Operator knowledge lives only in an AI-facing file, so the tool stops working without an agent | Release-gate criterion 11. Human documentation is the source and the Skill is the pointer, never the reverse: `docs/INTERPRETING_RESULTS.md` carries the reading order, the `NOT_EVALUATED` rule and the triage table, the reports print a `HOW TO READ THIS` block, and both are owned in `REQUIRED_DOCS`. A capability that only works when a model is in the room is not a capability this tool ships. |
+| A hand-written AI-facing file contradicts the engine it describes | `docs/RULES.md` is generated and checked; a Skill is not. `tests/test_skill_drift.py` holds every stated value to the imported constant and matches on the claim sentence over every occurrence, so a stale or contradictory number fails the build instead of being quoted to a model as authoritative. Any new AI-facing file restating a constant must arrive with its drift assertion. |
+| A gate fails open rather than failing loudly | Sprint 5.0.1 found the ownership claim parser could not begin a path with a dot, so a `.github/...` entry matched nothing and the check reported clean while covering it. Negative-testing a gate must include *what it cannot see*, not only what it rejects: every new gate needs a test that proves it detects the absence it exists to detect. |
 
 ## Explicitly Out of Scope
 
@@ -459,6 +602,8 @@ The phase closes only when all of the following are executable or evidenced:
   `artifacts/` is one conventional sink, not the boundary.
 - Shipping a writer, CLI output flag, documented example, or help text that steers
   evidence to a location git tracks by default.
+- Shipping operator guidance that exists only in a Skill or an agent-facing file, or
+  restating an engine constant in an AI-facing file without an executable drift check.
 - Rewriting pushed git history, or disposing of locally retained tenant evidence,
   without an explicit authorised human decision.
 
@@ -471,6 +616,8 @@ python scripts/check_agent_ownership.py
 python scripts/check_evidence_sinks.py
 python -m unittest tests.test_docs
 python -m unittest tests.test_evidence_sinks
+python -m unittest tests.test_skill_drift
+python -m unittest tests.test_standalone_guidance
 python -m unittest tests.test_self_assessment
 python -m unittest discover -s tests -t .
 ```
@@ -479,10 +626,14 @@ In addition, verify internal links and compare documented rule/test counts with 
 output.
 
 `check_agent_ownership.py` covers both `fabric_iq/` modules and the `REQUIRED_DOCS`
-documentation set; `check_evidence_sinks.py` covers writer destinations, tracked-file
-shadowing, and tracked identifiers. Both exit non-zero and name the offending path,
-address, or owner. Neither may be skipped on a documentation-only change — the 2026-09-23
-exposure arrived through a documented example, not through code.
+documentation and Skill set; `check_evidence_sinks.py` covers writer destinations,
+tracked-file shadowing, and tracked identifiers; `tests.test_skill_drift` covers the
+values the Skill restates; `tests.test_standalone_guidance` covers the property that the
+tool works with no Skill present. All exit non-zero and name the offending path,
+address, owner, stated value, or unhomed concept. None may be skipped on a
+documentation-only change — the 2026-09-23 exposure arrived through a documented
+example, not through code, and an AI-facing file is a documentation-only change that a
+model will act on.
 
 Any change that adds or moves an output path — a writer, a CLI output flag, or a
 documented example command — must also register that path with
