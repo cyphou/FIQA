@@ -15,6 +15,8 @@ You are the **Tester** agent. You own the evidence that this tool does what it c
 - `scripts/check_evidence_sinks.py` — evidence-sink hygiene: writer destinations
   resolve to a committed ignore rule, tracked files stay trackable, tracked content
   carries no real identifier
+- `scripts/__init__.py` — package marker that makes the gate scripts importable
+  from the suite
 
 Fixtures under `examples/sample_tenant/` are owned by **@collector**; coordinate before
 changing them, because rule tests depend on their shape.

@@ -8,11 +8,26 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Windows is not a nicety here. The worst defect this project has shipped was
+    # platform-only: with core.autocrlf=true a CRLF blank line in .gitignore parses
+    # as an EMPTY pattern that matches every directory, so deleting a real ignore
+    # rule was undetectable and the evidence-sink gate passed vacuously. Linux
+    # checks out LF unconditionally and can never reproduce it. The same is true of
+    # the octal-quoting `git ls-files` does to non-ASCII names. A gate that only
+    # runs where the bug cannot happen is not a gate.
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.12", "3.13"]
+
+    defaults:
+      run:
+        # Every step below is bash (heredocs, `set +e`, `$?`). windows-latest
+        # defaults to pwsh, where those are syntax errors, so pin the shell once
+        # here rather than rewriting each step twice.
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +45,19 @@ jobs:
               deps = tomllib.load(handle)["project"]["dependencies"]
           assert deps == [], f"core engine must stay stdlib-only, found: {deps}"
           print("stdlib-only: ok")
+          PY
+
+      - name: Verify .gitignore is checked out LF
+        run: |
+          python - <<'PY'
+          with open(".gitignore", "rb") as handle:
+              data = handle.read()
+          assert b"\r" not in data, (
+              ".gitignore checked out with CRLF: git reads every blank line as an empty "
+              "pattern matching each directory, so a deleted directory rule stops being "
+              "detectable. Restore `.gitignore text eol=lf` in .gitattributes."
+          )
+          print("gitignore eol: lf ok")
           PY
 
       - name: Run test suite
@@ -64,6 +92,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: assessment-${{ matrix.python-version }}
+          # upload-artifact@v4 rejects a duplicate artifact name, so the OS has to
+          # be in it once the matrix spans two platforms.
+          name: assessment-${{ matrix.os }}-py${{ matrix.python-version }}
           path: artifacts/
           retention-days: 7

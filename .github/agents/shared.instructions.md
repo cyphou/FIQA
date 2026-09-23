@@ -70,11 +70,15 @@ defect, regardless of how much nicer the output looks.
     from matching a specific customer workspace, model, report, or agent by name.
     Forbidden: `if workspace_name == 'Finance PROD'`, hardcoded tenant IDs, hardcoded
     capacity names. Fixtures use synthetic data only.
-11. **Declare file ownership** — every module under `fabric_iq/` must be listed by
-    exactly one agent before that agent's `## Constraints` heading. To point at another
-    owner write "owned by **@agent**"; to declare intentional sharing write
-    "co-owned with @agent". `python scripts/check_agent_ownership.py` reports the current
-    state and `tests/test_agent_ownership.py` fails the build on drift.
+11. **Declare file ownership** — every module under `fabric_iq/` and under `scripts/`,
+    and every document or Skill that carries a privacy, identity, retention or
+    instruction claim, must be listed by exactly one agent in its "Your Files" block,
+    before that agent's `## Constraints` heading. A gate script is owned on the same
+    terms as a module: an unowned gate fails open, and nobody is accountable for
+    noticing. To point at another owner write "owned by **@agent**"; to declare
+    intentional sharing write "co-owned with @agent".
+    `python scripts/check_agent_ownership.py` reports the current state and
+    `tests/test_agents.py` fails the build on drift.
 12. **Pre-push privacy and provenance audit** — see below. Required before every push.
 
 ### Documentation Gate
@@ -220,7 +224,7 @@ fail has not been shown to work — demand the mutation, not the assertion.
 | `@change-preceptor` | Development-time change review, gate integrity, coaching before merge |
 | `@remediation` | Backlog construction, prioritisation, effort |
 | `@lakehouse` | Medallion persistence, Gold marts, reporting |
-| `@tester` | Test suite, fixtures, regression coverage |
-| `@readme` | Documentation accuracy and release claims |
+| `@tester` | Test suite, fixtures, regression coverage, the gates that fail the build |
+| `@readme` | Documentation accuracy, release claims, rule-catalogue generation |
 | `@roadmap-planner` | Roadmap sequencing and gates |
 | `@security` | Privacy audit, least-privilege, data handling |

@@ -27,6 +27,13 @@ in writing must be reproducible by someone who runs the commands.
   the collector, what it may touch, where the evidence lands and how long it is kept.
   **@security** audits this document but owns no file by design, so the accountable
   documentation owner is here.
+- `scripts/build_rules_doc.py` — the generator behind `docs/RULES.md`. The rule catalogue
+  is generated rather than written precisely so it cannot drift, which makes this script
+  part of the documentation gate it enforces: `python scripts/build_rules_doc.py --check`
+  is how "the catalogue is current" stops being an assertion, and CI runs it. Owning the
+  output without owning the generator would leave the staleness check itself unowned. It
+  renders the registry; it never defines a rule — a change to what a rule *says* belongs
+  to the rule's owning agent.
 
 `docs/ROADMAP.md` is owned by **@roadmap-planner**.
 

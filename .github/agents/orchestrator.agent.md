@@ -27,6 +27,8 @@ change nobody reviewed has not landed.
   run evidence lands, and which paths stay untracked
 - `.gitattributes` — repository line-ending policy, so that what a contributor has
   checked out means the same thing as what is committed
+- `.github/workflows/ci.yml` — which platforms and Python versions the gates actually
+  execute on; a gate that never runs where the defect lives is not a gate
 
 ## Repository Hygiene
 

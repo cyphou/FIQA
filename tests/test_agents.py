@@ -112,6 +112,35 @@ class TestOwnership(unittest.TestCase):
         self.assertEqual(unclaimed, [], f"modules with no owner: {unclaimed}")
         self.assertEqual(duplicated, {}, f"modules with several owners: {duplicated}")
 
+    def test_every_gate_script_is_claimed_exactly_once(self):
+        # A gate script is audited on the same terms as a package module: an
+        # unowned gate fails open in silence, with no agent accountable for it.
+        from scripts.check_agent_ownership import claims, script_modules
+
+        scripts = script_modules()
+        self.assertIn(
+            "scripts/check_agent_ownership.py",
+            scripts,
+            "the gate must audit itself, otherwise this test passes vacuously",
+        )
+        owners = claims()
+        for module in sorted(scripts):
+            with self.subTest(module=module):
+                self.assertEqual(
+                    len(owners.get(module, [])), 1, f"{module}: {owners.get(module, [])}"
+                )
+
+    def test_the_audited_universe_spans_the_package_and_the_scripts(self):
+        from scripts.check_agent_ownership import (
+            audited_modules,
+            package_modules,
+            script_modules,
+        )
+
+        universe = audited_modules()
+        self.assertTrue(package_modules() < universe)
+        self.assertTrue(script_modules() <= universe)
+
     def test_preceptor_owns_the_review_loop(self):
         from scripts.check_agent_ownership import claims
 
@@ -218,6 +247,12 @@ class TestOwnershipCheckerBehaviour(unittest.TestCase):
         )
         with open(os.path.join(self.agents, f"{name}.agent.md"), "w", encoding="utf-8") as handle:
             handle.write(body)
+
+    def write_script(self, name):
+        directory = os.path.join(self.root, "scripts")
+        os.makedirs(directory, exist_ok=True)
+        with open(os.path.join(directory, name), "w", encoding="utf-8") as handle:
+            handle.write("# synthetic gate script\n")
 
     def audit_docs(self):
         from scripts.check_agent_ownership import audit_docs
@@ -355,6 +390,56 @@ class TestOwnershipCheckerBehaviour(unittest.TestCase):
 
         self.assertEqual(unclaimed, ["fabric_iq/scoring.py"])
         self.assertEqual(duplicated, {})
+
+    def test_an_unclaimed_script_is_reported_unclaimed(self):
+        # The point of widening the universe to `scripts/`. Without this test the
+        # widening is itself unverified, and an unowned gate -- worse than an
+        # unowned module, because it fails open -- would pass unnoticed.
+        from scripts.check_agent_ownership import audit
+
+        self.write_script("check_gate.py")
+        self.write_agent("tester", ["- `fabric_iq/scoring.py` — scoring"])
+
+        unclaimed, duplicated = audit(self.agents, self.root)
+
+        self.assertEqual(unclaimed, ["scripts/check_gate.py"])
+        self.assertEqual(duplicated, {})
+
+    def test_a_doubly_claimed_script_is_reported(self):
+        from scripts.check_agent_ownership import audit
+
+        self.write_script("check_gate.py")
+        self.write_agent(
+            "tester",
+            ["- `fabric_iq/scoring.py` — scoring", "- `scripts/check_gate.py` — gate"],
+        )
+        self.write_agent("readme", ["- `scripts/check_gate.py` — also mine"])
+
+        unclaimed, duplicated = audit(self.agents, self.root)
+
+        self.assertEqual(unclaimed, [])
+        self.assertEqual(duplicated, {"scripts/check_gate.py": ["readme", "tester"]})
+
+    def test_a_scripts_directory_claim_covers_every_script(self):
+        from scripts.check_agent_ownership import audit
+
+        self.write_script("__init__.py")
+        self.write_script("check_gate.py")
+        self.write_agent(
+            "tester",
+            ["- `fabric_iq/scoring.py` — scoring", "- `scripts/` — every gate script"],
+        )
+
+        self.assertEqual(audit(self.agents, self.root), ([], {}))
+
+    def test_the_scripts_package_marker_is_audited(self):
+        # `__init__.py` carries no logic, but it is what makes the gates
+        # importable from the suite; excluding it would leave a file nobody owns.
+        from scripts.check_agent_ownership import script_modules
+
+        self.write_script("__init__.py")
+
+        self.assertEqual(script_modules(self.root), {"scripts/__init__.py"})
 
 
 

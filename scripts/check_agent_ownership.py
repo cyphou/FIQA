@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 """Report and enforce agent file ownership.
 
-Every module under ``fabric_iq/`` must be claimed by exactly one agent in
-``.github/agents/*.agent.md``, in the "Your Files (You Own These)" section that
-precedes the agent's ``## Constraints`` heading. An unclaimed module has no owner
-to coach when the preceptorship loop raises a finding against it; a doubly
-claimed module has two agents editing the same file.
+The audited universe is every module under ``fabric_iq/``, every module under
+``scripts/``, and :data:`REQUIRED_DOCS`. Each of those paths must be claimed by
+exactly one agent in ``.github/agents/*.agent.md``, in the "Your Files (You Own
+These)" section that precedes the agent's ``## Constraints`` heading. An
+unclaimed module has no owner to coach when the preceptorship loop raises a
+finding against it; a doubly claimed module has two agents editing the same file.
+
+``scripts/`` is audited on the same terms as the package, ``__init__.py``
+included. An unowned gate is worse than an unowned module: nobody answers for it,
+so it degrades into a check that fails open in silence.
 
 The same rule applies to the documentation that makes a privacy, identity, or
 retention claim, and to the agent-facing Skill (:data:`REQUIRED_DOCS`, Phase 5
@@ -82,15 +87,33 @@ def _is_path(token: str) -> bool:
     return "/" in token or token.endswith(_PATH_LIKE)
 
 
-def package_modules(repo_root: str = REPO_ROOT) -> set[str]:
+def _modules_under(repo_root: str, directory: str) -> set[str]:
     modules = set()
-    for dirpath, _dirnames, filenames in os.walk(os.path.join(repo_root, "fabric_iq")):
+    for dirpath, _dirnames, filenames in os.walk(os.path.join(repo_root, directory)):
         for filename in filenames:
             if not filename.endswith(".py"):
                 continue
             absolute = os.path.join(dirpath, filename)
             modules.add(os.path.relpath(absolute, repo_root).replace(os.sep, "/"))
     return modules
+
+
+def package_modules(repo_root: str = REPO_ROOT) -> set[str]:
+    return _modules_under(repo_root, "fabric_iq")
+
+
+def script_modules(repo_root: str = REPO_ROOT) -> set[str]:
+    """Every ``*.py`` under ``scripts/``, ``__init__.py`` included.
+
+    A gate nobody owns is not a gate: it keeps exiting 0 while the thing it was
+    written to catch walks past it, and no agent is accountable for noticing.
+    """
+    return _modules_under(repo_root, "scripts")
+
+
+def audited_modules(repo_root: str = REPO_ROOT) -> set[str]:
+    """Every source module ownership is enforced over."""
+    return package_modules(repo_root) | script_modules(repo_root)
 
 
 def _ownership_section(text: str) -> str:
@@ -124,9 +147,9 @@ def claims(
         return owners
     if required_docs is None:
         required_docs = REQUIRED_DOCS
-    # A directory claim such as `fabric_iq/rules/` or `fabric/` expands over every
-    # path this audit is responsible for.
-    universe = package_modules(repo_root) | set(required_docs)
+    # A directory claim such as `fabric_iq/rules/`, `scripts/` or `fabric/` expands
+    # over every path this audit is responsible for.
+    universe = audited_modules(repo_root) | set(required_docs)
     for filename in sorted(os.listdir(agents_dir)):
         if not filename.endswith(".agent.md"):
             continue
@@ -149,7 +172,7 @@ def claims(
 def audit(
     agents_dir: str = AGENTS_DIR, repo_root: str = REPO_ROOT
 ) -> tuple[list[str], dict[str, list[str]]]:
-    modules = package_modules(repo_root)
+    modules = audited_modules(repo_root)
     owners = claims(agents_dir, repo_root)
     unclaimed = sorted(m for m in modules if not owners.get(m))
     duplicated = {m: a for m, a in sorted(owners.items()) if len(a) > 1 and m in modules}
@@ -208,7 +231,7 @@ def main() -> int:
     doc_missing = missing_docs()
 
     if not args.quiet:
-        print(f"Modules under fabric_iq/: {len(package_modules())}")
+        print(f"Audited modules under fabric_iq/ and scripts/: {len(audited_modules())}")
         if unclaimed:
             print("\nUnclaimed modules (no agent owns these):")
             for module in unclaimed:
