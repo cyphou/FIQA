@@ -131,6 +131,17 @@ Required before every `git push`, including documentation-only changes.
 
 ## Preceptorship Loop — Quality Gate
 
+This project runs **two** preceptorship loops. They share a threshold and a shape, and
+nothing else. Conflating them loses one of the two gates.
+
+| | Product loop — `@preceptor` | Development loop — `@change-preceptor` |
+|---|---|---|
+| Subject | an assessment run | a code, test, script or documentation change |
+| When | inside the pipeline, after scoring | before the change lands |
+| Verdict | publish the verdict, or block it | land the change, or send it back |
+
+### 1. The Product Loop — `@preceptor`
+
 Every assessment passes through the **preceptorship loop** before publication:
 
 ```
@@ -161,6 +172,40 @@ act on it.
 - After 3 cycles, `@preceptor` escalates to the user (publish-with-caveats or block).
 - The review is read-only — `@preceptor` never edits rules, scores, or collectors.
 
+### 2. The Development Loop — `@change-preceptor`
+
+Every change follows **Plan → Assign → Implement → Review**. `@orchestrator` is the
+tech lead: it plans and assigns one owner per change. The owning specialist implements
+inside the files it owns. `@change-preceptor` reviews before the change lands.
+
+```
+PLAN (@orchestrator) → ASSIGN (owning specialist) → IMPLEMENT
+     ↑                                                  │
+     │                                                  ↓
+     │                          REVIEW (@change-preceptor) → APPROVE? (≥ 4.0★?)
+     │                                                  │
+     │                    YES ──────────────────────────→ LAND
+     │                     NO ──────────────────────────→ COACH (the author)
+     └──────────────────────────────────────────────────┘
+                   (max 3 cycles, then escalate to the user)
+```
+
+It scores six dimensions: gate integrity, mutation proof, evidence discipline,
+ownership and scope, contract preservation, environment honesty. It owns no file, so
+it can never review its own edit, and it coaches rather than fixes.
+
+The failure mode it exists to catch is **a gate that fails open**: a check that exits 0
+when the thing it protects is absent, unparseable, or silently unmatched. That is worse
+than no check, because it reports safety that is not there. A gate nobody has watched
+fail has not been shown to work — demand the mutation, not the assertion.
+
+### Rules For Both Loops
+
+- If scored below the threshold, read the coaching feedback and fix within your domain.
+- Do NOT weaken a rule, a cap, a threshold, or an assertion to clear a review.
+- A reviewer never edits what it reviews; it coaches the owning agent.
+- Three cycles, then escalate to the user. Never loop forever.
+
 ## Agent Roster
 
 | Agent | Domain |
@@ -172,6 +217,7 @@ act on it.
 | `@semantic` | Semantic model and report rules |
 | `@dataagent` | Fabric Data Agent rules and evaluation corpus |
 | `@preceptor` | Preceptorship loop, assessment quality review |
+| `@change-preceptor` | Development-time change review, gate integrity, coaching before merge |
 | `@remediation` | Backlog construction, prioritisation, effort |
 | `@lakehouse` | Medallion persistence, Gold marts, reporting |
 | `@tester` | Test suite, fixtures, regression coverage |

@@ -15,9 +15,17 @@ AGENTS_DIR = os.path.join(REPO_ROOT, ".github", "agents")
 
 EXPECTED_AGENTS = {
     "orchestrator", "collector", "scorer", "tenant", "semantic", "dataagent",
-    "preceptor", "remediation", "lakehouse", "tester", "readme",
-    "roadmap-planner", "security",
+    "preceptor", "change-preceptor", "remediation", "lakehouse", "tester",
+    "readme", "roadmap-planner", "security",
 }
+
+# A backticked agent invocation such as `@scorer` or `@change-preceptor`.
+_MENTION = re.compile(r"`@([a-z][a-z-]*)`")
+
+
+def mentioned_agents(path):
+    """Agent names invoked in a document, as `@name`."""
+    return set(_MENTION.findall(read(path)))
 
 
 def agent_files():
@@ -72,6 +80,29 @@ class TestAgentRoster(unittest.TestCase):
             with self.subTest(agent=agent):
                 self.assertIn(f"`@{agent}`", text)
 
+    def test_copilot_instructions_list_every_agent(self):
+        # copilot-instructions.md is the roster the model actually reads at prompt
+        # time. An agent that exists on disk but is missing here is unreachable in
+        # practice, and two agents whose names share a stem (`@preceptor` reviews a
+        # run, `@change-preceptor` reviews a change) are the easiest pair to drop.
+        path = os.path.join(REPO_ROOT, ".github", "copilot-instructions.md")
+        missing = sorted(EXPECTED_AGENTS - mentioned_agents(path))
+        self.assertEqual(missing, [], f"agents absent from copilot-instructions.md: {missing}")
+
+    def test_a_roster_missing_an_agent_is_detected(self):
+        # Non-vacuity proof for the gate above: the mention parser must report an
+        # omission rather than quietly returning every name it happens to see.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            path = os.path.join(tmp, "roster.md")
+            listed = sorted(EXPECTED_AGENTS - {"change-preceptor"})
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("Invoke a specialist with `@name`.\n\n")
+                handle.write(" ".join(f"`@{agent}`" for agent in listed) + "\n")
+
+            self.assertEqual(
+                sorted(EXPECTED_AGENTS - mentioned_agents(path)), ["change-preceptor"]
+            )
+
 
 class TestOwnership(unittest.TestCase):
     def test_every_module_is_claimed_exactly_once(self):
@@ -91,6 +122,21 @@ class TestOwnership(unittest.TestCase):
 
         owned = [m for m, agents in claims().items() if "security" in agents]
         self.assertEqual(owned, [], "the security agent must stay read-only")
+
+    def test_change_preceptor_agent_owns_no_module(self):
+        # @change-preceptor reviews code changes before they land. Its value is
+        # that it cannot edit what it reviews, so it owns nothing -- and the
+        # ownership parser reads any backticked path in the claim block as a
+        # claim, so a single added line would silently hand it a module.
+        from scripts.check_agent_ownership import claims
+
+        self.assertIn(
+            "change-preceptor",
+            agent_files(),
+            "the agent file must exist, otherwise this gate passes vacuously",
+        )
+        owned = [m for m, agents in claims().items() if "change-preceptor" in agents]
+        self.assertEqual(owned, [], "the change-preceptor agent must stay read-only")
 
     def test_a_mention_outside_the_claim_block_is_not_a_claim(self):
         # An agent that describes the ownership rule ("every `fabric_iq/` module is
