@@ -4,9 +4,10 @@
 
 # 🧠 IsFabricReadyForIQ
 
-**Fabric IQ & Agentic Readiness Assessment** — score whether a Power BI / Microsoft
-Fabric tenant and its objects (tenant, workspace, semantic model, report, Fabric Data
-Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswork.
+**Fabric IQ & Agentic Readiness Assessment** — apply an evidence-aware readiness
+ruleset to a Power BI / Microsoft Fabric tenant and its objects (tenant, workspace,
+semantic model, report, Fabric Data Agent). The offline pipeline is fully testable;
+live results remain bounded by the fields the APIs actually return.
 
 | | |
 |---|---|
@@ -34,10 +35,11 @@ For every object the tool produces:
 
 ## 💡 Why This Exists
 
-The building blocks exist — Scanner APIs, Semantic Link Labs, the Fabric Data Agent SDK,
-Microsoft's "prepare data for AI" guidance. What is missing is the layer that walks the
-whole chain, from tenant switch to agent answer, and produces a consolidated, explainable
-verdict with an owned remediation list. That is this project.
+The building blocks exist — Scanner APIs, Fabric deployment surfaces, and Microsoft's
+"prepare data for AI" guidance. This project collects available evidence, applies a
+versioned rule catalogue, and produces explainable scorecards and an owned remediation
+list. It does **not** yet execute a behavioural corpus against a real Data Agent, and it
+does not turn unavailable API fields into a verdict.
 
 ---
 
@@ -72,16 +74,19 @@ Codes 2 and 3 are pipeline signals, not crashes: a CI gate can tell "the tool br
 from "the tenant is not ready" without parsing output.
 
 > [!TIP]
-> Wire `--fail-on-blocking` into a scheduled pipeline so a tenant that regresses below
-> eligibility fails the build loudly, instead of quietly publishing a stale "READY".
+> `--fail-on-blocking` is available for a deployment-owned CI or scheduler integration.
+> This repository does not yet include a versioned recurrence artifact or evidence of
+> two unattended runs; until that Phase 5 gate is met, the pipeline is **schedulable**,
+> not **scheduled**.
 
 ---
 
 ## 🚀 Deploy To Fabric
 
 The whole assessment also ships as a native Fabric solution — a Lakehouse, a notebook
-and a Data Pipeline — so it can run on a schedule inside the estate it evaluates
-instead of from someone's laptop.
+and a Data Pipeline — so it can be triggered inside the estate it evaluates instead of
+only from someone's laptop. Recurrence, identity, overlap prevention, notifications,
+and retention remain deployment-owned scheduling work.
 
 ```powershell
 $env:FABRIC_TOKEN  = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
@@ -95,7 +100,7 @@ duplicated. The `fabric_iq` package is uploaded as plain sources to `Files/lib` 
 Lakehouse — no wheel, no `%pip install`, because it is standard library only.
 
 Results land in the `FabricIQReadiness` Lakehouse: the medallion layers under
-`Files/readiness/`, the HTML report, and the eight Gold marts published as Delta tables
+`Files/readiness/`, the HTML report, and the nine Gold marts published as Delta tables
 ready for the DirectLake governance semantic model. Deployment also sets the workspace
 Spark runtime to **2.0** by default (pass `--skip-spark-runtime-upgrade` to leave it
 unchanged).
@@ -152,6 +157,12 @@ powerbi_report/
 ├── FabricIQ_Theme.json              # optional — apply via View ▸ Themes ▸ Browse
 └── README.md
 ```
+
+> [!WARNING]
+> The generated folder is **evidence, not source**. `powerbi_report/data/*.csv` carries
+> workspace, object and finding names from the assessed tenant, so `powerbi_report/` is
+> git-ignored and must never be committed. Treat the output like any other assessment
+> artifact: share it under the same handling rules as the tenant data it describes.
 
 Constraints: the semantic model's CSV partitions reference **absolute file paths**
 generated at write time, so re-open the `.pbip` from the same machine (or update the
@@ -231,10 +242,10 @@ The readiness semantic model/report also pass their own executable gate:
 `tests/test_self_assessment.py` keeps the ≥85 score / ≥90% confidence+coverage threshold
 from drifting.
 
-The same pipeline runs in two places: locally through `assess.py`, and inside Fabric
-through the notebook in [`fabric/items/`](./fabric/items). Both call the identical
-`fabric_iq` package, so a local run and a scheduled workspace run produce the same
-scorecards.
+The same assessment package is invoked locally through `assess.py` and inside Fabric
+through the notebook in [`fabric/items/`](./fabric/items). This provides one
+implementation for both paths; it is not evidence that unattended runs or a two-run
+re-measurement cadence have completed.
 
 ---
 
@@ -293,7 +304,7 @@ See [docs/AGENTS.md](./docs/AGENTS.md).
 ## 📌 Status and Limits
 
 The engine, rule catalogue, scoring, review loop and persistence run against offline
-fixtures. Phase 1 also supplies a stdlib-only, read-only live collection foundation:
+fixtures. Live collection supplies a stdlib-only, read-only foundation:
 it accepts an injected bearer token, reads tenant settings and Scanner workspace
 metadata, follows page links, backs off on `429`, and can resume from a checkpoint.
 Use a token environment-variable name rather than placing a token on the command line:
@@ -303,9 +314,19 @@ FABRIC_ACCESS_TOKEN=... python assess.py --live --tenant-id <tenant-id> \
   --bearer-token-env FABRIC_ACCESS_TOKEN --checkpoint artifacts/live-checkpoint.json
 ```
 
-Live API field coverage has not yet been verified against a tenant; see
-[docs/KNOWN_LIMITATIONS.md](./docs/KNOWN_LIMITATIONS.md) before quoting any result as
-a tenant assessment.
+The transport, Scanner normalisation, selected capacity fields, and both Fabric
+pipeline gate branches have been exercised against a live tenant. Complete API/SKU
+field coverage has **not** been established: Prep-for-AI, AI instructions, verified
+answers, Data Agent definition/source fields, relationships, and some capacity signals
+remain unconfirmed or unavailable. Static Data Agent rules can consume supplied
+evidence, but this repository has no behavioural execution harness. See
+[docs/KNOWN_LIMITATIONS.md](./docs/KNOWN_LIMITATIONS.md) before quoting any result as a
+complete tenant or agent assessment.
+
+Phase 5 is **Evidence Closure and Repeatable Re-Measurement**. It remains open until
+the API reality matrix, rule/input reconciliation, dated product-fact verification,
+practitioner calibration, real Data Agent execution proof, and two compatible
+unattended runs satisfy the gates in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 > [!WARNING]
 > This tool never reports a score without eligibility and confidence alongside it —

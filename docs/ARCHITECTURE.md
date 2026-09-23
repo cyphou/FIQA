@@ -38,7 +38,8 @@
 ```
 
 The last two stages are **Fabric-only** — they read the same Gold Delta tables a
-scheduled notebook run writes, so a local NDJSON run has nothing to render there. See
+scheduled notebook run writes, so a local NDJSON (`.jsonl`) run has nothing to render
+there. See
 [`fabric/README.md`](../fabric/README.md) for the deployed item list and
 [`docs/INSTALL.md`](INSTALL.md) for how the whole surface (Lakehouse, notebook, pipeline,
 semantic model, report) is deployed by a single installer notebook that clones
@@ -128,8 +129,10 @@ Copilot, Fabric IQ and Data Agents a simple entry point for the current assessme
 tenant id, ruleset version, run timestamps, object counts, blocking findings, backlog
 size and average object score/confidence/coverage.
 
-NDJSON is the durable development and medallion format: every run is written under its
-own `run_id`, and re-running the same `run_id` is idempotent. Delta is the Fabric
+NDJSON is the durable development and medallion format — `fabric_iq/lakehouse.py` writes
+it with the `.jsonl` extension (`<layer>/<table>/<run_id>.jsonl`), which is the name to
+look for on disk and in `.gitignore`. Every run is written under its own `run_id`, and
+re-running the same `run_id` is idempotent. Delta is the Fabric
 DirectLake target. By default the deployed notebook overwrites the Delta marts with the
 latest snapshot (`delta_publish_mode = "overwrite"`) so the report remains intelligible
 and does not duplicate objects across historical runs. Set `delta_publish_mode =

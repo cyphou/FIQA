@@ -3,9 +3,9 @@
 The most important document in this repository. A readiness assessor that does not state
 what it cannot see invites over-trust, and over-trust is how a tool like this causes harm.
 
-Last reviewed: ruleset `2026.09.1`.
+Last reviewed: **2026-09-23**, ruleset `2026.09.1`.
 
-## 1. Live Collection Is A Foundation, Not Validated Field Coverage
+## 1. Live Collection Is A Foundation With Partial Field Validation
 
 `fabric_iq/collectors/fabric_api.py` includes a standard-library HTTP transport with
 injected bearer-token retrieval, GET pagination, the read-only Scanner `getInfo` POST,
@@ -13,10 +13,11 @@ bounded `429` retry, Bronze response evidence, and checkpoint resume. It does no
 acquire, persist, or log credentials; the CLI accepts the *name* of a token environment
 variable rather than a token value.
 
-The endpoint-to-field mappings have not yet been verified against a live tenant or every
-supported SKU. In particular, this phase normalizes tenant settings and Scanner workspace,
-dataset, report, and data-agent containers only when returned by the APIs. It must not be
-treated as a complete tenant inventory.
+The transport and selected mappings have been verified against a live tenant, but the
+complete endpoint-to-field matrix has not yet been verified against a live tenant or
+every supported SKU. In particular, the collector normalizes tenant settings and Scanner
+workspace, dataset, report, and data-agent containers only when returned by the APIs. It
+must not be treated as a complete tenant inventory.
 
 **Consequence.** A live run can provide auditable partial evidence, but its unverified
 fields remain `NOT_EVALUATED`. Validate API permissions, endpoint availability, and field
@@ -60,7 +61,7 @@ A first real deployment and notebook execution against a live tenant (workspace
 - all four items (Lakehouse, auto-generated SQL endpoint, Notebook, DataPipeline)
   deployed and the `Files/lib` library uploaded through the OneLake DFS API;
 - the notebook job ran to `Completed` and wrote the full medallion output — Bronze
-  evidence, Silver per-object-type NDJSON, Gold Delta tables (`Tables/mart*`,
+  evidence, Silver per-object-type NDJSON (`.jsonl`), Gold Delta tables (`Tables/mart*`,
   queryable through the SQL endpoint), and the `reports/` bundle (`assessment.json`,
   `backlog.csv`/`.json`, `review.json`, `readiness.html`);
 - the produced `assessment.json` was read back and is structurally and semantically
@@ -162,9 +163,9 @@ been verified against a live tenant:
 `NOT_EVALUATED` — which is honest, but means the corresponding readiness dimension is a
 blind spot rather than a measurement.
 
-**Resolution.** Sprint 1.1 is a three-day proof of concept whose explicit purpose is to
-produce a field-by-field availability table and delete or reclassify any rule that cannot
-be evidenced.
+**Resolution gate.** Phase 5 Sprints 5.1–5.2 produce the API reality matrix and reconcile
+every rule input with confirmed, unavailable, permission-dependent, SKU-dependent, or
+unverified evidence. Unsupported inputs must continue to produce `NOT_EVALUATED`.
 
 ## 3. Agent Quality Is Declared, Not Measured
 
@@ -176,7 +177,9 @@ input**. The tool does not yet execute a corpus against a live agent.
 that produced it. With no evaluation supplied, those rules return `NOT_EVALUATED` — they
 never assume success.
 
-**Resolution.** Phase 3 builds the evaluation harness.
+**Resolution gate.** Phase 5 Sprint 5.4 first proves a supported read-only
+execution/readback surface. Only then may a corpus harness be implemented. If that
+surface is unavailable, `AGT-006` … `AGT-012` remain `NOT_EVALUATED`.
 
 ## 4. The Tool Cannot Author An Evaluation Corpus
 
@@ -187,9 +190,9 @@ measure only its own assumptions.
 
 ## 5. Weights Are Reasoned, Not Calibrated
 
-Dimension weights and the 85/70/50 thresholds are defensible but have not been validated
-against practitioner judgement on a real estate. Sprint 2.2 measures agreement between
-the tool's verdicts and independent expert labels.
+Dimension weights and the 85/70/50 thresholds are reasoned but have not been validated
+against practitioner judgement on a real estate. Phase 5 Sprint 5.3 records blinded,
+independent practitioner labels and disagreements before any scoring change is proposed.
 
 **Consequence.** Relative ranking between objects is more reliable than an absolute score
 at this stage. "This model is in worse shape than that one" is better supported than
@@ -197,9 +200,9 @@ at this stage. "This model is in worse shape than that one" is better supported 
 
 ## 6. Static Readiness Is A Prediction
 
-A perfect static score says the metadata is in good shape. It does not say the agent will
-answer correctly. Only Phase 3 measurement converts the prediction into a claim. The two
-are deliberately never merged into one number.
+A perfect static score says the supplied metadata is in good shape. It does not say the
+agent will answer correctly. Only the behavioural proof required by Phase 5 Sprint 5.4
+can support that claim. The two are deliberately never merged into one number.
 
 ## 7. Endorsement Is Not Evidence
 
@@ -210,20 +213,25 @@ as a context and validation surface rather than as an endorsed asset.
 
 ## 8. Product Limits Age
 
-Every hard limit encoded in the catalogue is a dated fact:
+The values below are encoded or quoted by the current ruleset. On **2026-09-23** the
+linked public pages resolved, but the project did **not** complete a line-by-line
+product-fact re-verification. Link availability is not factual verification; therefore
+the Phase 5 Sprint 5.3 product-limit release gate remains open.
 
-| Limit | Value | Used by |
-|-------|-------|---------|
-| Data sources per agent | 5 | `AGT-002` |
-| Agent result surface | 25 rows × 25 columns | `AGT-013` |
-| Description budget read by Copilot | 200 characters | `SEM-006`, `SEM-007` |
-| AI instructions maximum | 10,000 characters | `SEM-011` |
-| Capacity floor | F2+ / P1+ | `TEN-004`, `WKS-001` |
-| Purview access restriction policies (KQL DB, SQL DB, Data Warehouse) | Preview at time of writing | `TEN-012` |
-| Scanner `getInfo` | 500/hour, 16 concurrent, 100 workspaces/request | collector |
-| Activity Events | 1 UTC day/request, 28-day retention, 200/hour | collector |
+| Limit currently encoded/quoted | Used by | Public source candidate | Verification status |
+|--------------------------------|---------|-------------------------|---------------------|
+| 5 data sources per agent | `AGT-002` | [Fabric Data Agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact verification open; link resolved 2026-09-23 |
+| 25 rows × 25 columns | `AGT-013` | [Fabric Data Agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact verification open; link resolved 2026-09-23 |
+| First 200 description characters read by Copilot | `SEM-006`, `SEM-007` | [Prepare data for AI](https://learn.microsoft.com/power-bi/create-reports/copilot-prepare-data-ai) | Fact verification open; link resolved 2026-09-23 |
+| 10,000-character AI-instruction maximum | `SEM-011` | [Prepare data for AI](https://learn.microsoft.com/power-bi/create-reports/copilot-prepare-data-ai) | Fact verification open; link resolved 2026-09-23 |
+| F2+ / P1+ eligible-capacity floor | `TEN-004`, `WKS-001` | [Fabric Copilot capacity](https://learn.microsoft.com/fabric/enterprise/fabric-copilot-capacity) | Fact verification open; link resolved 2026-09-23 |
+| Purview policy support/status by item type | `TEN-012` | [Microsoft Purview and Fabric](https://learn.microsoft.com/fabric/governance/microsoft-purview-fabric) | Fact verification open; link resolved 2026-09-23 |
+| Scanner `getInfo`: 500/hour, 16 concurrent, 100 workspaces/request | collector | [Run metadata scanning](https://learn.microsoft.com/fabric/governance/metadata-scanning-run) | Fact verification open; link resolved 2026-09-23 |
+| Activity Events: 1 UTC day/request, 28-day retention, 200/hour | collector constants; no collector yet | [Get Activity Events](https://learn.microsoft.com/rest/api/power-bi/admin/get-activity-events) | Fact verification open; link resolved 2026-09-23 |
 
-The capacity floor carries a nuance worth stating, because a live run will surface it:
+The following capacity paragraphs describe the behaviour encoded by ruleset
+`2026.09.1`, not newly re-verified product facts. The capacity floor carries a nuance
+worth stating, because a live run will surface it:
 a **Trial** SKU is not an eligible host, so `WKS-001` fails on a trial-backed workspace
 — that is a true positive, not noise. Separately, a **Fabric Copilot capacity** (F2+/P1+)
 can carry Copilot billing for usage originating in another workspace. The two facts
@@ -264,15 +272,13 @@ Admin Portal by hand. This is the intentional, documented fallback for the "conf
 parameter in the flow" request — a manual/config field rather than a live API read,
 because no scriptable Admin API signal exists yet for this setting.
 
-Finally, **Microsoft Purview data loss prevention (DLP) policies and access restriction
-policies do not override effective permissions**. A Data Agent runs under the requesting
-user's own permissions, so DLP/sensitivity labels reduce visibility only where a policy
-exists and applies; `TEN-012` checks that this review happened, not that it is sufficient
-on its own — workspace and OneLake permissions must still be tightened directly wherever
-Purview does not reach. Access restriction policies for KQL Database, SQL Database and
-Data Warehouse were in **preview** at the time this rule was written; Data Warehouse DLP
-policies were **generally available**. Re-check current status before relying on this
-table — these limits age, per the header of this section.
+Finally, `TEN-012` encodes the position that Microsoft Purview data loss prevention
+policies and access restriction policies do not replace review of effective workspace
+and OneLake permissions. The earlier ruleset record classified access restriction
+policies for KQL Database, SQL Database and Data Warehouse as preview and Data Warehouse
+DLP policies as generally available. That status has not been re-verified for this
+review; do not rely on it as a current product claim until Sprint 5.3 closes the table
+above.
 
 `RULESET_VERSION` pins what was believed true when a score was produced. **Scores are
 only comparable across runs with the same ruleset version**; the trend view must refuse
@@ -287,9 +293,9 @@ floor.
 
 ## 10. Retiring Dependencies
 
-**Power BI Q&A** is announced for retirement in December 2026. No rule may add a new
-dependency on it; existing usage in a customer estate should be flagged as technical debt
-rather than scored as readiness.
+No rule relies on **Power BI Q&A**. Its retirement timing is a changing product fact and
+has not been re-verified for this review; no new dependency may be added until its
+current status and source are recorded through the Sprint 5.3 product-fact gate.
 
 ## 11. Scope Boundaries
 
@@ -299,3 +305,20 @@ This tool will not:
 - decide which objects are business-critical;
 - author descriptions, instructions, or evaluation corpora;
 - guarantee agent behaviour from static metadata alone.
+
+## 12. Scheduling And Re-Measurement Are Not Yet Proven
+
+The Fabric notebook and Data Pipeline can be triggered, and the repository implements
+persistence, baseline selection, trend classification, and remediation burn-down.
+However, there is no versioned recurrence artifact and no recorded pair of
+ruleset-compatible unattended runs. Scheduler identity, overlap prevention, retention,
+failure notification, and rerun procedure remain deployment-owned contracts rather than
+demonstrated repository capabilities.
+
+**Consequence.** Describe the solution as **schedulable**, not **scheduled**. Trend and
+burn-down code demonstrate the mechanism, not an operational remediation/re-measurement
+cycle.
+
+**Resolution gate.** Phase 5 Sprint 5.5 requires two compatible unattended runs on the
+defined cadence, reviewed publication, automatic baseline selection, and evidence that
+coverage loss is distinguished from quality regression.

@@ -18,12 +18,29 @@ files. Ownership is enforced: `python scripts/check_agent_ownership.py` reports 
 | `@remediation` | Backlog, priority, effort | `remediation.py` |
 | `@lakehouse` | Persistence and reporting | `lakehouse.py`, `reporting.py` |
 | `@tester` | Tests, fixtures, ownership script | `tests/`, `scripts/check_agent_ownership.py` |
-| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/*` |
+| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/KNOWN_LIMITATIONS.md` |
 | `@roadmap-planner` | Sequencing and gates | `docs/ROADMAP.md` |
 | `@security` | Privacy, scopes, retention | *(nothing — read-only by design)* |
 
 `@security` deliberately owns no module. A reviewer who can edit the code they review
 eventually reviews their own edits.
+
+### Known ownership gap — unclaimed documentation
+
+`python scripts/check_agent_ownership.py` audits modules under `fabric_iq/` only. It says
+nothing about Markdown, and four documents are currently claimed by **no** agent:
+
+| Unclaimed file | Consequence |
+|----------------|-------------|
+| `docs/IDENTITY_AND_RETENTION.md` | Privacy and retention claims have no owner to reconcile them when persistence changes |
+| `docs/INSTALL.md` | Installer confidentiality guarantees drift silently when the notebook changes |
+| `docs/SELF_ASSESSMENT.md` | Self-assessment gate description has no owner |
+| `fabric/README.md` | Deployed-item inventory has no owner |
+
+Until an agent claims them, changes to these files are unrouted: edits land wherever the
+current task happens to point, and the documentation gate cannot block on them. Assigning
+an owner is a decision for the user, not a gap `@readme` may quietly close by editing
+files it does not own.
 
 ## Why Ownership Is Enforced
 
