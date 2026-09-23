@@ -89,7 +89,57 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
   check alongside the ownership and rule-documentation checks.
 
-**Tests** — grown from 138 to **348 tests**, all green.
+**Tests** — grown from 138 to **375 tests**, all green. One test skips by design on
+Windows — it plants a control character in a tracked filename to prove the NUL-separated
+`git ls-files -z` parse, and Windows refuses such a name; it carries its weight on Linux
+CI.
+
+### Fixed
+
+**Evidence-sink gate — four fail-open defects**, found by `@change-preceptor` reading
+[`scripts/check_evidence_sinks.py`](./scripts/check_evidence_sinks.py) rather than running
+it. Each reported a safety that was not there, and each is now pinned by a regression in
+[`tests/test_evidence_sinks.py`](./tests/test_evidence_sinks.py):
+- A documented output folder written with a **trailing slash** was discarded as prose
+  before it ever reached the gate: the separator test ran on the stripped candidate, and
+  `"/" in "results/".strip("/")` is `False`. A single-level destination documented that
+  way was never checked against any ignore rule. The separator is now tested on the raw
+  value, and only a candidate that is nothing but separators is treated as naming no
+  destination.
+- Tracked files with **non-ASCII names** were invisible to *both* the shadowing check and
+  the identifier scan. Under git's default `core.quotePath`, `docs/café.md` comes back as
+  an octal C-literal that opens nothing and matches no ignore rule, so a real-shaped
+  synthetic GUID planted in that file went unreported while its ASCII twin was caught.
+  Git is now run with `-c core.quotePath=false`, the index is read with
+  `git ls-files -z`, and a pathname `git check-ignore` echoes back that was not asked for
+  raises instead of being silently dropped.
+- **Non-UTF-8 files were skipped as "binary"** although they leak exactly like their
+  UTF-8 twin — a UTF-16 document is text. Tracked bytes are now read in binary and
+  decoded losslessly, with NUL bytes stripped so ASCII identifier runs reassemble in
+  either endianness; a BOM-less UTF-16 file decodes as UTF-8 *without error*, so a
+  fallback triggered only by a decode failure would still have missed it. A tracked file
+  that cannot be **opened** is now reported by name, because an unscanned file that
+  reports nothing is indistinguishable from a clean one.
+- An **untracked `.gitignore` counted as protection**. Matching on the filename alone
+  accepted a rule source that exists in one clone and can be deleted, or simply never
+  exist for a teammate, while the gate reported the tree as safe. The ignore source is
+  now intersected with the index, alongside the existing rejections of an absolute
+  source, a blank CRLF pattern, and a negation rule that re-includes the destination.
+
+The identifier scan additionally now flags an **undashed** 32-hex tenant id — the form a
+token claim carries — bounded so a 40-hex commit SHA does not match, and skips a gitlink
+directory, whose own checkout runs its own gate.
+
+**Ownership audit — `scripts/` was outside the audited universe.** The check built its
+universe from the modules under `fabric_iq/` plus `REQUIRED_DOCS`, so the two gate scripts
+`@tester` claims were parsed but never verified, and `scripts/build_rules_doc.py` and
+`scripts/__init__.py` were owned by nobody. The universe is now `fabric_iq/` **plus**
+`scripts/` plus the required documents — **26** audited modules and **6** documents and
+skills — with the gate scripts and the package marker claimed by **@tester** and the
+generator behind [`docs/RULES.md`](./docs/RULES.md) claimed by **@readme**, which owns its
+output and runs `python scripts/build_rules_doc.py --check` as part of the documentation
+gate. An unowned gate is worse than an unowned module: it keeps exiting `0` while the
+thing it was written to catch walks past it, and no agent is accountable for noticing.
 
 ### Documentation
 
@@ -153,6 +203,12 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   went red on the four gates CI runs beyond the unittest suite. The existing
   preceptorship section is retitled "The Assessment Preceptorship Loop — `@preceptor`"
   so a reader knows which preceptor it belongs to.
+- [`docs/AGENTS.md`](./docs/AGENTS.md) — the audited universe is described as **three**
+  populations (the 22 modules under `fabric_iq/`, the 4 scripts under `scripts/`, the 6
+  documents and skills), the roster records who owns each script, and a new
+  "Script ownership — the gates and the generator" table states the split: `@tester` owns
+  the checks that fail the build, `@readme` owns the generator whose output is a
+  published document, and rule *content* stays with the rule's owning agent.
 - [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
   the agent-facing Skill is now claimed by **@readme** and reconciled against the engine:
   every restated threshold (5 data sources, 25×25, 200-character description budget,

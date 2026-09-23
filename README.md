@@ -12,7 +12,7 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 348 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity |
+| ✅ **Tests** | 375 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity (one skips on Windows by design: it needs a filename Windows refuses) |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 14-agent environment |
@@ -64,12 +64,14 @@ python scripts/check_evidence_sinks.py
 
 No dependencies. Python 3.12+ standard library only.
 
-`check_agent_ownership.py` asserts that every module under `fabric_iq/` is claimed by
-exactly one agent, and that each document carrying a privacy, identity or retention
-claim — or that a model reads as instruction, which is the same promise made at prompt
-time — names exactly one accountable owner. Six documents and skills are in that
-required set today; the check also fails if one of them is deleted outright, so the
-guarantee cannot be met by removing the document that carries it.
+`check_agent_ownership.py` asserts that every module under `fabric_iq/` **and** under
+`scripts/` is claimed by exactly one agent, and that each document carrying a privacy,
+identity or retention claim — or that a model reads as instruction, which is the same
+promise made at prompt time — names exactly one accountable owner. Twenty-six modules
+and six documents and skills are in that audited set today; the check also fails if one
+of the documents is deleted outright, so the guarantee cannot be met by removing the
+document that carries it. The gate scripts are inside the audited set on purpose: a
+check nobody owns keeps exiting `0` and nobody is accountable for noticing.
 
 `check_evidence_sinks.py` asserts three things about the repository as it stands: every
 writer destination — defaults, the extensions the writers emit, and the `--out`,

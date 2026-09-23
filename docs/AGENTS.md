@@ -2,9 +2,15 @@
 
 Fourteen agents under [.github/agents/](../.github/agents), twelve of them owning a
 declared set of files. Ownership is enforced: `python scripts/check_agent_ownership.py`
-reports drift and `tests/test_agents.py` fails the build on it. The audit covers **two**
-populations — the **22** modules under `fabric_iq/`, and the **6** documents and skills
-that assert a privacy, identity or retention claim or that a model reads as instruction.
+reports drift and `tests/test_agents.py` fails the build on it. The audit covers **three**
+populations — the **22** modules under `fabric_iq/`, the **4** gate and generator scripts
+under `scripts/`, and the **6** documents and skills that assert a privacy, identity or
+retention claim or that a model reads as instruction. The first two are reported together
+as **26** audited modules, which is the count the check prints.
+
+`scripts/` is audited on the same terms as the package, `__init__.py` included. An unowned
+gate is worse than an unowned module: it keeps exiting 0 while the thing it was written to
+catch walks past it, and no agent is accountable for noticing.
 
 Two agents own nothing on purpose: `@change-preceptor`, which reviews a code change
 before it lands, and `@security`, which audits privacy. Both are described below.
@@ -23,8 +29,8 @@ before it lands, and `@security`, which audits privacy. Both are described below
 | `@change-preceptor` | Code-change review before it lands — a **development role** | *(nothing — it reviews changes, it does not make them)* |
 | `@remediation` | Backlog, priority, effort | `remediation.py` |
 | `@lakehouse` | Persistence and reporting | `lakehouse.py`, `reporting.py` |
-| `@tester` | Tests, fixtures, ownership and evidence-sink gates | `tests/`, `scripts/check_agent_ownership.py`, `scripts/check_evidence_sinks.py` |
-| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/INTERPRETING_RESULTS.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/IDENTITY_AND_RETENTION.md`, `.github/skills/fabric-iq-readiness/SKILL.md` |
+| `@tester` | Tests, fixtures, ownership and evidence-sink gates | `tests/`, `scripts/__init__.py`, `scripts/check_agent_ownership.py`, `scripts/check_evidence_sinks.py` |
+| `@readme` | Documentation accuracy, rule-catalogue generation | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/INTERPRETING_RESULTS.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/IDENTITY_AND_RETENTION.md`, `.github/skills/fabric-iq-readiness/SKILL.md`, `scripts/build_rules_doc.py` |
 | `@roadmap-planner` | Sequencing and gates | `docs/ROADMAP.md` |
 | `@security` | Privacy, scopes, retention | *(nothing — read-only by design)* |
 
@@ -56,12 +62,30 @@ the guarantee could be met by deleting the document that carries it:
 The list is explicit rather than inferred. A heuristic that guessed which file "looks
 like" a privacy claim would let the gate widen or narrow itself without a review.
 
+### Script ownership — the gates and the generator
+
+Everything under `scripts/` carries an owner for the same reason the modules do, but the
+consequence of getting it wrong is sharper: a script that nobody maintains is usually a
+script nobody reads, and a check nobody reads is a check that can start passing for the
+wrong reason without anyone noticing.
+
+| Script | Owner | Why that owner |
+|--------|-------|----------------|
+| `scripts/check_agent_ownership.py` | `@tester` | Ownership drift gate — a test made runnable |
+| `scripts/check_evidence_sinks.py` | `@tester` | Evidence-sink hygiene gate — a test made runnable |
+| `scripts/__init__.py` | `@tester` | Package marker that makes the gate scripts importable by the suite |
+| `scripts/build_rules_doc.py` | `@readme` | Generates `docs/RULES.md`, which `@readme` owns; `--check` makes the catalogue-currency claim executable and CI runs it |
+
+The split follows the artifact, not the folder: `@tester` owns the checks that fail the
+build, `@readme` owns the generator whose output is a published document. Rule *content*
+still belongs to the rule's owning agent — the generator only renders the registry.
+
 ### Two Executable Gates
 
 Both are Phase 5 release-gate criteria, and both are runnable rather than asserted:
 
 ```bash
-python scripts/check_agent_ownership.py   # criterion 10: modules and privacy docs have exactly one owner
+python scripts/check_agent_ownership.py   # criterion 10: every module under fabric_iq/ and scripts/, plus the privacy docs, has exactly one owner
 python scripts/check_evidence_sinks.py    # criterion 9: evidence sinks are ignored, tracked files are clean
 ```
 
@@ -178,6 +202,11 @@ whether that review is `@preceptor` coaching an assessment dimension or
 `@change-preceptor` coaching a change. A doubly claimed module has two agents editing
 the same file with different mental models. Both failure modes are silent until they
 cost a day.
+
+For a gate the silence lasts longer. A module that nobody owns eventually breaks loudly,
+because something depends on it; a check that nobody owns keeps printing "clean" and is
+indistinguishable from a check that works. That is why `scripts/` is inside the audited
+universe rather than beside it: the gates themselves are held to the rule they enforce.
 
 ## The Assessment Preceptorship Loop — `@preceptor`
 

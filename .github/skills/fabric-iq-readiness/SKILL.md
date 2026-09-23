@@ -158,9 +158,10 @@ python scripts/build_rules_doc.py --check          # fail if docs/RULES.md is st
 python scripts/build_rules_doc.py                  # regenerate docs/RULES.md
 ```
 
-All of these run in CI. `check_agent_ownership.py` now covers both every module under
-`fabric_iq/` and the documentation that carries a privacy, identity or retention claim —
-this Skill is claimed by **@readme**. `check_evidence_sinks.py` asserts that every writer
+All of these run in CI. `check_agent_ownership.py` covers every module under `fabric_iq/`
+**and** under `scripts/` — the gate scripts are held to the rule they enforce — plus the
+documentation that carries a privacy, identity or retention claim; this Skill is claimed
+by **@readme**. `check_evidence_sinks.py` asserts that every writer
 destination resolves to a committed `.gitignore` rule, that no tracked file is shadowed
 by those rules, and that no tracked file carries a real tenant identifier.
 
