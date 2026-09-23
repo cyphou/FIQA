@@ -12,7 +12,7 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 295 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene |
+| ✅ **Tests** | 345 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 13-agent environment |
@@ -66,7 +66,10 @@ No dependencies. Python 3.12+ standard library only.
 
 `check_agent_ownership.py` asserts that every module under `fabric_iq/` is claimed by
 exactly one agent, and that each document carrying a privacy, identity or retention
-claim names exactly one accountable owner.
+claim — or that a model reads as instruction, which is the same promise made at prompt
+time — names exactly one accountable owner. Six documents and skills are in that
+required set today; the check also fails if one of them is deleted outright, so the
+guarantee cannot be met by removing the document that carries it.
 
 `check_evidence_sinks.py` asserts three things about the repository as it stands: every
 writer destination — defaults, the extensions the writers emit, and the `--out`,
@@ -97,6 +100,25 @@ from "the tenant is not ready" without parsing output.
 > This repository does not yet include a versioned recurrence artifact or evidence of
 > two unattended runs; until that Phase 5 gate is met, the pipeline is **schedulable**,
 > not **scheduled**.
+
+---
+
+## 🔎 Reading the Results
+
+A run prints score, status, coverage and confidence together, then its blocking findings,
+then the backlog. Read it in that order — **blocking findings first**, `NOT_EVALUATED`
+second (a blind spot to fix by collecting more evidence, never by re-scoring), scores
+third and always beside their confidence, backlog last.
+
+[docs/INTERPRETING_RESULTS.md](./docs/INTERPRETING_RESULTS.md) is the operator's guide:
+what each console column means, a triage table from result pattern to first move, why an
+over-broad AI data schema scores worse than a scoped one, why agent instructions do not
+fix a model-metadata problem, and why "Approved for Copilot" never moves a score here.
+The console points at the same guide, so nothing in this repository depends on loading an
+agent Skill to interpret a run.
+
+The normative thresholds live in [docs/SCORING.md](./docs/SCORING.md); the rule detail
+lives in [docs/RULES.md](./docs/RULES.md).
 
 ---
 

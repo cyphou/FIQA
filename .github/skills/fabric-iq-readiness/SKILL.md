@@ -44,13 +44,22 @@ before presenting a live run as a complete tenant inventory.
 
 ### 2. Read the results in this order
 
-1. **Blocking findings first.** These are walls, not quality issues. A tenant switch off,
-   an ineligible capacity, a Pro workspace, an agent with six sources — no amount of
-   metadata polish changes the outcome until they are cleared.
-2. **`NOT_EVALUATED` objects second.** These are blind spots, not bad objects. Decide
-   whether to improve collection before interpreting anything else.
+The console prints score, status, coverage and confidence per object, then a
+`BLOCKING FINDINGS` section, then the backlog. Read it as:
+
+1. **Blocking findings first** — walls, not quality issues. A tenant switch off, an
+   ineligible capacity, a Pro workspace, an agent with six sources: no metadata polish
+   changes the outcome until they are cleared.
+2. **`NOT_EVALUATED` objects second** — blind spots, not bad objects. Fix collection,
+   **do not re-score**.
 3. **Scores third**, always alongside confidence.
 4. **Backlog last** — grouped by owner role, sorted by priority.
+
+The human-facing operational guide is
+[`docs/INTERPRETING_RESULTS.md`](../../../docs/INTERPRETING_RESULTS.md): console columns,
+the full triage table, the artifacts to open, and the worked examples. This Skill
+summarises it. When the two differ, the guide and the engine win — prefer routing a user
+there over paraphrasing from here, since it works without loading this Skill.
 
 ### 3. Report honestly
 
@@ -100,17 +109,24 @@ as input, and without it `AGT-006` … `AGT-012` return `NOT_EVALUATED`
 
 ## Rules That Surprise People
 
+Short forms of the six results that generate the most pushback. Each is explained, with
+its rule IDs and the evidence behind it, in
+[`docs/INTERPRETING_RESULTS.md` § Rules that surprise people](../../../docs/INTERPRETING_RESULTS.md#5-rules-that-surprise-people)
+— route the user there rather than expanding from memory.
+
 - **Missing evidence is never a pass.** An unreadable model is `NOT_EVALUATED`, not 100.
 - **A blocking failure caps the score at 39** and revokes eligibility; a major failure
   caps at 59. A cap only ever lowers a score, so a capped object may score below 39.
   Weighted averages hide walls.
-- **"Approved for Copilot" is self-attestation**, not proof of quality.
+- **"Approved for Copilot" is self-attestation**, not proof of quality: no rule in the
+  catalogue reads an endorsement flag.
 - **An over-broad AI data schema is a problem**, not generosity: it widens the search
-  space and lowers precision.
+  space and lowers precision (`SEM-008` degrades past 80% exposure of visible objects).
 - **Agent-level instructions do not influence DAX generation for a Power BI source** —
   fix the model metadata, not the agent prompt.
 - **An agent that never refuses is more dangerous than one that answers less.** One
-  confident fabrication destroys trust in every correct answer before it.
+  confident fabrication destroys trust in every correct answer before it (`AGT-011`
+  requires tested refusal).
 - **Power BI Q&A: no rule depends on it, and this project has not verified a retirement
   date or its source.** Treat the timing as an unverified, changing product fact
   ([Known limitations §10](../../../docs/KNOWN_LIMITATIONS.md#10-retiring-dependencies)),
@@ -124,6 +140,11 @@ as input, and without it `AGT-006` … `AGT-012` return `NOT_EVALUATED`
 | `NOT_EVALUATED` | Coverage below **50%** (`MIN_COVERAGE_TO_PUBLISH`) and no blocking finding — an observed wall is still published as `NOT_READY` | Fix collection, do not re-score |
 | Score 50–70, high confidence | Genuine metadata debt | Work the backlog by owner |
 | High score, low confidence | We are guessing | Say so; do not publish the score alone |
+
+The two middle rows are triage judgement, not engine behaviour. The operator-facing
+version of this table — with the console patterns, the capped-below-the-cap case and the
+commands to find what went unread — is
+[`docs/INTERPRETING_RESULTS.md` § Triage table](../../../docs/INTERPRETING_RESULTS.md#3-triage-table).
 
 ## Commands
 
@@ -148,6 +169,8 @@ by those rules, and that no tracked file carries a real tenant identifier.
 - Report score, eligibility and confidence together
 - Name the blocking findings before discussing quality
 - State coverage before quoting a tenant-level verdict
+- Point the user at [`docs/INTERPRETING_RESULTS.md`](../../../docs/INTERPRETING_RESULTS.md)
+  when they ask how to read a run — the repository must stay usable without this Skill
 - Quote thresholds from `docs/RULES.md` and the engine constants, not from memory
 - Treat every fixture and example as synthetic
 
@@ -160,6 +183,8 @@ by those rules, and that no tracked file carries a real tenant identifier.
 
 ## Reference
 
+- [How to read a run](../../../docs/INTERPRETING_RESULTS.md) — the human-facing
+  operational guide; it stands alone without this Skill and supersedes any summary here
 - [Scoring contract](../../../docs/SCORING.md)
 - [Rule catalogue](../../../docs/RULES.md) — generated; the source of truth for rules and thresholds
 - [Known limitations](../../../docs/KNOWN_LIMITATIONS.md) — what this tool cannot see, and which limits are dated

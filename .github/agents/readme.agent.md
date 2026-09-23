@@ -16,6 +16,9 @@ in writing must be reproducible by someone who runs the commands.
 - `docs/SCORING.md`
 - `docs/RULES.md`
 - `docs/AGENTS.md`
+- `docs/INTERPRETING_RESULTS.md` — the human-facing guide to reading a run. The CLI and
+  the HTML report point at it, so it must stay reproducible against the engine without
+  any Skill being loaded.
 - `docs/KNOWN_LIMITATIONS.md`
 - `.github/skills/fabric-iq-readiness/SKILL.md` — the agent-facing Skill. It is what a
   model treats as authoritative at prompt time, and it restates engine-owned thresholds

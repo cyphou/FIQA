@@ -177,6 +177,15 @@ input**. The tool does not yet execute a corpus against a live agent.
 that produced it. With no evaluation supplied, those rules return `NOT_EVALUATED` — they
 never assume success.
 
+Refusal is the facet least likely to be supplied and the most consequential to leave
+unread. `AGT-011` wants observed evidence that an out-of-scope or adversarial prompt was
+declined; absent a corpus it returns `NOT_EVALUATED`, because an untested refusal path is
+not a refusal path. What an agent would actually do with a prompt outside its scope is
+precisely what this tool cannot tell you. Why that gap matters more than a thin metadata
+score is explained in
+[`docs/INTERPRETING_RESULTS.md` §5](./INTERPRETING_RESULTS.md#5-rules-that-surprise-people),
+which is where the interpretation of a run belongs.
+
 **Resolution gate.** Phase 5 Sprint 5.4 first proves a supported read-only
 execution/readback surface. Only then may a corpus harness be implemented. If that
 surface is unavailable, `AGT-006` … `AGT-012` remain `NOT_EVALUATED`.

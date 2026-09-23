@@ -2,9 +2,9 @@
 
 Thirteen agents under [.github/agents/](../.github/agents), each owning a declared set of
 files. Ownership is enforced: `python scripts/check_agent_ownership.py` reports drift and
-`tests/test_agents.py` fails the build on it. The audit covers **two** populations — every
-module under `fabric_iq/`, and every document that asserts a privacy, identity or
-retention claim.
+`tests/test_agents.py` fails the build on it. The audit covers **two** populations — the
+**22** modules under `fabric_iq/`, and the **6** documents and skills that assert a
+privacy, identity or retention claim or that a model reads as instruction.
 
 ## Roster
 
@@ -20,7 +20,7 @@ retention claim.
 | `@remediation` | Backlog, priority, effort | `remediation.py` |
 | `@lakehouse` | Persistence and reporting | `lakehouse.py`, `reporting.py` |
 | `@tester` | Tests, fixtures, ownership and evidence-sink gates | `tests/`, `scripts/check_agent_ownership.py`, `scripts/check_evidence_sinks.py` |
-| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/IDENTITY_AND_RETENTION.md` |
+| `@readme` | Documentation accuracy | `README.md`, `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/SCORING.md`, `docs/RULES.md`, `docs/AGENTS.md`, `docs/INTERPRETING_RESULTS.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/IDENTITY_AND_RETENTION.md`, `.github/skills/fabric-iq-readiness/SKILL.md` |
 | `@roadmap-planner` | Sequencing and gates | `docs/ROADMAP.md` |
 | `@security` | Privacy, scopes, retention | *(nothing — read-only by design)* |
 
@@ -29,16 +29,20 @@ eventually reviews their own edits. That is why the privacy documentation it aud
 owned by another agent: the review stays independent, and the claim still has a name
 against it.
 
-### Documentation ownership — privacy, identity and retention
+### Documentation ownership — privacy, identity, retention and instruction
 
 A promise about which identity is used, where evidence lands, and how long it is kept is
-a promise to a customer. `REQUIRED_DOCS` in `scripts/check_agent_ownership.py` names the
-accountable owner of each such document, and the check fails if one is unclaimed, claimed
-twice, or claimed by an agent other than the one named:
+a promise to a customer; a Skill is the same kind of promise made to a model at prompt
+time. `REQUIRED_DOCS` in `scripts/check_agent_ownership.py` names the accountable owner
+of each such file, and the check fails if one is unclaimed, claimed twice, claimed by an
+agent other than the one named, **or missing from the repository entirely** — otherwise
+the guarantee could be met by deleting the document that carries it:
 
 | Document | Accountable owner | Why it carries a claim |
 |----------|-------------------|------------------------|
 | `docs/IDENTITY_AND_RETENTION.md` | `@readme` | Names which identities are read, where they land, and how long they are kept |
+| `docs/INTERPRETING_RESULTS.md` | `@readme` | Tells an operator how to act on a verdict, and is the path the console and the HTML report hardcode (`fabric_iq.reporting.INTERPRETATION_GUIDE`) |
+| `.github/skills/fabric-iq-readiness/SKILL.md` | `@readme` | A model reads it as authoritative instruction and it restates engine-owned thresholds in prose |
 | `docs/INSTALL.md` | `@orchestrator` | Tells an operator where evidence is written and which paths stay untracked |
 | `docs/SELF_ASSESSMENT.md` | `@preceptor` | Publishes the tool's own readiness evidence and its retention |
 | `fabric/README.md` | `@orchestrator` | Deployment surface: workspace items, lakehouse destination, run evidence — covered by the `fabric/` claim |

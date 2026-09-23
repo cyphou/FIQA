@@ -65,11 +65,79 @@ TYPE_ORDER = (
     ObjectType.DATA_AGENT,
 )
 
+#: The human-facing guide. Both renderers point at it; neither depends on it.
+INTERPRETATION_GUIDE = "docs/INTERPRETING_RESULTS.md"
+
+ORIENTATION_TITLE = "HOW TO READ THIS"
+ORIENTATION_HTML_TITLE = "How to read this report"
+
 
 def _score_cell(card: Scorecard) -> str:
     if card.status is ReadinessStatus.NOT_EVALUATED:
         return "NE"
     return f"{card.score:5.1f}"
+
+
+def _not_evaluated_count(run: AssessmentRun) -> int:
+    return sum(
+        1 for c in run.scorecards if c.status is ReadinessStatus.NOT_EVALUATED
+    )
+
+
+def _orientation_points(run: AssessmentRun) -> list[tuple[str, str]]:
+    """The three things a first-time reader has to know, as (claim, why) pairs.
+
+    Counts are surfaced here only so the reader learns, in the first screen, how
+    many walls and how many blind spots this run has. Nothing is recomputed,
+    merged or restated as a verdict.
+    """
+    blocking = len(run.blocking_findings)
+    not_evaluated = _not_evaluated_count(run)
+    if blocking:
+        walls = (
+            f"Blocking findings ({blocking}) come first.",
+            "They are walls, not quality issues - nothing ships until they clear.",
+        )
+    else:
+        walls = (
+            "Blocking findings (0) come first.",
+            "None today - no object is structurally excluded, so read the scores next.",
+        )
+    return [
+        walls,
+        (
+            f"NOT EVALUATED ({not_evaluated}) is a blind spot, not a bad score.",
+            "Fix it by collecting more evidence, never by re-scoring.",
+        ),
+        (
+            "A score only means something beside its coverage and confidence.",
+            "Eligibility, score and confidence are three results and are never merged.",
+        ),
+    ]
+
+
+def _orientation_console(run: AssessmentRun) -> list[str]:
+    lines = [ORIENTATION_TITLE, "-" * 78]
+    for index, (claim, why) in enumerate(_orientation_points(run), start=1):
+        lines.append(f"  {index}. {claim}")
+        lines.append(f"     {why}")
+    lines.append(f"  Full guide: {INTERPRETATION_GUIDE}")
+    lines.append("")
+    return lines
+
+
+def _orientation_html(run: AssessmentRun) -> str:
+    items = "".join(
+        f"<li><strong>{html.escape(claim)}</strong> {html.escape(why)}</li>"
+        for claim, why in _orientation_points(run)
+    )
+    return (
+        '<section id="sec-orientation" class="card orient-card">'
+        f"<h2>{html.escape(ORIENTATION_HTML_TITLE)}</h2>"
+        f'<ol class="orient">{items}</ol>'
+        f'<p class="orient-more">Full guide: <code>{html.escape(INTERPRETATION_GUIDE)}</code></p>'
+        "</section>"
+    )
 
 
 def to_console(
@@ -88,6 +156,7 @@ def to_console(
         f"Collector : {run.collector_mode}",
         "",
     ]
+    lines.extend(_orientation_console(run))
 
     for object_type in TYPE_ORDER:
         cards = run.by_type(object_type)
@@ -303,7 +372,10 @@ def to_html(
         ]
     )
 
-    nav_items = [_nav_pill("sec-blocking", "Blocking findings", len(blocking))]
+    nav_items = [
+        _nav_pill("sec-orientation", "How to read this"),
+        _nav_pill("sec-blocking", "Blocking findings", len(blocking)),
+    ]
     for object_type in present_types:
         nav_items.append(
             _nav_pill(f"sec-{object_type.value}", object_type.value.replace("_", " ").title(),
@@ -314,6 +386,7 @@ def to_html(
         nav_items.append(_nav_pill("sec-preceptor", "Preceptorship"))
 
     sections = [
+        _orientation_html(run),
         _section(
             "sec-blocking",
             "Blocking findings",
@@ -389,6 +462,11 @@ def to_html(
  .card h2 {{ margin: 0 0 .2rem; font-size: 1.1rem; color: var(--brand-dark); }}
  .card-subtitle {{ margin: 0 0 .8rem; font-size: .85rem; color: var(--muted); }}
  .alert-card {{ border-left: 4px solid #a4262c; }}
+ .orient-card {{ border-left: 4px solid var(--brand); }}
+ ol.orient {{ margin: .2rem 0 .6rem; padding-left: 1.2rem; font-size: .88rem; }}
+ ol.orient li {{ margin-bottom: .25rem; color: var(--muted); }}
+ ol.orient li strong {{ color: var(--ink); }}
+ .orient-more {{ margin: 0; font-size: .82rem; color: var(--muted); }}
  table.data-table {{ border-collapse: collapse; width: 100%; font-size: .85rem; }}
  table.data-table th {{
    text-align: left; padding: .5rem .6rem; border-bottom: 2px solid var(--border);

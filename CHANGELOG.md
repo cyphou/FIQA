@@ -69,23 +69,51 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   pre-push privacy audit, and it cannot see a path written outside the working tree.
 - [`scripts/check_agent_ownership.py`](./scripts/check_agent_ownership.py) extended
   beyond `fabric_iq/` modules to documentation that asserts a privacy, identity or
-  retention claim. Four such documents now name exactly one accountable owner —
-  [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) (**@readme**),
-  [`docs/INSTALL.md`](./docs/INSTALL.md) and [`fabric/README.md`](./fabric/README.md)
-  (**@orchestrator**), and [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md)
-  (**@preceptor**). **@security** reviews all four and owns no file by design: a reviewer
+  retention claim, and to the files a model reads as instruction. Six such documents and
+  skills now name exactly one accountable owner —
+  [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md),
+  [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md) and
+  [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md)
+  (**@readme**), [`docs/INSTALL.md`](./docs/INSTALL.md) and
+  [`fabric/README.md`](./fabric/README.md) (**@orchestrator**), and
+  [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md) (**@preceptor**). The check also
+  fails when a required document is missing from the repository entirely, so the
+  guarantee cannot be satisfied by deleting the document that carries it.
+  **@security** reviews all six and owns no file by design: a reviewer
   that can edit what it reviews eventually reviews its own edits.
 - Both checks fail with exit code `1` and name the offending path, and both carry
   negative tests over synthetic fixtures — a temporary git repository for the sink check,
   a temporary agent roster for the ownership check — proving each invariant actually
   rejects a missing ignore rule, a shadowed tracked file, a planted identifier, and a
-  document that is unclaimed, doubly claimed or claimed by the wrong agent.
+  document that is unclaimed, doubly claimed, claimed by the wrong agent, or absent.
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
   check alongside the ownership and rule-documentation checks.
 
-**Tests** — grown from 138 to **295 tests**, all green.
+**Tests** — grown from 138 to **345 tests**, all green.
 
 ### Documentation
+
+- [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md) (new) — the
+  operational guide to reading a run, written for a human at a console rather than for a
+  model. It moves the interpretation knowledge that previously existed only in
+  AI-facing files (`.github/skills/`, `.github/agents/`) into the documentation set:
+  the reading order (blocking findings, then `NOT_EVALUATED`, then scores beside their
+  confidence, then backlog), what each console column and section means, a triage table
+  from result pattern to first move, the `NOT_EVALUATED` instruction ("fix collection,
+  do not re-score") with the command that lists which rules went unread, and the results
+  that surprise people — over-broad AI data schemas, agent instructions that cannot fix
+  model metadata, endorsement as self-attestation, and refusal as a security property.
+  Every claim was reproduced against ruleset `2026.09.1` before being written; the
+  normative thresholds stay in [`docs/SCORING.md`](./docs/SCORING.md) and the rule detail
+  in the generated [`docs/RULES.md`](./docs/RULES.md), which this guide links rather than
+  restates.
+- [`README.md`](./README.md) — a "Reading the results" section links the new guide, so a
+  reader who never loads a Skill still finds it.
+- [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
+  now **routes** to `docs/INTERPRETING_RESULTS.md` instead of being the only home of the
+  interpretation knowledge. The Skill keeps a usable summary (and every engine-constant
+  claim the drift check asserts), and is explicitly told to send users to the guide. The
+  Skill is optional sugar; the CLI and the documentation stand alone.
 
 - [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) reconciled against
   the writers: all **four** run destinations are now documented (`--out`, `--lakehouse`,
