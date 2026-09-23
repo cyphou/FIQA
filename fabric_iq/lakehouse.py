@@ -385,6 +385,58 @@ def run_trend_mart_rows(
     return rows
 
 
+def load_assessment_run(path: str) -> AssessmentRun:
+    """Load an assessment run persisted by ``AssessmentRun.to_json``."""
+
+    try:
+        return AssessmentRun.from_json(path)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise PersistenceError(f"cannot load assessment run {path}: {exc}") from exc
+
+
+def select_latest_baseline_run(
+    reports_dir: str,
+    current_run: AssessmentRun,
+    *,
+    same_ruleset_only: bool = True,
+) -> AssessmentRun | None:
+    """Return the latest previous comparable assessment run from ``reports_dir``.
+
+    The deployed notebook writes durable run JSON files under
+    ``Files/readiness/reports``. This helper uses that medallion history as the
+    source of truth for trend comparisons, excluding the current run and, by
+    default, ignoring runs created with a different ruleset version.
+    """
+
+    if not reports_dir:
+        raise PersistenceError("reports_dir is required for baseline selection")
+    if not current_run.run_id:
+        raise PersistenceError("current_run.run_id is required for baseline selection")
+    if not os.path.isdir(reports_dir):
+        return None
+
+    candidates: list[AssessmentRun] = []
+    for name in sorted(os.listdir(reports_dir)):
+        if not name.endswith("_assessment.json"):
+            continue
+        path = os.path.join(reports_dir, name)
+        baseline = load_assessment_run(path)
+        if baseline.run_id == current_run.run_id:
+            continue
+        if baseline.tenant_id != current_run.tenant_id:
+            continue
+        if same_ruleset_only and baseline.ruleset_version != current_run.ruleset_version:
+            continue
+        candidates.append(baseline)
+    if not candidates:
+        return None
+    return max(candidates, key=_baseline_sort_key)
+
+
+def _baseline_sort_key(run: AssessmentRun) -> tuple[str, str, str]:
+    return (run.completed_at or "", run.started_at or "", run.run_id)
+
+
 def gold_mart_rows(
     run: AssessmentRun,
     backlog: RemediationBacklog,

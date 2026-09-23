@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from fabric_iq import RULESET_VERSION, __version__
 from fabric_iq.collectors import FabricApiCollector, FabricApiConfig, FabricHttpTransport, OfflineCollector
 from fabric_iq.errors import AssessmentError
-from fabric_iq.lakehouse import LakehouseWriter
+from fabric_iq.lakehouse import LakehouseWriter, select_latest_baseline_run
 from fabric_iq.models import ObjectType
 from fabric_iq.powerbi import PowerBiReportWriter
 from fabric_iq.preceptor import PreceptorLoop
@@ -136,6 +136,7 @@ def main(argv: list[str] | None = None) -> int:
             review = PreceptorLoop().run(run, max_cycles=args.max_cycles)
 
         os.makedirs(args.out, exist_ok=True)
+        baseline_run = select_latest_baseline_run(args.out, run)
         run.to_json(os.path.join(args.out, f"{run_id}_assessment.json"))
         backlog.to_json(os.path.join(args.out, f"{run_id}_backlog.json"))
         backlog.to_csv(os.path.join(args.out, f"{run_id}_backlog.csv"))
@@ -150,10 +151,11 @@ def main(argv: list[str] | None = None) -> int:
                 backlog,
                 inventory=collection.inventory,
                 bronze=collection.bronze,
+                baseline_run=baseline_run,
             )
 
         if args.powerbi:
-            PowerBiReportWriter(root=args.powerbi).write_run(run, backlog)
+            PowerBiReportWriter(root=args.powerbi).write_run(run, backlog, baseline_run=baseline_run)
 
         if not args.quiet:
             print(to_console(run, backlog, review))

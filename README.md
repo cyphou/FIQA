@@ -11,7 +11,7 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 246 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer |
+| ✅ **Tests** | 250 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 8 Gold marts · 13-agent environment |
@@ -215,6 +215,8 @@ Eight Gold marts feed a DirectLake readiness semantic model and report:
 `MartRunSummary`, `MartTenantReadiness`, `MartWorkspaceReadiness`, `MartObjectReadiness`,
 `MartBlockingFindings`, `MartRemediationBacklog`, `MartCoverageAndFreshness`,
 `MartRunTrend`.
+`MartRunTrend` is populated automatically from the latest previous comparable run in
+the medallion report history; the first run stays empty but schema-stable.
 The model keeps those PascalCase names for business readability, while its DirectLake
 partitions point to the Lakehouse SQL endpoint's physical lowercase table names
 (`marttenantreadiness`, `martobjectreadiness`, and so on). This keeps the model

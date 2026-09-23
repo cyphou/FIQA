@@ -188,6 +188,9 @@ report conventions familiar to Fabric administrators:
 
 Because the model is Direct Lake, the report needs no separate refresh schedule — only
 the pipeline's schedule (or a manual notebook run) needs to produce a new Gold write.
+For `Trend & Regression`, the notebook automatically uses the latest previous
+assessment JSON for the same tenant and ruleset from `Files/readiness/reports`; the
+first comparable run publishes an empty, schema-stable trend table.
 
 ## 📥 Installer Notebook
 

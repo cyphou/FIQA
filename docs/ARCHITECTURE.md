@@ -141,10 +141,12 @@ classifies score movement separately from observability movement: a lower score 
 stable coverage is a quality regression, while a lower score with materially lower
 coverage is a collection incident that should be fixed before blaming the object owner.
 Ruleset-version changes are flagged as incompatible for score trending instead of being
-plotted as if the scale were unchanged. `MartRunTrend` persists those object-level
-comparisons when a baseline run is provided; it is empty on the first run but still
-published with an explicit schema so the DirectLake semantic model and report page remain
-stable before history exists.
+plotted as if the scale were unchanged. The CLI and Fabric notebook automatically select
+the latest previous run for the same tenant and ruleset from the durable
+`reports/*_assessment.json` history before publishing the current run. `MartRunTrend`
+persists those object-level comparisons; it is empty on the first comparable run but
+still published with an explicit schema so the DirectLake semantic model and report page
+remain stable before history exists.
 
 ## Error Handling
 

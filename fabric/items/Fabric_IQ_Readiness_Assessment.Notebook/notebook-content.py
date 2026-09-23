@@ -89,7 +89,13 @@ if library_path not in sys.path:
 import fabric_iq
 from fabric_iq import RULESET_VERSION
 from fabric_iq.collectors import FabricApiCollector, FabricApiConfig, FabricHttpTransport
-from fabric_iq.lakehouse import GOLD, GOLD_SCHEMAS, GOLD_TABLES, LakehouseWriter
+from fabric_iq.lakehouse import (
+    GOLD,
+    GOLD_SCHEMAS,
+    GOLD_TABLES,
+    LakehouseWriter,
+    select_latest_baseline_run,
+)
 from fabric_iq.preceptor import PreceptorLoop
 from fabric_iq.remediation import build_backlog
 from fabric_iq.reporting import to_console, to_html
@@ -174,14 +180,21 @@ print(to_console(run, backlog, review))
 
 # CELL ********************
 
+reports_dir = os.path.join(readiness_root, "reports")
+baseline_run = select_latest_baseline_run(reports_dir, run)
+if baseline_run is None:
+    print("trend baseline: none (first comparable run)")
+else:
+    print(f"trend baseline: {baseline_run.run_id}")
+
 written = LakehouseWriter(root=readiness_root, run_id=run_id).write_run(
     run,
     backlog,
     inventory=inventory,
     bronze=collection.bronze,
+    baseline_run=baseline_run,
 )
 
-reports_dir = os.path.join(readiness_root, "reports")
 os.makedirs(reports_dir, exist_ok=True)
 run.to_json(os.path.join(reports_dir, f"{run_id}_assessment.json"))
 backlog.to_json(os.path.join(reports_dir, f"{run_id}_backlog.json"))

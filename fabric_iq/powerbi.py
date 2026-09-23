@@ -1094,12 +1094,18 @@ class PowerBiReportWriter:
         self.root = root
         self.project_name = project_name
 
-    def write_run(self, run: AssessmentRun, backlog: RemediationBacklog) -> str:
+    def write_run(
+        self,
+        run: AssessmentRun,
+        backlog: RemediationBacklog,
+        *,
+        baseline_run: AssessmentRun | None = None,
+    ) -> str:
         os.makedirs(self.root, exist_ok=True)
         data_dir = os.path.join(self.root, "data")
         os.makedirs(data_dir, exist_ok=True)
 
-        mart_rows = gold_mart_rows(run, backlog, run_id=run.run_id)
+        mart_rows = gold_mart_rows(run, backlog, run_id=run.run_id, baseline_run=baseline_run)
         for table_name, columns in MART_COLUMNS.items():
             _write_csv(os.path.join(data_dir, f"{table_name}.csv"), columns, mart_rows[table_name])
 

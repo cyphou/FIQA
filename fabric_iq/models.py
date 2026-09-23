@@ -122,6 +122,15 @@ class Evidence:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Evidence":
+        return cls(
+            source=str(data.get("source", "")),
+            reference=str(data.get("reference", "")),
+            collected_at=str(data.get("collected_at", "")) or utcnow(),
+            detail=str(data.get("detail", "")),
+        )
+
 
 @dataclass
 class RuleOutcome:
@@ -173,6 +182,20 @@ class RuleOutcome:
             "evidence": [e.to_dict() for e in self.evidence],
         }
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "RuleOutcome":
+        return cls(
+            status=RuleStatus(str(data.get("status", RuleStatus.NOT_EVALUATED.value))),
+            score=float(data.get("score", 0.0) or 0.0),
+            detail=str(data.get("detail", "")),
+            observed=dict(data.get("observed") or {}),
+            evidence=[
+                Evidence.from_dict(e)
+                for e in data.get("evidence", [])
+                if isinstance(e, dict)
+            ],
+        )
+
 
 @dataclass
 class Finding:
@@ -214,6 +237,23 @@ class Finding:
             "docs": self.docs,
             "outcome": self.outcome.to_dict(),
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Finding":
+        return cls(
+            rule_id=str(data.get("rule_id", "")),
+            title=str(data.get("title", "")),
+            object_id=str(data.get("object_id", "")),
+            object_name=str(data.get("object_name", "")),
+            object_type=ObjectType(str(data.get("object_type", ObjectType.TENANT.value))),
+            dimension=Dimension(str(data.get("dimension", Dimension.GOVERNANCE.value))),
+            severity=Severity(str(data.get("severity", Severity.INFO.value))),
+            outcome=RuleOutcome.from_dict(dict(data.get("outcome") or {})),
+            remediation=str(data.get("remediation", "")),
+            effort=Effort(str(data.get("effort", Effort.M.value))),
+            docs=str(data.get("docs", "")),
+            owner_role=str(data.get("owner_role", "")),
+        )
 
 
 @dataclass
@@ -268,6 +308,30 @@ class Scorecard:
             "findings": [f.to_dict() for f in self.findings],
         }
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Scorecard":
+        return cls(
+            object_id=str(data.get("object_id", "")),
+            object_name=str(data.get("object_name", "")),
+            object_type=ObjectType(str(data.get("object_type", ObjectType.TENANT.value))),
+            parent_id=str(data.get("parent_id", "")),
+            score=float(data.get("score", 0.0) or 0.0),
+            raw_score=float(data.get("raw_score", 0.0) or 0.0),
+            status=ReadinessStatus(str(data.get("status", ReadinessStatus.NOT_EVALUATED.value))),
+            eligible=bool(data.get("eligible", False)),
+            confidence=float(data.get("confidence", 0.0) or 0.0),
+            coverage=float(data.get("coverage", 0.0) or 0.0),
+            dimension_scores=dict(data.get("dimension_scores") or {}),
+            findings=[
+                Finding.from_dict(f)
+                for f in data.get("findings", [])
+                if isinstance(f, dict)
+            ],
+            ruleset_version=str(data.get("ruleset_version", "")),
+            assessed_at=str(data.get("assessed_at", "")) or utcnow(),
+            notes=[str(note) for note in data.get("notes", [])],
+        )
+
 
 @dataclass
 class AssessmentRun:
@@ -319,3 +383,32 @@ class AssessmentRun:
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write(payload)
         return payload
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "AssessmentRun":
+        return cls(
+            run_id=str(data.get("run_id", "")),
+            tenant_id=str(data.get("tenant_id", "")),
+            started_at=str(data.get("started_at", "")) or utcnow(),
+            completed_at=str(data.get("completed_at", "")),
+            ruleset_version=str(data.get("ruleset_version", "")),
+            collector_mode=str(data.get("collector_mode", "offline")),
+            scorecards=[
+                Scorecard.from_dict(card)
+                for card in data.get("scorecards", [])
+                if isinstance(card, dict)
+            ],
+            collection_errors=[
+                dict(error)
+                for error in data.get("collection_errors", [])
+                if isinstance(error, dict)
+            ],
+        )
+
+    @classmethod
+    def from_json(cls, path: str) -> "AssessmentRun":
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        if not isinstance(data, dict):
+            raise ValueError(f"assessment run JSON must be an object: {path}")
+        return cls.from_dict(data)

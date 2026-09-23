@@ -11,7 +11,7 @@ from dataclasses import replace
 from fabric_iq.collectors.base import BronzeRecord, CollectionResult, empty_inventory
 from fabric_iq.collectors.offline import OfflineCollector
 from fabric_iq.errors import CollectionError, NormalizationError, PersistenceError
-from fabric_iq.lakehouse import LakehouseWriter, gold_mart_rows
+from fabric_iq.lakehouse import LakehouseWriter, gold_mart_rows, select_latest_baseline_run
 from fabric_iq.models import ObjectType
 from fabric_iq.remediation import build_backlog
 from fabric_iq.reporting import to_console, to_html
@@ -161,6 +161,87 @@ class TestLakehouseWriter(unittest.TestCase):
         self.assertEqual(len(target_rows), 1)
         self.assertEqual(target_rows[0]["classification"], "quality_regression")
         self.assertLess(target_rows[0]["score_delta"], 0)
+
+    def test_assessment_run_json_can_be_reloaded_for_trend_baseline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "baseline_assessment.json")
+            self.run.to_json(path)
+
+            loaded = type(self.run).from_json(path)
+
+        self.assertEqual(loaded.run_id, self.run.run_id)
+        self.assertEqual(loaded.tenant_id, self.run.tenant_id)
+        self.assertEqual(len(loaded.scorecards), len(self.run.scorecards))
+        self.assertEqual(loaded.scorecards[0].object_type, self.run.scorecards[0].object_type)
+        self.assertEqual(loaded.scorecards[0].status, self.run.scorecards[0].status)
+
+    def test_latest_baseline_selector_picks_previous_same_ruleset_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            older = replace(
+                self.run,
+                run_id="run_older",
+                started_at="2026-09-20T00:00:00+00:00",
+                completed_at="2026-09-20T00:05:00+00:00",
+            )
+            latest = replace(
+                self.run,
+                run_id="run_latest",
+                started_at="2026-09-21T00:00:00+00:00",
+                completed_at="2026-09-21T00:05:00+00:00",
+            )
+            current = replace(
+                self.run,
+                run_id="run_current",
+                started_at="2026-09-22T00:00:00+00:00",
+                completed_at="2026-09-22T00:05:00+00:00",
+            )
+            older.to_json(os.path.join(tmp, "run_older_assessment.json"))
+            latest.to_json(os.path.join(tmp, "run_latest_assessment.json"))
+            current.to_json(os.path.join(tmp, "run_current_assessment.json"))
+
+            baseline = select_latest_baseline_run(tmp, current)
+
+        self.assertIsNotNone(baseline)
+        self.assertEqual(baseline.run_id, "run_latest")
+
+    def test_latest_baseline_selector_ignores_different_ruleset_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_ruleset = replace(
+                self.run,
+                run_id="run_old_ruleset",
+                ruleset_version="1900.01.1",
+                started_at="2026-09-21T00:00:00+00:00",
+                completed_at="2026-09-21T00:05:00+00:00",
+            )
+            current = replace(self.run, run_id="run_current")
+            old_ruleset.to_json(os.path.join(tmp, "run_old_ruleset_assessment.json"))
+
+            baseline = select_latest_baseline_run(tmp, current)
+
+        self.assertIsNone(baseline)
+
+    def test_writer_uses_selected_baseline_for_trend_mart(self):
+        baseline = replace(self.run, run_id="baseline")
+        current_cards = list(self.run.scorecards)
+        object_index = next(
+            i for i, card in enumerate(current_cards)
+            if card.object_type is ObjectType.SEMANTIC_MODEL
+        )
+        current_cards[object_index] = replace(
+            current_cards[object_index],
+            score=max(0, current_cards[object_index].score - 10),
+        )
+        current = replace(self.run, run_id="current", scorecards=current_cards)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            writer = LakehouseWriter(root=tmp, run_id="current")
+            written = writer.write_gold(current, self.backlog, baseline_run=baseline)
+            with open(written["MartRunTrend"], encoding="utf-8") as handle:
+                rows = [json.loads(line) for line in handle if line.strip()]
+
+        self.assertTrue(rows)
+        self.assertEqual(rows[0]["baseline_run_id"], "baseline")
+        self.assertEqual(rows[0]["current_run_id"], "current")
 
     def test_reruns_are_idempotent_per_run_id(self):
         with tempfile.TemporaryDirectory() as tmp:
