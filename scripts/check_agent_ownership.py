@@ -8,11 +8,12 @@ to coach when the preceptorship loop raises a finding against it; a doubly
 claimed module has two agents editing the same file.
 
 The same rule applies to the documentation that makes a privacy, identity, or
-retention claim (:data:`REQUIRED_DOCS`, Phase 5 release gate criterion 10). A
-document that tells a reader what the tool collects, who is named in it, and how
-long it is kept is a promise to a customer; a promise nobody owns goes stale
-silently. The required set is explicit rather than inferred: guessing which file
-"looks like" a privacy claim would let the gate move on its own.
+retention claim, and to the agent-facing Skill (:data:`REQUIRED_DOCS`, Phase 5
+release gate criterion 10). A document that tells a reader what the tool
+collects, who is named in it, and how long it is kept is a promise to a customer;
+a Skill is the same promise made to a model at prompt time. A promise nobody owns
+goes stale silently. The required set is explicit rather than inferred: guessing
+which file "looks like" a privacy claim would let the gate move on its own.
 
 Usage:
     python scripts/check_agent_ownership.py          # report, exit 1 on drift
@@ -30,9 +31,9 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGENTS_DIR = os.path.join(REPO_ROOT, ".github", "agents")
 PACKAGE_DIR = os.path.join(REPO_ROOT, "fabric_iq")
 
-#: Documentation that asserts a privacy, identity, or retention claim, mapped to
-#: the agent accountable for it. @security owns no file by design: it audits, it
-#: does not maintain.
+#: Documentation that asserts a privacy, identity, or retention claim -- or that a
+#: model reads as instruction -- mapped to the agent accountable for it. @security
+#: owns no file by design: it audits, it does not maintain.
 REQUIRED_DOCS: dict[str, str] = {
     # Names which identities are read, where they land, and how long they are kept.
     "docs/IDENTITY_AND_RETENTION.md": "readme",
@@ -42,20 +43,37 @@ REQUIRED_DOCS: dict[str, str] = {
     "docs/SELF_ASSESSMENT.md": "preceptor",
     # Deployment surface: workspace items, lakehouse destination, run evidence.
     "fabric/README.md": "orchestrator",
+    # A Skill is read by a model as authoritative instruction at prompt time: it
+    # states the product limits, the score caps and the coverage floor that the
+    # engine owns as constants. Unlike docs/RULES.md it is not generated, so a
+    # stale number here contradicts the engine in the one place nobody reviews.
+    # tests/test_skill_drift.py holds the values to the constants; this entry
+    # holds a named agent to the claim.
+    ".github/skills/fabric-iq-readiness/SKILL.md": "readme",
 }
 
 # Backtick-quoted repository paths such as `fabric_iq/scoring.py`, `fabric_iq/rules/`,
 # `docs/INSTALL.md` or `assess.py`. Restricted to tokens that look like a path -- a
 # directory reference, or a source or documentation file -- so that prose in an agent
 # file (`getInfo`, `run_id`, `NOT_EVALUATED`) is never mistaken for a claim.
-_PATH = re.compile(r"`([A-Za-z0-9_][A-Za-z0-9_./-]*)`")
+# A leading dot is allowed so that a dot-directory claim such as
+# `.github/skills/fabric-iq-readiness/SKILL.md` parses; without it the token was
+# read as `github/skills/...` and silently matched nothing.
+_PATH = re.compile(r"`(\.?[A-Za-z0-9_][A-Za-z0-9_./-]*)`")
 _PATH_LIKE = (".py", ".md")
 # A reference to another owner is a pointer, not a claim.
 _DELEGATED = re.compile(r"owned by \*\*@", re.IGNORECASE)
 
 
 def _is_path(token: str) -> bool:
-    """True for a backticked token that names a file or directory, not prose."""
+    """True for a backticked token that names a file or directory, not prose.
+
+    A dot-leading token counts only when it carries a path separator: prose about
+    the parser itself legitimately writes `.py` and `.md`, and reading a suffix as
+    a claim would hand a phantom path to whoever described the rule.
+    """
+    if token.startswith("."):
+        return "/" in token
     return "/" in token or token.endswith(_PATH_LIKE)
 
 
@@ -179,7 +197,8 @@ def main() -> int:
             print("Ownership is clean: every module is claimed exactly once.")
 
         print(
-            f"\nDocumentation asserting a privacy/identity/retention claim: {len(REQUIRED_DOCS)}"
+            "\nDocuments and skills carrying a privacy/identity/retention or "
+            f"instruction claim: {len(REQUIRED_DOCS)}"
         )
         if doc_unclaimed:
             print("\nUnclaimed documentation (no agent owns these):")

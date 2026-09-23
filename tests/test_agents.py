@@ -125,6 +125,16 @@ class TestDocumentationOwnership(unittest.TestCase):
 
         self.assertNotIn("security", set(REQUIRED_DOCS.values()))
 
+    def test_the_agent_facing_skill_has_an_accountable_owner(self):
+        # A Skill is read by a model as authoritative instruction at prompt time.
+        # It is not generated, so its product limits and score caps go stale in
+        # silence unless a named agent answers for them.
+        from scripts.check_agent_ownership import REQUIRED_DOCS
+
+        self.assertEqual(
+            REQUIRED_DOCS.get(".github/skills/fabric-iq-readiness/SKILL.md"), "readme"
+        )
+
     def test_every_required_document_is_claimed_by_exactly_one_agent(self):
         from scripts.check_agent_ownership import REQUIRED_DOCS, audit_docs
 
@@ -249,6 +259,46 @@ class TestOwnershipCheckerBehaviour(unittest.TestCase):
 
         self.assertNotIn("NOT_EVALUATED", claimed)
         self.assertNotIn("run_id", claimed)
+
+    def test_a_dot_directory_path_is_recognised_as_a_claim(self):
+        # `.github/skills/.../SKILL.md` must parse: before the leading dot was
+        # accepted the token was read as `github/skills/...` and matched nothing,
+        # so an owned Skill reported as unclaimed forever.
+        from scripts.check_agent_ownership import audit_docs
+
+        required = {".github/skills/demo/SKILL.md": "readme"}
+        self.write_agent(
+            "readme", ["- `.github/skills/demo/SKILL.md` — agent-facing skill"]
+        )
+
+        self.assertEqual(audit_docs(self.agents, self.root, required), ([], {}, {}))
+
+    def test_a_dot_directory_style_claim_covers_the_files_inside_it(self):
+        from scripts.check_agent_ownership import audit_docs
+
+        required = {".github/skills/demo/SKILL.md": "readme"}
+        self.write_agent("readme", ["- `.github/skills/` — every agent-facing skill"])
+
+        self.assertEqual(audit_docs(self.agents, self.root, required), ([], {}, {}))
+
+    def test_a_bare_suffix_in_backticks_is_not_read_as_a_path(self):
+        # Prose about the parser itself writes `.py` and `.md`; reading a suffix
+        # as a claim would hand a phantom path to whoever described the rule.
+        from scripts.check_agent_ownership import claims
+
+        self.write_agent(
+            "readme",
+            [
+                "- `docs/PRIVACY.md` — retention claim",
+                "- a claim ends in `.py`/`.md`, and `.gitignore` is not one",
+            ],
+        )
+
+        claimed = claims(self.agents, self.root, self.required)
+
+        for token in (".py", ".md", ".gitignore"):
+            with self.subTest(token=token):
+                self.assertNotIn(token, claimed)
 
     def test_the_module_audit_still_reports_an_unclaimed_module(self):
         from scripts.check_agent_ownership import audit
