@@ -50,12 +50,22 @@ records, not earlier roadmap labels.
 At this review the documentation gate reported:
 
 - ruleset `2026.09.1`, **65 rules** across five object types;
-- **256** passing unit tests;
-- clean generated rule documentation, ownership audit, internal links, and synthetic
-  self-assessment gate;
-- an evidence-sink check after the 2026-09-23 privacy fix: **95 tracked files**, none of
-  them shadowed by the hardened ignore rules, and no tenant identifier, UPN, or email
-  address in tracked content outside synthetic placeholders.
+- **295** passing unit tests;
+- clean generated rule documentation, internal links, and synthetic self-assessment gate;
+- `python scripts/check_agent_ownership.py` exit 0 — 22 modules under `fabric_iq/`
+  claimed exactly once, and the **4** documents asserting a privacy, identity, or
+  retention claim each claimed by exactly one agent through an explicit `REQUIRED_DOCS`
+  map;
+- `python scripts/check_evidence_sinks.py` exit 0 — **61 writer destinations** and
+  documented output examples each resolve to a committed `.gitignore` rule, all **95
+  tracked files** remain trackable (none shadowed by a broad pattern such as `*.jsonl`
+  or `Mart*.csv`), and no tracked file carries a real tenant identifier, UPN, email, or
+  non-placeholder GUID.
+
+Both checks were shown to be non-vacuous by deliberate negative tests on 2026-09-23:
+removing the `powerbi_report/` ignore rule, planting a UPN in a tracked file, and
+removing a documentation ownership claim each fail with exit 1 and name the unprotected
+path, the host and address, or the required owner. A gate that cannot fail is not a gate.
 
 These counts describe the current revision only. They are not release-quality evidence
 for unconfirmed live API fields, scheduling, calibration, or real-agent behaviour.
@@ -136,52 +146,94 @@ unsupported evidence remains `NOT_EVALUATED`, no output path can place tenant-de
 evidence under version control, and two compatible unattended runs prove the complete
 re-measurement loop.
 
-### Sprint 5.0 — Evidence-Sink and Provenance Hygiene (fix delivered; two decisions open)
+### Sprint 5.0 — Evidence-Sink and Provenance Hygiene ✅ Delivered 2026-09-23
 
-1. **Outcome** — No tenant-derived evidence can reach version control through any
-   documented command, writer default, or CLI output flag, and every file that makes a
-   privacy, identity, or retention claim has a named accountable owner.
-2. **Current evidence** — A `@security` audit on 2026-09-23 found that the documented
+One retention decision remains open; it is a user decision, not sprint work.
+
+1. **Outcome** — Delivered. No tenant-derived evidence can reach version control through
+   any documented command, writer default, or CLI output flag, and every file that makes
+   a privacy, identity, or retention claim has a named accountable owner. Both
+   properties are now asserted by executable checks that run in CI, not by convention.
+2. **Originating evidence** — A `@security` audit on 2026-09-23 found that the documented
    `assess.py --inventory <inv> --powerbi ./powerbi_report` wrote object and workspace
    names, scores, and findings into `powerbi_report/`, which was not git-ignored, so a
    `git add .` after a live run would have committed tenant-derived evidence. The same
    audit found `--out`, `--lakehouse`, and `--checkpoint` safe only at their documented
    default values; `--checkpoint` persisting `tenant_id` and raw Bronze payloads
    including `identity`; `.gitignore` ignoring `*.ndjson` while the writer emits
-   `.jsonl`; and a real tenant admin UPN committed to `CHANGELOG.md` and pushed. The
-   ignore rules, CLI help warnings, and forward redaction are fixed and verified — 95
-   tracked files with none shadowed, 256 tests passing. Separately,
-   `scripts/check_agent_ownership.py` audits only modules under `fabric_iq/`, so
+   `.jsonl`; a real tenant admin UPN committed to `CHANGELOG.md` and pushed; and
+   `scripts/check_agent_ownership.py` auditing only modules under `fabric_iq/`, so
    [`IDENTITY_AND_RETENTION.md`](IDENTITY_AND_RETENTION.md), [`INSTALL.md`](INSTALL.md),
-   [`SELF_ASSESSMENT.md`](SELF_ASSESSMENT.md), and `fabric/README.md` are claimed by no
+   [`SELF_ASSESSMENT.md`](SELF_ASSESSMENT.md), and `fabric/README.md` were claimed by no
    agent.
-3. **Smallest slice** — Two remaining slices. (a) `@security` prepares the
-   authorised-human decision on the pushed history that still contains the UPN, together
-   with the retention disposition of the local `artifacts/checkpoint.json` holding a real
-   tenant GUID; neither is an agent action. (b) `@tester` extends the ownership audit, or
-   adds a sibling check, so a documentation file asserting a privacy, identity, or
-   retention claim fails the build when no agent claims it; `@readme` and the named
-   owners then claim the four unowned files.
-4. **Dependencies** — `@security` owns the privacy verdict, scopes, and retention;
-   `@orchestrator` owns CLI help text and output-flag defaults; `@tester` owns the
-   executable ownership and scan checks; `@readme` owns documentation ownership
-   declarations. The history rewrite is a user decision. No later sprint may introduce a
-   writer whose default or documented path is trackable.
-5. **Validation** — Focused check: `git check-ignore -v` resolves every writer default
-   and every documented output example to a rule, and the tracked-file identifier scan in
-   the **Per-Change Quality Gate** returns only synthetic placeholders. Release gate:
-   criteria 9 and 10 below.
-6. **Risks and non-goals** — Ignore rules do not remove data already pushed; only an
-   authorised history rewrite does, and that decision is open. The scans are heuristics
-   that reduce, never replace, the mandatory pre-push privacy audit. This sprint does not
-   add redaction to collected evidence, does not weaken checkpoint resume, and does not
-   claim the pushed history is clean.
-7. **Commit boundary** — Ignore rules, CLI help text, and their verification belong with
-   the delivered orchestrator/security change. The ownership-audit extension and the four
-   documentation ownership declarations form a separate `@tester`/`@readme` boundary.
-   The `artifacts/` disposition produces no commit.
+3. **Delivered slices** —
+   - (a) Ignore rules, CLI help warnings, and forward redaction fixed and verified.
+   - (b) `scripts/check_evidence_sinks.py` (`@tester`, claimed in `tester.agent.md`)
+     makes release-gate criterion 9 executable rather than a manual command sequence: it
+     asserts that 61 writer destinations and documented output examples each resolve to a
+     committed `.gitignore` rule, that all 95 tracked files remain trackable, and that no
+     tracked file contains a real tenant identifier, UPN, email, or non-placeholder GUID.
+   - (c) `scripts/check_agent_ownership.py` extended with an explicit `REQUIRED_DOCS`
+     map, making criterion 10 executable: `docs/INSTALL.md` and `fabric/README.md` →
+     `@orchestrator`; `docs/SELF_ASSESSMENT.md` → `@preceptor`;
+     `docs/IDENTITY_AND_RETENTION.md` → `@readme`. `@security` still owns no file by
+     design, so each privacy claim is owned by the agent accountable for the surface it
+     describes. The set is explicit, not inferred — guessing which file makes a privacy
+     claim is how such a check silently stops covering one.
+   - (d) `docs/IDENTITY_AND_RETENTION.md` reconciled with the code: all four sinks
+     documented, `.jsonl` corrected, and an unsourced "30–90 day" retention figure
+     removed rather than rationalised after the fact.
+   - (e) CI runs the evidence-sink gate as its own named step in
+     `.github/workflows/ci.yml`, alongside the ownership and rule-documentation steps.
+   - (f) The pushed-history decision is **resolved**: the user deleted and recreated the
+     public repository, so the orphaned commit carrying the real tenant admin UPN now
+     returns 404 and is permanently destroyed. The republished history is 21 commits with
+     0 occurrences. This is a stronger outcome than a force-push, which leaves orphaned
+     objects served by SHA until GitHub garbage-collects them.
+4. **Dependencies** — `@security` owned the privacy verdict, scopes, and retention;
+   `@orchestrator` owned CLI help text and output-flag defaults; `@tester` owned the
+   executable ownership and evidence-sink checks; `@readme` owned documentation ownership
+   declarations; the history decision was the user's. Standing constraint for every later
+   sprint: no writer may be introduced whose default or documented path is trackable, and
+   any new document asserting a privacy, identity, or retention claim must be added to
+   `REQUIRED_DOCS` in the same change.
+5. **Validation performed** — `python scripts/check_evidence_sinks.py` exit 0 (61
+   destinations, 95 tracked files); `python scripts/check_agent_ownership.py` exit 0 (22
+   modules, 4 required documents); full suite **295 tests** passing, up from 256;
+   `python scripts/build_rules_doc.py --check` clean at ruleset `2026.09.1`, 65 rules.
+   Three independent negative tests proved the gates are not vacuous: removing the
+   `powerbi_report/` ignore rule fails with exit 1 naming the unprotected paths; planting
+   a UPN in a tracked file fails naming the host and address; removing a documentation
+   ownership claim fails naming the required owner.
+6. **Still open, and non-goals** — Two items are explicitly **not** closed by this
+   sprint:
+   - The retention disposition of the local `artifacts/checkpoint.json` holding 33
+     non-placeholder GUIDs from a 2026-09-21 live run. It is git-ignored, so it is not a
+     push risk, but keeping or destroying it is an authorised-human decision and no agent
+     action can settle it.
+   - The checks are heuristics. They reduce the chance of an exposure reaching a push;
+     they never replace the mandatory pre-push privacy audit, and no release gate may
+     cite them as proof that a repository is clean.
 
-### Sprint 5.1 — Close the API Reality Matrix (3–5 days)
+   Non-goals unchanged: this sprint did not add redaction to collected evidence, did not
+   weaken checkpoint resume, and makes no claim about tenant content that was never in
+   git.
+7. **Commit boundary** — Ignore rules, CLI help text, and their verification belonged
+   with the orchestrator/security change. `scripts/check_evidence_sinks.py`, the
+   `REQUIRED_DOCS` extension, `tests/test_evidence_sinks.py`, the CI step, and the four
+   documentation ownership declarations formed the separate `@tester`/`@readme` boundary.
+   The `artifacts/` disposition produces no commit, and the history resolution produced
+   none either — it was a repository-level user action.
+
+### Sprint 5.1 — Close the API Reality Matrix (3–5 days) ← next actionable sprint
+
+**Blocked on one prerequisite that is not repository work:** an authorised test tenant
+and service principal with read-only scope. Every slice below is an evidence-acquisition
+slice; none of it can be simulated from fixtures, and none of it may start before
+`@security` has approved the scopes and the retention of the redacted field matrix.
+Sprint 5.0 has cleared the gating condition: no writer default or documented output path
+is trackable, so a proof run can now be performed without risking a commit of
+tenant-derived evidence.
 
 1. **Outcome** — Every field consumed by the 65-rule catalogue has a current,
    reproducible availability classification, including the fields still unconfirmed
@@ -339,21 +391,33 @@ The phase closes only when all of the following are executable or evidenced:
 8. Two ruleset-compatible unattended runs demonstrate collect → normalize → score →
    prioritise → review → publish → re-measure. If schedule evidence is unavailable, the
    phase stays open even when the pipeline can be triggered manually.
-9. Evidence-sink hygiene is verified: every writer default and every documented output
-   example resolves to a `.gitignore` rule under `git check-ignore -v`; no CLI output
-   flag steers a user toward a trackable location at its documented value; and a
-   pre-push scan of tracked content finds no tenant identifier, workspace or capacity
-   GUID, UPN, or email address outside synthetic placeholders.
+9. Evidence-sink hygiene is executable, not manual: `python scripts/check_evidence_sinks.py`
+   exits 0, asserting that every writer destination and documented output example
+   resolves to a committed `.gitignore` rule, that no tracked file is shadowed by a broad
+   ignore pattern, and that tracked content carries no tenant identifier, workspace or
+   capacity GUID, UPN, or email outside synthetic placeholders. No CLI output flag steers
+   a user toward a trackable location at its documented value. The check runs in CI as
+   its own named step. **Met at this revision** (61 destinations, 95 tracked files,
+   negative-tested). It remains a heuristic that supplements, never replaces, the
+   mandatory pre-push privacy audit.
 10. Every documentation file that makes a privacy, identity, or retention claim is
-    claimed by exactly one agent and covered by an executable ownership check.
+    claimed by exactly one agent, enforced by the explicit `REQUIRED_DOCS` map in
+    `python scripts/check_agent_ownership.py`. **Met at this revision** (4 documents,
+    exit 0, negative-tested): adding or un-claiming such a document fails the build and
+    names the required owner.
 
 ## Sequencing and Release Policy
 
-`5.0 evidence-sink hygiene → 5.1 API proof → 5.2 evidence reconciliation
+`5.0 evidence-sink hygiene ✅ → 5.1 API proof (next) → 5.2 evidence reconciliation
 → 5.3 facts/calibration → 5.4 agent proof → 5.5 operational re-measurement`
 
-- Sprint 5.0 gates the live-tenant sprints: no proof run against a real tenant starts
-  before every writer default and documented output path is confirmed ignored.
+- Sprint 5.0 is closed. It gated the live-tenant sprints: no proof run against a real
+  tenant starts before every writer default and documented output path is confirmed
+  ignored, and that condition is now asserted by `scripts/check_evidence_sinks.py` on
+  every change rather than by a one-off review.
+- Sprint 5.1 is therefore the next actionable sprint. Its only blocker is external: an
+  authorised test tenant and read-only service principal. Until that exists, 5.1 cannot
+  be started and no later sprint may substitute for it by assuming a field.
 - Sprints 5.3 limit verification may begin while 5.2 is in progress, but scoring
   calibration waits for honest coverage.
 - Sprint 5.4 implementation is conditional on its API proof; a failed proof produces an
@@ -374,9 +438,10 @@ The phase closes only when all of the following are executable or evidenced:
 | Scheduler cannot be represented portably | Document the environment-owned deployment step and validate it live; do not claim repository-provisioned scheduling. |
 | Ruleset changes break trend comparability | Start a new baseline or use an explicit compatible migration; never silently join versions. |
 | Documentation drifts from implementation | Run the documentation gate before and after each increment; bounded claims block release when evidence is missing. |
-| Documentation, help text, or a flag default creates privacy exposure without any change to collection code | The 2026-09-23 audit exposed evidence through a documented example path, not through a collector. Treat docs, CLI help, and output defaults as part of the privacy surface: every writer and output flag is ignored at any supplied value, no example steers output to a trackable location, and the pre-push identifier scan runs on documentation-only changes too. |
-| Unowned documentation carries unaccountable privacy claims | `scripts/check_agent_ownership.py` audits only `fabric_iq/` modules, so `docs/IDENTITY_AND_RETENTION.md`, `docs/INSTALL.md`, `docs/SELF_ASSESSMENT.md`, and `fabric/README.md` have no owner — the structural cause of the stale-terminology finding. Sprint 5.0 assigns owners and extends the audit; until criterion 10 is met, no release gate may rest on a claim made only in those files. |
-| Data already pushed cannot be un-ignored | Hardened ignore rules protect the future only. A pushed identifier requires an authorised human decision on history; record it as open rather than describing the repository as clean. |
+| Documentation, help text, or a flag default creates privacy exposure without any change to collection code | The 2026-09-23 audit exposed evidence through a documented example path, not through a collector. Treat docs, CLI help, and output defaults as part of the privacy surface: `scripts/check_evidence_sinks.py` asserts on every change that every writer and output flag is ignored at any supplied value, that no example steers output to a trackable location, and that tracked content holds no real identifier — including on documentation-only changes. |
+| Unowned documentation carries unaccountable privacy claims | Closed by Sprint 5.0. `scripts/check_agent_ownership.py` now audits `fabric_iq/` modules **and** an explicit `REQUIRED_DOCS` set, so `docs/IDENTITY_AND_RETENTION.md` (@readme), `docs/INSTALL.md` and `fabric/README.md` (@orchestrator), and `docs/SELF_ASSESSMENT.md` (@preceptor) each have exactly one owner, and an unowned required document fails the build. Any new document asserting a privacy, identity, or retention claim must be added to that map in the same change; the set is explicit precisely so that coverage cannot lapse silently. |
+| Data already pushed cannot be un-ignored | Hardened ignore rules protect the future only. The 2026-09-23 exposure was resolved by the user deleting and recreating the public repository: the orphaned commit returns 404 and the republished history is 21 commits with 0 occurrences. Any *future* pushed identifier again requires an authorised human decision — record it as open rather than describing the repository as clean. |
+| Local evidence outlives the run that produced it | `artifacts/checkpoint.json` from the 2026-09-21 live run still holds 33 non-placeholder GUIDs. Git-ignored, so not a push risk, but retention is an authorised-human decision that no check can close. Open. |
 
 ## Explicitly Out of Scope
 
@@ -403,7 +468,9 @@ The phase closes only when all of the following are executable or evidenced:
 python assess.py --list-rules
 python scripts/build_rules_doc.py --check
 python scripts/check_agent_ownership.py
+python scripts/check_evidence_sinks.py
 python -m unittest tests.test_docs
+python -m unittest tests.test_evidence_sinks
 python -m unittest tests.test_self_assessment
 python -m unittest discover -s tests -t .
 ```
@@ -411,8 +478,16 @@ python -m unittest discover -s tests -t .
 In addition, verify internal links and compare documented rule/test counts with command
 output.
 
+`check_agent_ownership.py` covers both `fabric_iq/` modules and the `REQUIRED_DOCS`
+documentation set; `check_evidence_sinks.py` covers writer destinations, tracked-file
+shadowing, and tracked identifiers. Both exit non-zero and name the offending path,
+address, or owner. Neither may be skipped on a documentation-only change — the 2026-09-23
+exposure arrived through a documented example, not through code.
+
 Any change that adds or moves an output path — a writer, a CLI output flag, or a
-documented example command — also runs the evidence-sink and provenance check:
+documented example command — must also register that path with
+`scripts/check_evidence_sinks.py` so the destination is asserted rather than assumed. The
+underlying manual probes remain useful when diagnosing a failure of that check:
 
 ```powershell
 git status --short
@@ -425,8 +500,8 @@ git --no-pager grep -nIE '[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}' --
 Every path passed to `git check-ignore -v` must resolve to a rule, including the flag's
 documented default value. Every grep hit must be a synthetic address such as
 `person@example.invalid` or a zero/placeholder GUID; any other hit blocks the push until
-`@security` classifies it. These scans are heuristics — they supplement the mandatory
-pre-push privacy audit and never replace it.
+`@security` classifies it. These checks and scans are heuristics — they supplement the
+mandatory pre-push privacy audit and never replace it.
 
 A live-tenant or schedule claim requires external evidence and cannot be closed by unit
 tests alone. Before any push, run the mandatory privacy/provenance audit; this roadmap

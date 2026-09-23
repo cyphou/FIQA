@@ -55,10 +55,49 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   FIQA artifacts remain `READY`, eligible, ≥85 scored, ≥90% confident/covered and free of
   blocking findings. See [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md).
 
-**Tests** — grown from 138 to **256 tests**, all green.
+**Evidence hygiene and documentation ownership** — two release gates made executable
+- [`scripts/check_evidence_sinks.py`](./scripts/check_evidence_sinks.py) with
+  [`tests/test_evidence_sinks.py`](./tests/test_evidence_sinks.py) — asserts that every
+  writer destination (defaults, emitted extensions, and the `--out`, `--lakehouse`,
+  `--powerbi` and `--checkpoint` values used as examples in tracked documentation and
+  code) resolves to a rule in a committed `.gitignore`; that no tracked file is shadowed
+  by those rules, so every tracked file stays trackable; and that no tracked file carries
+  a real tenant identifier, UPN, email address, `onmicrosoft` host or non-placeholder
+  GUID. Prompted by a privacy audit that found a documented command writing
+  tenant-derived CSVs to a path no committed ignore rule covered. The check is a
+  heuristic gate over this repository: it reduces, and never replaces, the mandatory
+  pre-push privacy audit, and it cannot see a path written outside the working tree.
+- [`scripts/check_agent_ownership.py`](./scripts/check_agent_ownership.py) extended
+  beyond `fabric_iq/` modules to documentation that asserts a privacy, identity or
+  retention claim. Four such documents now name exactly one accountable owner —
+  [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) (**@readme**),
+  [`docs/INSTALL.md`](./docs/INSTALL.md) and [`fabric/README.md`](./fabric/README.md)
+  (**@orchestrator**), and [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md)
+  (**@preceptor**). **@security** reviews all four and owns no file by design: a reviewer
+  that can edit what it reviews eventually reviews its own edits.
+- Both checks fail with exit code `1` and name the offending path, and both carry
+  negative tests over synthetic fixtures — a temporary git repository for the sink check,
+  a temporary agent roster for the ownership check — proving each invariant actually
+  rejects a missing ignore rule, a shadowed tracked file, a planted identifier, and a
+  document that is unclaimed, doubly claimed or claimed by the wrong agent.
+- CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
+  check alongside the ownership and rule-documentation checks.
+
+**Tests** — grown from 138 to **295 tests**, all green.
 
 ### Documentation
 
+- [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) reconciled against
+  the writers: all **four** run destinations are now documented (`--out`, `--lakehouse`,
+  `--powerbi`, `--checkpoint`) with what each contains and which writer produces it,
+  where previously only the medallion output was named; the medallion extension is
+  corrected to `.jsonl` (the protection is a filename pattern, so `.ndjson` would have
+  left Bronze evidence trackable); the `--checkpoint` file is called out as the most
+  identity-dense artifact a run leaves behind; and the 30–90 day Bronze retention figure
+  is restated as an operational recommendation made in that document, its attribution to
+  a `KNOWN_LIMITATIONS.md` source removed because no such source existed.
+- [`README.md`](./README.md) — documents `python scripts/check_evidence_sinks.py` and
+  what each gate asserts, so the documented gate set matches the one CI runs.
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — Phase 1 marked done and field-validated;
   Phase 4 marked done after scheduling, Delta persistence, semantic model/report,
   AI-readable summary, trend/regression, remediation burn-down, CI gate and

@@ -12,7 +12,7 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 256 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment |
+| ✅ **Tests** | 295 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 13-agent environment |
@@ -57,9 +57,28 @@ python -m unittest discover -s tests -t .
 
 # Verify multi-agent file ownership
 python scripts/check_agent_ownership.py
+
+# Verify evidence sinks stay untracked and identifier-free
+python scripts/check_evidence_sinks.py
 ```
 
 No dependencies. Python 3.12+ standard library only.
+
+`check_agent_ownership.py` asserts that every module under `fabric_iq/` is claimed by
+exactly one agent, and that each document carrying a privacy, identity or retention
+claim names exactly one accountable owner.
+
+`check_evidence_sinks.py` asserts three things about the repository as it stands: every
+writer destination — defaults, the extensions the writers emit, and the `--out`,
+`--lakehouse`, `--powerbi` and `--checkpoint` values used as examples in tracked
+documentation and code — resolves to a rule in a committed `.gitignore`; no tracked file
+is shadowed by those ignore rules, so every tracked file stays trackable; and no tracked
+file carries a real tenant identifier, UPN, email address, `onmicrosoft` host or
+non-placeholder GUID. It is a heuristic gate over this repository only: it reduces, and
+never replaces, the pre-push privacy audit, and it says nothing about a path written
+outside the working tree. Both checks run in CI and exit `1` with the offending path on
+drift. Sinks and retention are documented in
+[docs/IDENTITY_AND_RETENTION.md](./docs/IDENTITY_AND_RETENTION.md).
 
 ### 🚦 Exit Codes
 
@@ -163,6 +182,8 @@ powerbi_report/
 > workspace, object and finding names from the assessed tenant, so `powerbi_report/` is
 > git-ignored and must never be committed. Treat the output like any other assessment
 > artifact: share it under the same handling rules as the tenant data it describes.
+> `python scripts/check_evidence_sinks.py` enforces that this ignore rule stays
+> committed, instead of leaving the guarantee to this paragraph.
 
 Constraints: the semantic model's CSV partitions reference **absolute file paths**
 generated at write time, so re-open the `.pbip` from the same machine (or update the
