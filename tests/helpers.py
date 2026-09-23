@@ -8,6 +8,7 @@ import os
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLE_TENANT = os.path.join(REPO_ROOT, "examples", "sample_tenant")
+FIQA_SELF_ASSESSMENT = os.path.join(REPO_ROOT, "examples", "fiqa_self_assessment")
 
 
 def ready_model(**overrides):

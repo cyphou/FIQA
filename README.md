@@ -11,7 +11,7 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 254 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer |
+| ✅ **Tests** | 256 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 13-agent environment |
@@ -225,6 +225,11 @@ partitions point to the Lakehouse SQL endpoint's physical lowercase table names
 AI-readable without breaking table resolution in Fabric.
 
 See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+
+The readiness semantic model/report also pass their own executable gate:
+[docs/SELF_ASSESSMENT.md](./docs/SELF_ASSESSMENT.md) records the result and
+`tests/test_self_assessment.py` keeps the ≥85 score / ≥90% confidence+coverage threshold
+from drifting.
 
 The same pipeline runs in two places: locally through `assess.py`, and inside Fabric
 through the notebook in [`fabric/items/`](./fabric/items). Both call the identical

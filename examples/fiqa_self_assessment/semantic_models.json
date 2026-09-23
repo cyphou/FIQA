@@ -1,0 +1,288 @@
+[
+  {
+    "id": "fiqa-semantic-model",
+    "name": "IsFabricReadyForIQ",
+    "parent_id": "fiqa-workspace",
+    "tables": [
+      {
+        "name": "MartRunSummary",
+        "role": "dimension",
+        "description": "One row per assessment run. Current snapshot metadata and aggregate counts for the Fabric IQ readiness report.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartTenantReadiness",
+        "role": "dimension",
+        "description": "One row per assessed tenant, per run. The overall Fabric IQ and Copilot readiness scorecard at tenant level.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartWorkspaceReadiness",
+        "role": "dimension",
+        "description": "One row per assessed workspace, per run. Readiness scorecard for a single Fabric or Power BI workspace.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartObjectReadiness",
+        "role": "fact",
+        "description": "One row per assessed semantic model, report, or data agent, per run. Object-level readiness scorecard.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartBlockingFindings",
+        "role": "fact",
+        "description": "One row per blocking finding raised during a run. These must be fixed before an object is eligible.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartRemediationBacklog",
+        "role": "fact",
+        "description": "One row per prioritized remediation action across all findings in a run, grouped by owner role.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartRemediationBurnDown",
+        "role": "fact",
+        "description": "One row per remediation lifecycle comparison for the current run. Tracks new, open, resolved, reopened and priority-changed work.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartCoverageAndFreshness",
+        "role": "fact",
+        "description": "One row per assessed object, per run. Shows evidence coverage and confidence for the readiness score.",
+        "is_date_table": false
+      },
+      {
+        "name": "MartRunTrend",
+        "role": "fact",
+        "description": "One row per object compared between a baseline and current run. Separates true regressions from coverage loss.",
+        "is_date_table": false
+      }
+    ],
+    "columns": [
+      {
+        "name": "MartRunSummary Run Id",
+        "description": "Join key for MartRunSummary.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRunSummary Score",
+        "description": "Readiness score metric for MartRunSummary.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartTenantReadiness Run Id",
+        "description": "Join key for MartTenantReadiness.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartTenantReadiness Score",
+        "description": "Readiness score metric for MartTenantReadiness.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartWorkspaceReadiness Run Id",
+        "description": "Join key for MartWorkspaceReadiness.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartWorkspaceReadiness Score",
+        "description": "Readiness score metric for MartWorkspaceReadiness.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartObjectReadiness Run Id",
+        "description": "Join key for MartObjectReadiness.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartObjectReadiness Score",
+        "description": "Readiness score metric for MartObjectReadiness.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartBlockingFindings Run Id",
+        "description": "Join key for MartBlockingFindings.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartBlockingFindings Score",
+        "description": "Readiness score metric for MartBlockingFindings.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRemediationBacklog Run Id",
+        "description": "Join key for MartRemediationBacklog.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRemediationBacklog Score",
+        "description": "Readiness score metric for MartRemediationBacklog.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRemediationBurnDown Run Id",
+        "description": "Join key for MartRemediationBurnDown.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRemediationBurnDown Score",
+        "description": "Readiness score metric for MartRemediationBurnDown.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartCoverageAndFreshness Run Id",
+        "description": "Join key for MartCoverageAndFreshness.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartCoverageAndFreshness Score",
+        "description": "Readiness score metric for MartCoverageAndFreshness.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRunTrend Run Id",
+        "description": "Join key for MartRunTrend.",
+        "data_type": "string",
+        "semantic_role": "identifier",
+        "summarize_by": "none",
+        "hidden": false
+      },
+      {
+        "name": "MartRunTrend Score",
+        "description": "Readiness score metric for MartRunTrend.",
+        "data_type": "double",
+        "semantic_role": "amount",
+        "summarize_by": "none",
+        "hidden": false
+      }
+    ],
+    "measures": [
+      {
+        "name": "Objects Assessed",
+        "description": "Total number of semantic models, reports, and data agents assessed in the selected run.",
+        "expression": "COUNTROWS(MartObjectReadiness)",
+        "synonyms": ["assessed objects", "objects", "inventory"],
+        "hidden": false
+      },
+      {
+        "name": "Avg Score",
+        "description": "Average readiness score for the selected objects. Always interpret with confidence and coverage.",
+        "expression": "AVERAGE(MartObjectReadiness[score])",
+        "synonyms": ["average score", "readiness score", "score"],
+        "hidden": false
+      },
+      {
+        "name": "Eligible %",
+        "description": "Share of selected objects without blocking findings and therefore structurally eligible.",
+        "expression": "DIVIDE(CALCULATE(COUNTROWS(MartObjectReadiness), MartObjectReadiness[eligible] = TRUE()), COUNTROWS(MartObjectReadiness))",
+        "synonyms": ["eligibility rate", "eligible percent", "eligible percentage"],
+        "hidden": false
+      },
+      {
+        "name": "Avg Confidence",
+        "description": "Average confidence for selected readiness scorecards. Low confidence means evidence gaps remain.",
+        "expression": "AVERAGE(MartObjectReadiness[confidence])",
+        "synonyms": ["average confidence", "confidence", "evidence confidence"],
+        "hidden": false
+      },
+      {
+        "name": "Blocking Findings",
+        "description": "Count of blocking findings. Any blocking finding prevents the affected object from being eligible.",
+        "expression": "COUNTROWS(MartBlockingFindings)",
+        "synonyms": ["blockers", "blocking issues", "eligibility blockers"],
+        "hidden": false
+      },
+      {
+        "name": "Backlog Items",
+        "description": "Number of remediation backlog items generated from failed readiness checks.",
+        "expression": "COUNTROWS(MartRemediationBacklog)",
+        "synonyms": ["remediation items", "backlog", "actions"],
+        "hidden": false
+      }
+    ],
+    "relationships": [],
+    "has_time_intelligence": false,
+    "visible_object_count": 15,
+    "ai_data_schema": {
+      "selected_objects": 9,
+      "missing_dependencies": []
+    },
+    "ai_instructions": "This model explains Fabric IQ readiness assessment results. Always start with MartRunSummary to identify the run, then quote score together with confidence, coverage, eligibility and blocking findings. Use MartObjectReadiness for object-level scores, MartBlockingFindings before quality interpretation, MartRemediationBacklog for owned fixes, MartRemediationBurnDown for lifecycle movement, and MartRunTrend for run-to-run regression. Never describe a high score as approval when confidence or coverage is low.",
+    "verified_answers": [
+      {
+        "question": "Which objects are not ready for Fabric IQ?",
+        "broken": false
+      },
+      {
+        "question": "What blocking findings prevent eligibility?",
+        "broken": false
+      },
+      {
+        "question": "Which remediation actions should each owner prioritize?",
+        "broken": false
+      },
+      {
+        "question": "Did readiness regress compared with the previous run?",
+        "broken": false
+      },
+      {
+        "question": "Which backlog items were resolved or reopened?",
+        "broken": false
+      }
+    ],
+    "rls_required": false,
+    "rls_roles": [],
+    "hours_since_refresh": 0,
+    "freshness_sla_hours": 24,
+    "schema_retrieval_error": null
+  }
+]

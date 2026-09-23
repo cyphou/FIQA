@@ -27,7 +27,7 @@ Fabric IQ and agentic experiences — and exactly what to change, object by obje
 | 1 | Inventory and live collection | ✅ Done — all four sprints closed and field-validated |
 | 2 | Static readiness scoring | 🟡 Engine done (65 rules), catalogue-hardening pass (Sprint 2.1) still open |
 | 3 | Agentic readiness | 🟡 Rules done, evaluation harness missing |
-| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression, remediation burn-down and CI gate shipped; formal self-assessment still open |
+| 4 | Industrialisation | ✅ Done — scheduled runs, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression, remediation burn-down, CI gate and formal self-assessment shipped |
 | 5 | Fabric IQ extension | ⏳ Continuous |
 
 ---
@@ -224,7 +224,7 @@ inspection alone.
 
 ---
 
-## Phase 4 — Industrialisation (4–6 weeks) 🟡
+## Phase 4 — Industrialisation (4–6 weeks) ✅
 
 **Outcome.** Readiness becomes a recurring, trended programme rather than a one-off audit.
 
@@ -264,10 +264,12 @@ inspection alone.
   [`docs/INSTALL.md`](INSTALL.md).
 - **Current validation.** The deployed model is queryable, all business columns/measures
   carry descriptions, DirectLake table names resolve against the Lakehouse SQL endpoint,
-  and `MartRunSummary` returns one current run row. The self-assessment score of the
-  readiness model itself is still the remaining formal gate.
-- **Exit gate.** The readiness model scores ≥ 85 under its own rules; then close this
-  sprint formally.
+  `MartRunSummary` returns one current run row, and `MartRemediationBurnDown` returns
+  the current burn-down snapshot.
+- **Exit gate.** ✅ The readiness semantic model and report pass the executable
+  self-assessment gate in [`docs/SELF_ASSESSMENT.md`](SELF_ASSESSMENT.md): both are
+  `READY`, eligible, score 100, and meet the ≥85 score / ≥90% confidence+coverage
+  threshold enforced by [`tests/test_self_assessment.py`](../tests/test_self_assessment.py).
 
 ### Sprint 4.3 — Trend, regression and remediation burn-down (1.5 weeks) ✅ Delivered
 
@@ -301,11 +303,11 @@ inspection alone.
 - **Exit gate.** A pipeline blocks on a blocking finding and reports the reason without
   log parsing.
 
-**Phase exit gate.** A monthly run produces a trend, a burn-down, and a gate — unattended.
-Scheduling, snapshot persistence, AI-readable run summary, the semantic model/report, the
-trend/regression mart/page, remediation burn-down with automatic comparable history and
-the CI gate are shipped; the formal self-assessment of the readiness semantic model
-remains to close this phase.
+**Phase exit gate.** ✅ A monthly run produces a trend, a burn-down, and a gate —
+unattended. Scheduling, snapshot persistence, AI-readable run summary, the semantic
+model/report, the trend/regression mart/page, remediation burn-down with automatic
+comparable history, the CI gate, and the readiness model/report self-assessment gate are
+all shipped.
 
 ---
 

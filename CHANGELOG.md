@@ -49,14 +49,20 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   (`tenant identity redacted`, F2 capacity), confirming the transport, the
   Scanner normaliser, the `/admin/capacities` join, and correcting three beliefs that had
   only been assumed — see [`docs/KNOWN_LIMITATIONS.md` §1.1](./docs/KNOWN_LIMITATIONS.md#11-what-the-first-live-validation-established).
+- Formal self-assessment gate for the readiness semantic model/report. The synthetic
+  fixture in [`examples/fiqa_self_assessment`](./examples/fiqa_self_assessment) and
+  [`tests/test_self_assessment.py`](./tests/test_self_assessment.py) enforce that both
+  FIQA artifacts remain `READY`, eligible, ≥85 scored, ≥90% confident/covered and free of
+  blocking findings. See [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md).
 
-**Tests** — grown from 138 to **226 tests**, all green.
+**Tests** — grown from 138 to **256 tests**, all green.
 
 ### Documentation
 
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — Phase 1 marked done and field-validated;
-  Phase 4 marked in progress (scheduling, Delta persistence, semantic model/report and
-  CI gate delivered; trend/regression detection, Sprint 4.3, still open).
+  Phase 4 marked done after scheduling, Delta persistence, semantic model/report,
+  AI-readable summary, trend/regression, remediation burn-down, CI gate and
+  self-assessment all shipped.
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md), [`fabric/README.md`](./fabric/README.md) —
   updated to describe the deployed semantic model, report and installer notebook, which
   were previously undocumented.

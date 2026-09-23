@@ -1,0 +1,31 @@
+[
+  {
+    "id": "fiqa-workspace",
+    "name": "Fabric IQ Readiness",
+    "capacity_sku": "F64",
+    "region": "westeurope",
+    "source_regions": ["westeurope"],
+    "cross_geo_approved": false,
+    "business_owner": "fiqa-business",
+    "technical_owner": "fiqa-platform",
+    "lifecycle_stage": "prod",
+    "role_assignments": [
+      {
+        "principal": "sg-fiqa-admins",
+        "principal_type": "Group",
+        "role": "Admin"
+      },
+      {
+        "principal": "sg-fiqa-readers",
+        "principal_type": "Group",
+        "role": "Viewer"
+      }
+    ],
+    "days_since_last_activity": 0,
+    "refresh_total": 10,
+    "refresh_failed": 0,
+    "items_total": 2,
+    "items_scanned": 2,
+    "scan_errors": []
+  }
+]

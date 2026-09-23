@@ -1,0 +1,22 @@
+[
+  {
+    "id": "fiqa-report",
+    "name": "IsFabricReadyForIQ",
+    "parent_id": "fiqa-workspace",
+    "semantic_model_id": "fiqa-semantic-model",
+    "visual_count": 8,
+    "broken_visuals": [],
+    "untitled_visuals": [],
+    "report_level_measures": [],
+    "hidden_filters": [],
+    "visuals_with_alt_text": 8,
+    "owner": "fiqa-platform",
+    "audience": "Fabric platform and BI governance owners",
+    "monthly_views": 25,
+    "verified_answer_candidates": [
+      "Readiness overview",
+      "Blocking findings",
+      "Remediation burn-down"
+    ]
+  }
+]

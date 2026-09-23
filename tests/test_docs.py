@@ -36,6 +36,7 @@ class TestRequiredDocuments(unittest.TestCase):
             "README.md", "CHANGELOG.md", "pyproject.toml", ".gitignore", ".env.example",
             "docs/ROADMAP.md", "docs/SCORING.md", "docs/ARCHITECTURE.md",
             "docs/AGENTS.md", "docs/RULES.md", "docs/KNOWN_LIMITATIONS.md",
+            "docs/SELF_ASSESSMENT.md",
             ".github/copilot-instructions.md", ".github/workflows/ci.yml",
             ".github/skills/fabric-iq-readiness/SKILL.md",
         ):

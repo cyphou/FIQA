@@ -1,0 +1,33 @@
+{
+  "id": "fiqa-self-assessment",
+  "name": "FIQA self-assessment fixture",
+  "fabric_enabled": true,
+  "copilot_enabled": true,
+  "agents_enabled": true,
+  "copilot_security_groups": ["sg-fiqa-pilot"],
+  "capacities": [
+    {
+      "id": "cap-fiqa",
+      "name": "FIQA Capacity",
+      "sku": "F64",
+      "state": "Active",
+      "throttled": false
+    }
+  ],
+  "cross_geo_required": false,
+  "cross_geo_approved": false,
+  "scanner_enabled": true,
+  "scanner_service_principal": "sp-fiqa-readiness",
+  "workspaces_total": 1,
+  "workspaces_scanned": 1,
+  "sensitivity_labels_enabled": true,
+  "labelled_item_ratio": 1.0,
+  "owners": {
+    "platform": "fiqa-platform",
+    "security": "fiqa-security",
+    "business": "fiqa-business"
+  },
+  "audit_log_enabled": true,
+  "purview_dlp_reviewed": true,
+  "copilot_capacity_designation_enabled": true
+}
