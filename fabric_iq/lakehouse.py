@@ -15,7 +15,7 @@ from typing import Any, Iterable
 
 from fabric_iq.errors import PersistenceError
 from fabric_iq.models import AssessmentRun, ReadinessStatus, utcnow
-from fabric_iq.remediation import RemediationBacklog
+from fabric_iq.remediation import RemediationBacklog, RemediationItem, build_backlog
 from fabric_iq.trends import compare_runs
 
 BRONZE = "bronze"
@@ -30,6 +30,7 @@ GOLD_TABLES = (
     "MartObjectReadiness",
     "MartBlockingFindings",
     "MartRemediationBacklog",
+    "MartRemediationBurnDown",
     "MartCoverageAndFreshness",
     "MartRunTrend",
 )
@@ -161,6 +162,27 @@ GOLD_SCHEMAS: dict[str, tuple[tuple[str, str], ...]] = {
         ("blocks_go_live", "boolean"),
         ("evidence", "string"),
         ("docs", "string"),
+    ),
+    "MartRemediationBurnDown": (
+        ("run_id", "string"),
+        ("baseline_run_id", "string"),
+        ("current_run_id", "string"),
+        ("previous_seen_run_id", "string"),
+        ("rule_id", "string"),
+        ("title", "string"),
+        ("object_id", "string"),
+        ("object_name", "string"),
+        ("object_type", "string"),
+        ("owner_role", "string"),
+        ("severity", "string"),
+        ("effort", "string"),
+        ("estimated_days", "double"),
+        ("priority", "double"),
+        ("blocks_go_live", "boolean"),
+        ("lifecycle_status", "string"),
+        ("priority_delta", "double"),
+        ("estimated_days_delta", "double"),
+        ("detail", "string"),
     ),
     "MartCoverageAndFreshness": (
         ("run_id", "string"),
@@ -324,6 +346,140 @@ def backlog_mart_rows(backlog: RemediationBacklog, run_id: str = "") -> list[dic
     return [{"run_id": run_id, **i.to_dict()} for i in backlog.items]
 
 
+def _backlog_item_key(item: RemediationItem) -> tuple[str, str]:
+    return (item.rule_id, item.object_id)
+
+
+def _backlog_items_by_key(backlog: RemediationBacklog) -> dict[tuple[str, str], RemediationItem]:
+    return {_backlog_item_key(item): item for item in backlog.items}
+
+
+def _latest_backlog_items_by_key(
+    history: Iterable[tuple[AssessmentRun, RemediationBacklog]],
+) -> dict[tuple[str, str], tuple[str, RemediationItem]]:
+    latest: dict[tuple[str, str], tuple[str, RemediationItem]] = {}
+    for run, backlog in history:
+        for item in backlog.items:
+            latest[_backlog_item_key(item)] = (run.run_id, item)
+    return latest
+
+
+def _burndown_row(
+    *,
+    run_id: str,
+    baseline_run_id: str,
+    current_run_id: str,
+    previous_seen_run_id: str,
+    item: RemediationItem,
+    lifecycle_status: str,
+    priority_delta: float = 0.0,
+    estimated_days_delta: float = 0.0,
+    detail: str,
+) -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "baseline_run_id": baseline_run_id,
+        "current_run_id": current_run_id,
+        "previous_seen_run_id": previous_seen_run_id,
+        "rule_id": item.rule_id,
+        "title": item.title,
+        "object_id": item.object_id,
+        "object_name": item.object_name,
+        "object_type": item.object_type.value,
+        "owner_role": item.owner_role,
+        "severity": item.severity.value,
+        "effort": item.effort.value,
+        "estimated_days": item.estimated_days,
+        "priority": round(item.priority, 2),
+        "blocks_go_live": item.blocks_go_live,
+        "lifecycle_status": lifecycle_status,
+        "priority_delta": round(priority_delta, 2),
+        "estimated_days_delta": round(estimated_days_delta, 2),
+        "detail": detail,
+    }
+
+
+def remediation_burndown_mart_rows(
+    history_runs: Iterable[AssessmentRun] | None,
+    current_run: AssessmentRun,
+    current_backlog: RemediationBacklog,
+    run_id: str = "",
+) -> list[dict[str, Any]]:
+    """Build backlog lifecycle rows for the current run.
+
+    A backlog item is matched by the stable pair ``(rule_id, object_id)``. The
+    latest comparable historical run is the baseline for open/resolved status;
+    older comparable runs are used only to distinguish a genuinely new item
+    from one that was previously resolved and has now reopened.
+    """
+
+    history = [(run, build_backlog(run)) for run in history_runs or []]
+    latest_history = history[-1] if history else None
+    baseline_run_id = latest_history[0].run_id if latest_history else ""
+    baseline_items = _backlog_items_by_key(latest_history[1]) if latest_history else {}
+    latest_seen = _latest_backlog_items_by_key(history)
+    current_items = _backlog_items_by_key(current_backlog)
+
+    rows: list[dict[str, Any]] = []
+    for key, current_item in current_items.items():
+        if key in baseline_items:
+            baseline_item = baseline_items[key]
+            priority_delta = current_item.priority - baseline_item.priority
+            days_delta = current_item.estimated_days - baseline_item.estimated_days
+            if round(priority_delta, 2) != 0 or round(days_delta, 2) != 0:
+                status = "changed_priority"
+                detail = "Backlog item persists, but priority or estimated effort changed."
+            else:
+                status = "open"
+                detail = "Backlog item remains open from the baseline run."
+            previous_seen_run_id = baseline_run_id
+        elif key in latest_seen:
+            previous_seen_run_id, previous_item = latest_seen[key]
+            priority_delta = current_item.priority - previous_item.priority
+            days_delta = current_item.estimated_days - previous_item.estimated_days
+            status = "reopened"
+            detail = "Backlog item was absent from the baseline run but appeared in earlier history."
+        else:
+            previous_seen_run_id = ""
+            priority_delta = current_item.priority
+            days_delta = current_item.estimated_days
+            status = "new"
+            detail = "Backlog item is new in the current run."
+        rows.append(
+            _burndown_row(
+                run_id=run_id,
+                baseline_run_id=baseline_run_id,
+                current_run_id=current_run.run_id,
+                previous_seen_run_id=previous_seen_run_id,
+                item=current_item,
+                lifecycle_status=status,
+                priority_delta=priority_delta,
+                estimated_days_delta=days_delta,
+                detail=detail,
+            )
+        )
+
+    for key, baseline_item in baseline_items.items():
+        if key in current_items:
+            continue
+        rows.append(
+            _burndown_row(
+                run_id=run_id,
+                baseline_run_id=baseline_run_id,
+                current_run_id=current_run.run_id,
+                previous_seen_run_id=baseline_run_id,
+                item=baseline_item,
+                lifecycle_status="resolved",
+                priority_delta=-baseline_item.priority,
+                estimated_days_delta=-baseline_item.estimated_days,
+                detail="Backlog item was present in the baseline run and is no longer present.",
+            )
+        )
+
+    rows.sort(key=lambda row: (row["lifecycle_status"], row["object_type"], row["rule_id"], row["object_id"]))
+    return rows
+
+
 def _average(values: Iterable[float]) -> float:
     numbers = list(values)
     if not numbers:
@@ -408,12 +564,28 @@ def select_latest_baseline_run(
     default, ignoring runs created with a different ruleset version.
     """
 
-    if not reports_dir:
-        raise PersistenceError("reports_dir is required for baseline selection")
-    if not current_run.run_id:
-        raise PersistenceError("current_run.run_id is required for baseline selection")
-    if not os.path.isdir(reports_dir):
+    candidates = select_comparable_history_runs(
+        reports_dir, current_run, same_ruleset_only=same_ruleset_only
+    )
+    if not candidates:
         return None
+    return candidates[-1]
+
+
+def select_comparable_history_runs(
+    reports_dir: str,
+    current_run: AssessmentRun,
+    *,
+    same_ruleset_only: bool = True,
+) -> list[AssessmentRun]:
+    """Return previous comparable runs from ``reports_dir``, oldest first."""
+
+    if not reports_dir:
+        raise PersistenceError("reports_dir is required for history selection")
+    if not current_run.run_id:
+        raise PersistenceError("current_run.run_id is required for history selection")
+    if not os.path.isdir(reports_dir):
+        return []
 
     candidates: list[AssessmentRun] = []
     for name in sorted(os.listdir(reports_dir)):
@@ -428,9 +600,7 @@ def select_latest_baseline_run(
         if same_ruleset_only and baseline.ruleset_version != current_run.ruleset_version:
             continue
         candidates.append(baseline)
-    if not candidates:
-        return None
-    return max(candidates, key=_baseline_sort_key)
+    return sorted(candidates, key=_baseline_sort_key)
 
 
 def _baseline_sort_key(run: AssessmentRun) -> tuple[str, str, str]:
@@ -443,6 +613,7 @@ def gold_mart_rows(
     *,
     run_id: str = "",
     baseline_run: AssessmentRun | None = None,
+    history_runs: Iterable[AssessmentRun] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Build every Gold mart's rows for one run, keyed by table name.
 
@@ -457,6 +628,12 @@ def gold_mart_rows(
         "MartObjectReadiness": object_mart_rows(run, run_id),
         "MartBlockingFindings": blocking_mart_rows(run, run_id),
         "MartRemediationBacklog": backlog_mart_rows(backlog, run_id),
+        "MartRemediationBurnDown": remediation_burndown_mart_rows(
+            history_runs if history_runs is not None else ([baseline_run] if baseline_run else []),
+            run,
+            backlog,
+            run_id,
+        ),
         "MartCoverageAndFreshness": coverage_mart_rows(run, run_id),
         "MartRunTrend": run_trend_mart_rows(baseline_run, run, run_id),
     }
@@ -501,8 +678,15 @@ class LakehouseWriter:
         backlog: RemediationBacklog,
         *,
         baseline_run: AssessmentRun | None = None,
+        history_runs: Iterable[AssessmentRun] | None = None,
     ) -> dict[str, str]:
-        marts = gold_mart_rows(run, backlog, run_id=self.run_id, baseline_run=baseline_run)
+        marts = gold_mart_rows(
+            run,
+            backlog,
+            run_id=self.run_id,
+            baseline_run=baseline_run,
+            history_runs=history_runs,
+        )
         return {name: self._write_ndjson(GOLD, name, rows) for name, rows in marts.items()}
 
     def write_run(
@@ -513,6 +697,7 @@ class LakehouseWriter:
         inventory: dict[str, Any] | None = None,
         bronze: Iterable[Any] | None = None,
         baseline_run: AssessmentRun | None = None,
+        history_runs: Iterable[AssessmentRun] | None = None,
     ) -> dict[str, Any]:
         """Persist every layer for one run and return the written paths."""
         written: dict[str, Any] = {"run_id": self.run_id, "written_at": utcnow()}
@@ -520,7 +705,12 @@ class LakehouseWriter:
             written[BRONZE] = self.write_bronze(bronze)
         if inventory is not None:
             written[SILVER] = self.write_silver(inventory)
-        written[GOLD] = self.write_gold(run, backlog, baseline_run=baseline_run)
+        written[GOLD] = self.write_gold(
+            run,
+            backlog,
+            baseline_run=baseline_run,
+            history_runs=history_runs,
+        )
         return written
 
     # ── io ────────────────────────────────────────────────────────

@@ -119,6 +119,7 @@ any field inside an object is present. Absent fields are the normal case, handle
 | `MartObjectReadiness` | model / report / agent × run |
 | `MartBlockingFindings` | blocking finding × run |
 | `MartRemediationBacklog` | backlog item × run |
+| `MartRemediationBurnDown` | remediation lifecycle item × current run |
 | `MartCoverageAndFreshness` | object × run |
 | `MartRunTrend` | object comparison × current run |
 
@@ -147,6 +148,9 @@ the latest previous run for the same tenant and ruleset from the durable
 persists those object-level comparisons; it is empty on the first comparable run but
 still published with an explicit schema so the DirectLake semantic model and report page
 remain stable before history exists.
+`MartRemediationBurnDown` reuses the comparable history and matches backlog items by
+`(rule_id, object_id)` to show whether each action is `new`, `open`, `resolved`,
+`reopened` or `changed_priority`.
 
 ## Error Handling
 

@@ -135,6 +135,7 @@ semantic model:
 - `MartObjectReadiness` — one row per model, report and agent per run
 - `MartBlockingFindings` — the "cannot ship" list
 - `MartRemediationBacklog` — the prioritised work, by owner role
+- `MartRemediationBurnDown` — new, open, resolved, reopened and changed remediation work
 - `MartCoverageAndFreshness` — what we could actually observe
 
 Read them in that order. **Blocking findings first** — they are walls, not quality
@@ -183,6 +184,7 @@ report conventions familiar to Fabric administrators:
 | Object Readiness | Score and confidence for every semantic model, report and Data Agent |
 | Blocking Findings | The "cannot ship" list — walls, not quality issues |
 | Remediation Backlog | The prioritised work, grouped by owner role |
+| Remediation Burn-down | Backlog lifecycle and effort deltas across comparable runs |
 | Coverage & Freshness | How much of the estate could actually be observed, and when |
 | Trend & Regression | What changed between a baseline and current run, separating quality regressions from coverage loss |
 

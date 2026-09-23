@@ -174,6 +174,29 @@ BACKLOG_COLUMNS: tuple[Column, ...] = (
     Column("docs", "type text", "string", description="Link or reference to further documentation for this item."),
 )
 
+#: ``MartRemediationBurnDown`` -- backlog item lifecycle versus run history.
+BURNDOWN_COLUMNS: tuple[Column, ...] = (
+    Column("run_id", "type text", "string", description="Current assessment run ID. Join key across every Mart table."),
+    Column("baseline_run_id", "type text", "string", description="Latest previous comparable run used to decide open or resolved status."),
+    Column("current_run_id", "type text", "string", description="Assessment run being evaluated for remediation progress."),
+    Column("previous_seen_run_id", "type text", "string", description="Most recent historical run where this backlog item was previously seen, if any."),
+    Column("rule_id", "type text", "string", description="ID of the readiness rule behind this remediation item, matching docs/RULES.md."),
+    Column("title", "type text", "string", description="Short human-readable title of the remediation item."),
+    Column("object_id", "type text", "string", description="ID of the object this remediation item applies to."),
+    Column("object_name", "type text", "string", description="Human-readable name of the object this remediation item applies to."),
+    Column("object_type", "type text", "string", description="Kind of object this item applies to: tenant, workspace, semantic_model, report, or data_agent."),
+    Column("owner_role", "type text", "string", description="Role best placed to action this item, e.g. tenant_admin, workspace_admin, model_owner."),
+    Column("severity", "type text", "string", description="Underlying finding severity: blocking or non-blocking quality issue."),
+    Column("effort", "type text", "string", description="Rough remediation effort: low, medium, or high."),
+    Column("estimated_days", "type number", "double", "0.0", description="Current rough person-days estimated to complete this item."),
+    Column("priority", "type number", "double", "0.0", description="Current backlog ranking score -- higher means fix sooner."),
+    Column("blocks_go_live", "type logical", "boolean", description="True if this item must be resolved before the object can go live with Fabric IQ / Copilot."),
+    Column("lifecycle_status", "type text", "string", description="Backlog lifecycle classification: new, open, resolved, reopened, or changed_priority."),
+    Column("priority_delta", "type number", "double", "0.0", description="Current priority minus historical priority for this item. Negative resolved rows reduce outstanding risk."),
+    Column("estimated_days_delta", "type number", "double", "0.0", description="Current estimated days minus historical estimated days. Negative resolved rows reduce remaining effort."),
+    Column("detail", "type text", "string", description="Plain-English explanation of the lifecycle classification for this item."),
+)
+
 #: ``MartCoverageAndFreshness`` -- coverage/confidence per assessed object.
 COVERAGE_COLUMNS: tuple[Column, ...] = (
     Column("run_id", "type text", "string", description="ID of the assessment run. Join key across every Mart table."),
@@ -217,6 +240,7 @@ MART_COLUMNS: dict[str, tuple[Column, ...]] = {
     "MartObjectReadiness": OBJECT_COLUMNS,
     "MartBlockingFindings": BLOCKING_COLUMNS,
     "MartRemediationBacklog": BACKLOG_COLUMNS,
+    "MartRemediationBurnDown": BURNDOWN_COLUMNS,
     "MartCoverageAndFreshness": COVERAGE_COLUMNS,
     "MartRunTrend": TREND_COLUMNS,
 }
@@ -231,6 +255,7 @@ MART_DESCRIPTIONS: dict[str, str] = {
     "MartObjectReadiness": "One row per assessed semantic model, report, or data agent, per run. Object-level readiness scorecard.",
     "MartBlockingFindings": "One row per blocking (structurally disqualifying) finding raised during a run. These must be fixed before an object is eligible.",
     "MartRemediationBacklog": "One row per prioritized remediation action across all findings in a run, grouped by owner role.",
+    "MartRemediationBurnDown": "One row per remediation item lifecycle comparison for the current run. Tracks new, open, resolved, reopened and priority-changed work.",
     "MartCoverageAndFreshness": "One row per assessed object, per run. How much evidence could be collected (coverage) and how confident the score is.",
     "MartRunTrend": "One row per object compared between a baseline and current run. Separates true quality regressions from collection or coverage loss.",
 }
@@ -566,6 +591,11 @@ def build_model_bim(data_dir: str) -> dict[str, Any]:
             BACKLOG_MEASURES,
         ),
         _tmsl_table(
+            "MartRemediationBurnDown",
+            BURNDOWN_COLUMNS,
+            _m_expression(os.path.join(data_dir, "MartRemediationBurnDown.csv"), BURNDOWN_COLUMNS),
+        ),
+        _tmsl_table(
             "MartCoverageAndFreshness",
             COVERAGE_COLUMNS,
             _m_expression(os.path.join(data_dir, "MartCoverageAndFreshness.csv"), COVERAGE_COLUMNS),
@@ -653,6 +683,12 @@ def build_model_bim_directlake(
             entity_name=_directlake_entity_name("MartRemediationBacklog"),
             schema_name=schema_name,
             measures=BACKLOG_MEASURES,
+        ),
+        _tmsl_table_directlake(
+            "MartRemediationBurnDown",
+            BURNDOWN_COLUMNS,
+            entity_name=_directlake_entity_name("MartRemediationBurnDown"),
+            schema_name=schema_name,
         ),
         _tmsl_table_directlake(
             "MartCoverageAndFreshness",
@@ -899,6 +935,35 @@ def _backlog_page() -> dict[str, Any]:
     return _page("ReportSection4", "Remediation Backlog", 4, [visual])
 
 
+def _burndown_page() -> dict[str, Any]:
+    fields = [
+        "lifecycle_status",
+        "object_name",
+        "object_type",
+        "title",
+        "owner_role",
+        "severity",
+        "priority_delta",
+        "estimated_days_delta",
+        "previous_seen_run_id",
+        "detail",
+    ]
+    names = {
+        "lifecycle_status": "Lifecycle",
+        "object_name": "Object",
+        "object_type": "Type",
+        "title": "Finding",
+        "owner_role": "Owner",
+        "severity": "Severity",
+        "priority_delta": "Priority Delta",
+        "estimated_days_delta": "Days Delta",
+        "previous_seen_run_id": "Previous Seen",
+        "detail": "Detail",
+    }
+    visual = _table_visual(20, 20, PAGE_WIDTH - 40, PAGE_HEIGHT - 40, "MartRemediationBurnDown", fields, names)
+    return _page("ReportSection5", "Remediation Burn-down", 5, [visual])
+
+
 def _coverage_page() -> dict[str, Any]:
     fields = ["object_id", "object_type", "coverage", "confidence", "not_evaluated_count", "is_published", "assessed_at"]
     names = {
@@ -911,7 +976,7 @@ def _coverage_page() -> dict[str, Any]:
         "assessed_at": "Assessed At",
     }
     visual = _table_visual(20, 20, PAGE_WIDTH - 40, PAGE_HEIGHT - 40, "MartCoverageAndFreshness", fields, names)
-    return _page("ReportSection5", "Coverage & Freshness", 5, [visual])
+    return _page("ReportSection6", "Coverage & Freshness", 6, [visual])
 
 
 def _trend_page() -> dict[str, Any]:
@@ -938,7 +1003,7 @@ def _trend_page() -> dict[str, Any]:
         "detail": "Detail",
     }
     visual = _table_visual(20, 20, PAGE_WIDTH - 40, PAGE_HEIGHT - 40, "MartRunTrend", fields, names)
-    return _page("ReportSection6", "Trend & Regression", 6, [visual])
+    return _page("ReportSection7", "Trend & Regression", 7, [visual])
 
 
 def build_report_json() -> dict[str, Any]:
@@ -949,6 +1014,7 @@ def build_report_json() -> dict[str, Any]:
         _object_page(),
         _blocking_page(),
         _backlog_page(),
+        _burndown_page(),
         _coverage_page(),
         _trend_page(),
     ]
@@ -1100,12 +1166,19 @@ class PowerBiReportWriter:
         backlog: RemediationBacklog,
         *,
         baseline_run: AssessmentRun | None = None,
+        history_runs: Iterable[AssessmentRun] | None = None,
     ) -> str:
         os.makedirs(self.root, exist_ok=True)
         data_dir = os.path.join(self.root, "data")
         os.makedirs(data_dir, exist_ok=True)
 
-        mart_rows = gold_mart_rows(run, backlog, run_id=run.run_id, baseline_run=baseline_run)
+        mart_rows = gold_mart_rows(
+            run,
+            backlog,
+            run_id=run.run_id,
+            baseline_run=baseline_run,
+            history_runs=history_runs,
+        )
         for table_name, columns in MART_COLUMNS.items():
             _write_csv(os.path.join(data_dir, f"{table_name}.csv"), columns, mart_rows[table_name])
 
@@ -1184,8 +1257,12 @@ then refresh.
 * **Blocking Findings** -- every blocking (go-live blocking) finding
   recorded during the run.
 * **Remediation Backlog** -- the prioritized remediation backlog.
+* **Remediation Burn-down** -- new, open, resolved, reopened and
+  priority-changed remediation work compared with previous runs.
 * **Coverage & Freshness** -- coverage, confidence and last-assessed
   timestamps per object.
+* **Trend & Regression** -- score, coverage and confidence movement between
+  the current run and its baseline.
 
 This project is generated read-only output: it does not write to, or
 connect to, the assessed Power BI/Fabric tenant.

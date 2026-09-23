@@ -94,6 +94,7 @@ from fabric_iq.lakehouse import (
     GOLD_SCHEMAS,
     GOLD_TABLES,
     LakehouseWriter,
+    select_comparable_history_runs,
     select_latest_baseline_run,
 )
 from fabric_iq.preceptor import PreceptorLoop
@@ -181,11 +182,13 @@ print(to_console(run, backlog, review))
 # CELL ********************
 
 reports_dir = os.path.join(readiness_root, "reports")
-baseline_run = select_latest_baseline_run(reports_dir, run)
+history_runs = select_comparable_history_runs(reports_dir, run)
+baseline_run = history_runs[-1] if history_runs else select_latest_baseline_run(reports_dir, run)
 if baseline_run is None:
     print("trend baseline: none (first comparable run)")
 else:
     print(f"trend baseline: {baseline_run.run_id}")
+print(f"remediation history: {len(history_runs)} comparable run(s)")
 
 written = LakehouseWriter(root=readiness_root, run_id=run_id).write_run(
     run,
@@ -193,6 +196,7 @@ written = LakehouseWriter(root=readiness_root, run_id=run_id).write_run(
     inventory=inventory,
     bronze=collection.bronze,
     baseline_run=baseline_run,
+    history_runs=history_runs,
 )
 
 os.makedirs(reports_dir, exist_ok=True)

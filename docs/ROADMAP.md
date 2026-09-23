@@ -27,7 +27,7 @@ Fabric IQ and agentic experiences — and exactly what to change, object by obje
 | 1 | Inventory and live collection | ✅ Done — all four sprints closed and field-validated |
 | 2 | Static readiness scoring | 🟡 Engine done (65 rules), catalogue-hardening pass (Sprint 2.1) still open |
 | 3 | Agentic readiness | 🟡 Rules done, evaluation harness missing |
-| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression mart/page with automatic baseline selection and CI gate shipped; remediation burn-down still open |
+| 4 | Industrialisation | 🟡 Scheduling, snapshot Delta persistence, semantic model/report, AI-readable run summary, trend/regression, remediation burn-down and CI gate shipped; formal self-assessment still open |
 | 5 | Fabric IQ extension | ⏳ Continuous |
 
 ---
@@ -269,7 +269,7 @@ inspection alone.
 - **Exit gate.** The readiness model scores ≥ 85 under its own rules; then close this
   sprint formally.
 
-### Sprint 4.3 — Trend and regression detection (1.5 weeks) 🟡 Trend shipped, burn-down open
+### Sprint 4.3 — Trend, regression and remediation burn-down (1.5 weeks) ✅ Delivered
 
 - Score deltas per object between runs, new blocking findings, remediation burn-down.
 - Distinguish a genuine regression from a coverage change: **an object that dropped because
@@ -286,7 +286,11 @@ inspection alone.
   schema-stable and empty before a baseline exists. The **Trend & Regression** report page
   can therefore be deployed from day one without converting the operational Delta tables
   back to append-only history.
-- **Remaining exit gate.** Add remediation burn-down over multiple runs.
+- **Delivered remediation burn-down.** `MartRemediationBurnDown` matches backlog items by
+  `(rule_id, object_id)` across comparable run history and classifies actions as `new`,
+  `open`, `resolved`, `reopened` or `changed_priority`, with priority and effort deltas.
+  The **Remediation Burn-down** report page surfaces the owner, severity and movement for
+  each action.
 
 ### Sprint 4.4 — CI gate (1 week) ✅ Delivered
 
@@ -299,9 +303,9 @@ inspection alone.
 
 **Phase exit gate.** A monthly run produces a trend, a burn-down, and a gate — unattended.
 Scheduling, snapshot persistence, AI-readable run summary, the semantic model/report, the
-trend/regression mart/page with automatic baseline selection and the CI gate are shipped;
-remediation burn-down and the formal self-assessment of the readiness semantic model
-remain to close this phase.
+trend/regression mart/page, remediation burn-down with automatic comparable history and
+the CI gate are shipped; the formal self-assessment of the readiness semantic model
+remains to close this phase.
 
 ---
 

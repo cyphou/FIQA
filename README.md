@@ -11,10 +11,10 @@ Agent) are ready for **Fabric IQ**, fully offline-testable, zero manual guesswor
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 250 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer |
+| ✅ **Tests** | 254 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
-| 🎯 **Coverage** | 65 rules · 5 object types · 8 Gold marts · 13-agent environment |
+| 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 13-agent environment |
 
 For every object the tool produces:
 
@@ -210,13 +210,15 @@ Fabric / Power BI APIs → [Collect] → Bronze evidence
                                    → [Persist] → Lakehouse Gold marts
 ```
 
-Eight Gold marts feed a DirectLake readiness semantic model and report:
+Nine Gold marts feed a DirectLake readiness semantic model and report:
 
 `MartRunSummary`, `MartTenantReadiness`, `MartWorkspaceReadiness`, `MartObjectReadiness`,
-`MartBlockingFindings`, `MartRemediationBacklog`, `MartCoverageAndFreshness`,
-`MartRunTrend`.
+`MartBlockingFindings`, `MartRemediationBacklog`, `MartRemediationBurnDown`,
+`MartCoverageAndFreshness`, `MartRunTrend`.
 `MartRunTrend` is populated automatically from the latest previous comparable run in
 the medallion report history; the first run stays empty but schema-stable.
+`MartRemediationBurnDown` uses the same comparable history to classify backlog work as
+`new`, `open`, `resolved`, `reopened` or `changed_priority`.
 The model keeps those PascalCase names for business readability, while its DirectLake
 partitions point to the Lakehouse SQL endpoint's physical lowercase table names
 (`marttenantreadiness`, `martobjectreadiness`, and so on). This keeps the model

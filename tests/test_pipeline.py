@@ -12,7 +12,7 @@ from fabric_iq.collectors.base import BronzeRecord, CollectionResult, empty_inve
 from fabric_iq.collectors.offline import OfflineCollector
 from fabric_iq.errors import CollectionError, NormalizationError, PersistenceError
 from fabric_iq.lakehouse import LakehouseWriter, gold_mart_rows, select_latest_baseline_run
-from fabric_iq.models import ObjectType
+from fabric_iq.models import Effort, ObjectType
 from fabric_iq.remediation import build_backlog
 from fabric_iq.reporting import to_console, to_html
 from fabric_iq.scoring import assess
@@ -84,6 +84,29 @@ class TestLakehouseWriter(unittest.TestCase):
         self.run = assess(self.collection.inventory, run_id="run_lh")
         self.backlog = build_backlog(self.run)
 
+    def _run_without_backlog_item(self, run, item):
+        cards = []
+        for card in run.scorecards:
+            findings = [
+                finding for finding in card.findings
+                if not (finding.rule_id == item.rule_id and finding.object_id == item.object_id)
+            ]
+            cards.append(replace(card, findings=findings))
+        return replace(run, scorecards=cards)
+
+    def _run_with_changed_effort(self, run, item):
+        replacement_effort = Effort.XL if item.effort is not Effort.XL else Effort.XS
+        cards = []
+        for card in run.scorecards:
+            findings = []
+            for finding in card.findings:
+                if finding.rule_id == item.rule_id and finding.object_id == item.object_id:
+                    findings.append(replace(finding, effort=replacement_effort))
+                else:
+                    findings.append(finding)
+            cards.append(replace(card, findings=findings))
+        return replace(run, scorecards=cards)
+
     def test_root_and_run_id_are_required(self):
         with self.assertRaises(PersistenceError):
             LakehouseWriter(root="", run_id="r")
@@ -140,6 +163,83 @@ class TestLakehouseWriter(unittest.TestCase):
         marts = gold_mart_rows(self.run, self.backlog, run_id="run_lh")
 
         self.assertEqual(marts["MartRunTrend"], [])
+
+    def test_remediation_burndown_marks_first_run_items_as_new(self):
+        marts = gold_mart_rows(self.run, self.backlog, run_id="run_lh")
+        rows = marts["MartRemediationBurnDown"]
+
+        self.assertEqual(len(rows), len(self.backlog.items))
+        self.assertEqual({row["lifecycle_status"] for row in rows}, {"new"})
+        self.assertTrue(all(row["baseline_run_id"] == "" for row in rows))
+
+    def test_remediation_burndown_marks_resolved_items(self):
+        item = self.backlog.items[0]
+        current = replace(
+            self._run_without_backlog_item(self.run, item),
+            run_id="current",
+        )
+        current_backlog = build_backlog(current)
+
+        marts = gold_mart_rows(
+            current,
+            current_backlog,
+            run_id="current",
+            history_runs=[replace(self.run, run_id="baseline")],
+        )
+        target = [
+            row for row in marts["MartRemediationBurnDown"]
+            if row["rule_id"] == item.rule_id and row["object_id"] == item.object_id
+        ]
+
+        self.assertEqual(len(target), 1)
+        self.assertEqual(target[0]["lifecycle_status"], "resolved")
+        self.assertLess(target[0]["estimated_days_delta"], 0)
+
+    def test_remediation_burndown_marks_reopened_items(self):
+        item = self.backlog.items[0]
+        older = replace(self.run, run_id="older")
+        baseline = replace(
+            self._run_without_backlog_item(self.run, item),
+            run_id="baseline",
+        )
+        current = replace(self.run, run_id="current")
+
+        marts = gold_mart_rows(
+            current,
+            build_backlog(current),
+            run_id="current",
+            history_runs=[older, baseline],
+        )
+        target = [
+            row for row in marts["MartRemediationBurnDown"]
+            if row["rule_id"] == item.rule_id and row["object_id"] == item.object_id
+        ]
+
+        self.assertEqual(len(target), 1)
+        self.assertEqual(target[0]["lifecycle_status"], "reopened")
+        self.assertEqual(target[0]["previous_seen_run_id"], "older")
+
+    def test_remediation_burndown_marks_priority_changes(self):
+        item = self.backlog.items[0]
+        current = replace(
+            self._run_with_changed_effort(self.run, item),
+            run_id="current",
+        )
+
+        marts = gold_mart_rows(
+            current,
+            build_backlog(current),
+            run_id="current",
+            history_runs=[replace(self.run, run_id="baseline")],
+        )
+        target = [
+            row for row in marts["MartRemediationBurnDown"]
+            if row["rule_id"] == item.rule_id and row["object_id"] == item.object_id
+        ]
+
+        self.assertEqual(len(target), 1)
+        self.assertEqual(target[0]["lifecycle_status"], "changed_priority")
+        self.assertNotEqual(target[0]["priority_delta"], 0)
 
     def test_run_trend_mart_classifies_regressions_with_a_baseline(self):
         baseline = replace(self.run, run_id="baseline")

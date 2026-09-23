@@ -110,6 +110,11 @@ class TestPowerBiReportWriter(unittest.TestCase):
         self.assertIn("score_delta", trend_columns)
         self.assertIn("ruleset_version_changed", trend_columns)
 
+        burndown_columns = {c["name"] for c in tables["MartRemediationBurnDown"]["columns"]}
+        self.assertIn("lifecycle_status", burndown_columns)
+        self.assertIn("previous_seen_run_id", burndown_columns)
+        self.assertIn("estimated_days_delta", burndown_columns)
+
         object_columns = {c["name"] for c in tables["MartObjectReadiness"]["columns"]}
         self.assertIn("object_id", object_columns)
         self.assertIn("score", object_columns)
@@ -140,9 +145,9 @@ class TestPowerBiReportWriter(unittest.TestCase):
                 self.assertTrue(table.get("description"))
                 self.assertTrue(all(column.get("description") for column in table["columns"]))
 
-    def test_report_json_has_seven_pages(self):
+    def test_report_json_has_eight_pages(self):
         report = self._load_json("IsFabricReadyForIQ.Report", "report.json")
-        self.assertEqual(len(report["sections"]), 7)
+        self.assertEqual(len(report["sections"]), 8)
         names = [s["displayName"] for s in report["sections"]]
         self.assertEqual(
             names,
@@ -152,6 +157,7 @@ class TestPowerBiReportWriter(unittest.TestCase):
                 "Object Readiness",
                 "Blocking Findings",
                 "Remediation Backlog",
+                "Remediation Burn-down",
                 "Coverage & Freshness",
                 "Trend & Regression",
             ],
