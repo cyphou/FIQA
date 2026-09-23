@@ -40,3 +40,25 @@ Thumbs.db
 
 # Tooling scratch output
 .playwright-mcp/
+
+# Generated Power BI (.pbip) project — tenant-derived marts, never source
+powerbi_report/
+*.pbip
+Mart*.csv
+
+# Assessment artifacts, wherever --out points them
+*_assessment.json
+*_backlog.json
+*_backlog.csv
+*_readiness.html
+*_review.json
+
+# Medallion output: layer dirs are already ignored; cover the documented root
+# and the actual file extension the writer emits (lakehouse.py writes .jsonl).
+/lakehouse/
+*.jsonl
+!examples/**/*.jsonl
+
+# Live-collection checkpoints: tenant_id + raw Bronze payloads
+*checkpoint*.json
+*checkpoint*.json.tmp

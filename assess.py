@@ -43,7 +43,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--bearer-token-env",
         help="Name of the environment variable that supplies a live bearer token; never pass tokens on the command line",
     )
-    parser.add_argument("--checkpoint", help="Path for resumable live-collection checkpoint data")
+    parser.add_argument(
+        "--checkpoint",
+        help=(
+            "Path for resumable live-collection checkpoint data. "
+            "PRIVACY: the checkpoint stores the tenant ID and the raw Bronze API payloads "
+            "(including identity/role-assignment responses). Keep it inside the git-ignored "
+            "artifacts/ folder, e.g. artifacts/live-checkpoint.json, and never commit it"
+        ),
+    )
     parser.add_argument(
         "--no-artifact-users",
         action="store_true",
@@ -53,10 +61,34 @@ def build_parser() -> argparse.ArgumentParser:
             "permission rules unevaluated"
         ),
     )
-    parser.add_argument("--out", default="artifacts", help="Output folder for reports (default: artifacts)")
+    parser.add_argument(
+        "--out",
+        default="artifacts",
+        help=(
+            "Output folder for reports (default: artifacts, which is git-ignored). "
+            "Reports carry run IDs, object names and findings — point this elsewhere only "
+            "at a location that is also git-ignored"
+        ),
+    )
     parser.add_argument("--run-id", help="Run identifier (default: UTC timestamp)")
-    parser.add_argument("--lakehouse", help="Root folder for the Bronze/Silver/Gold medallion output")
-    parser.add_argument("--powerbi", help="Root folder for a generated Power BI (.pbip) report project")
+    parser.add_argument(
+        "--lakehouse",
+        help=(
+            "Root folder for the Bronze/Silver/Gold medallion output. "
+            "PRIVACY: Bronze holds raw collected payloads — keep this on a git-ignored path "
+            "such as the documented ./lakehouse root"
+        ),
+    )
+    parser.add_argument(
+        "--powerbi",
+        help=(
+            "Root folder for a generated Power BI (.pbip) report project. "
+            "PRIVACY: the generated data/Mart*.csv files are tenant-derived evidence "
+            "(run IDs, object and workspace names, scores, findings) and the model.bim "
+            "embeds absolute local paths — this output is never source and must never be "
+            "committed. ./powerbi_report and Mart*.csv are git-ignored"
+        ),
+    )
     parser.add_argument("--review", action="store_true", help="Run the preceptorship quality loop")
     parser.add_argument(
         "--max-cycles", type=int, default=3, help="Maximum preceptorship cycles (default: 3)"

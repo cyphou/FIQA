@@ -45,8 +45,8 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   closing Roadmap Sprint 4.1.
 
 **Validation**
-- First live end-to-end run against a real Microsoft 365 developer tenant
-  (`tenant identity redacted`, F2 capacity), confirming the transport, the
+- First live end-to-end run against a real Microsoft 365 developer tenant on F2
+  capacity (tenant identity redacted), confirming the transport, the
   Scanner normaliser, the `/admin/capacities` join, and correcting three beliefs that had
   only been assumed — see [`docs/KNOWN_LIMITATIONS.md` §1.1](./docs/KNOWN_LIMITATIONS.md#11-what-the-first-live-validation-established).
 - Formal self-assessment gate for the readiness semantic model/report. The synthetic
