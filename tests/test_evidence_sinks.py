@@ -19,10 +19,12 @@ import os
 import subprocess
 import tempfile
 import unittest
+import unittest.mock
 
 from scripts.check_evidence_sinks import (
     ALLOWED_EMAIL_DOMAINS,
     GOLD_TABLES,
+    SINK_ROOTS,
     _is_placeholder_guid,
     _is_plausible_destination,
     audit,
@@ -41,6 +43,11 @@ from tests.helpers import REPO_ROOT
 def tenant_shaped_guid() -> str:
     """A GUID that looks like a tenant issued it, assembled so no literal exists."""
     return "-".join(["3f2b9c71", "4d2e", "4a11", "9b33", "7c5d1e2f4a6b"])
+
+
+def tenant_shaped_undashed_guid() -> str:
+    """The same id as a token claim carries it: 32 hex characters, no dashes."""
+    return tenant_shaped_guid().replace("-", "")
 
 
 def tenant_shaped_upn() -> str:
@@ -151,7 +158,7 @@ class SinkCheckTests(TempRepoCase):
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("negation", problems[0])
 
-    def test_a_rule_that_is_not_committed_does_not_count(self):
+    def test_a_rule_from_git_info_exclude_does_not_count(self):
         # .git/info/exclude protects one clone only. A teammate who runs the
         # documented command still commits the evidence.
         self.ignore("artifacts/")
@@ -161,6 +168,39 @@ class SinkCheckTests(TempRepoCase):
 
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("not a committed .gitignore", problems[0])
+
+    def test_an_untracked_gitignore_does_not_count(self):
+        """Regression: an uncommitted rule was accepted whenever it was *named* .gitignore.
+
+        The previous test claimed "not committed" but only ever exercised
+        ``.git/info/exclude``, which is caught by its filename. A ``.gitignore``
+        that git does not track is exactly as private -- it exists in one working
+        tree, and a teammate's clone has no such rule -- and it passed the gate
+        green while the destination was unprotected for everybody else.
+        """
+        self.ignore("artifacts/")  # tracked, and deliberately without *.jsonl
+        self.assertEqual(
+            len(check_sinks(self.root, [("elsewhere/run.jsonl", "NDJSON mart")])),
+            1,
+            "precondition: the tracked rules must not already cover the destination",
+        )
+        # Present on disk, never `git add`-ed.
+        _write(self.root, "elsewhere/.gitignore", "*.jsonl\n")
+
+        problems = check_sinks(self.root, [("elsewhere/run.jsonl", "NDJSON mart")])
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("elsewhere/.gitignore", problems[0])
+        self.assertIn("not a committed .gitignore", problems[0])
+
+    def test_the_same_nested_rule_counts_once_git_tracks_it(self):
+        # Non-vacuity of the fix: the check rejects the *untracked* state, not
+        # nested .gitignore files, so adding the very same file clears the gate.
+        self.ignore("artifacts/")
+        _write(self.root, "elsewhere/.gitignore", "*.jsonl\n")
+        _git(self.root, "add", "--", "elsewhere/.gitignore")
+
+        self.assertEqual(check_sinks(self.root, [("elsewhere/run.jsonl", "NDJSON mart")]), [])
 
 
 class BlankIgnorePatternTests(TempRepoCase):
@@ -238,12 +278,19 @@ class PlausibleDestinationTests(unittest.TestCase):
             with self.subTest(word=word):
                 self.assertFalse(_is_plausible_destination(word))
 
-    def test_every_path_shape_the_docs_use_is_a_destination(self):
+    def test_every_path_shape_a_writer_destination_can_take_is_recognised(self):
+        # Not only the shapes this repository happens to use today: a test that
+        # enumerates the current fixture certifies the fixture, not the property.
+        # `results/`, `evidence/` and `./out` are shapes the docs are *allowed* to
+        # use, and every one of them must reach question 1 of the gate.
         for value in (
             "./powerbi_report",
             "./lakehouse",
+            "./out",
             "artifacts",
             "artifacts/",
+            "results/",
+            "evidence/",
             "artifacts/live-checkpoint.json",
             "lakehouse/gold/MartRunSummary/run.jsonl",
             "run.jsonl",
@@ -252,6 +299,28 @@ class PlausibleDestinationTests(unittest.TestCase):
         ):
             with self.subTest(value=value):
                 self.assertTrue(_is_plausible_destination(value))
+
+    def test_a_single_level_folder_with_a_trailing_slash_is_a_destination(self):
+        """Regression: the separator was tested *after* it had been stripped off.
+
+        ``"/" in candidate.strip("/")`` removes the one character that proves the
+        value is a path, so a single-level output folder written with a trailing
+        slash was discarded as prose and never checked against the ignore rules at
+        all. Only a folder that happened to be listed in SINK_ROOTS, or one nested
+        deeply enough to keep an interior slash, survived -- which is why the
+        defect looked like it worked.
+        """
+        for folder in ("results", "evidence", "tenant_dump", "out"):
+            with self.subTest(folder=folder):
+                self.assertNotIn(folder, SINK_ROOTS, "a bare root would pass for another reason")
+                self.assertFalse(_is_plausible_destination(folder))
+                self.assertTrue(_is_plausible_destination(folder + "/"))
+                self.assertTrue(_is_plausible_destination(folder + "\\"))
+
+    def test_a_value_made_only_of_separators_names_no_destination(self):
+        for value in ("/", "//", "\\", ""):
+            with self.subTest(value=value):
+                self.assertFalse(_is_plausible_destination(value))
 
 
 class DocumentedSinkScrapeTests(TempRepoCase):
@@ -322,6 +391,42 @@ class DocumentedSinkScrapeTests(TempRepoCase):
         )
 
         self.assertEqual(dict(documented_sinks(self.root)), {})
+
+    def test_a_documented_single_level_folder_reaches_the_ignore_check(self):
+        """Regression (end to end): a single-level folder was dropped before question 1.
+
+        The scrape and the verdict are both asserted. A scraper that finds the
+        folder while the check ignores it is the same fail-open wearing a
+        different hat, so proving only that the value is collected is not enough.
+        """
+        self.track("README.md", f"python assess.py {flag_example('out', 'results/')}\n")
+        self.ignore("artifacts/")
+
+        found = dict(documented_sinks(self.root))
+
+        self.assertIn("results/", found, found)
+        problems = check_sinks(self.root, documented_sinks(self.root))
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("results/", problems[0])
+        self.assertIn("no ignore rule", problems[0])
+
+    def test_a_documented_single_level_folder_that_is_ignored_passes(self):
+        # Non-vacuity: the finding above is about the missing rule, not the shape.
+        self.track("README.md", f"python assess.py {flag_example('out', 'results/')}\n")
+        self.ignore("artifacts/", "results/")
+
+        self.assertEqual(check_sinks(self.root, documented_sinks(self.root)), [])
+
+    def test_a_documented_folder_is_scraped_out_of_a_utf16_document(self):
+        # A document git tracks is a document that instructs somebody, whatever
+        # encoding an editor saved it in.
+        self.track(
+            "docs/guide.md",
+            f"python assess.py {flag_example('out', 'results/')}\n".encode("utf-16"),
+            mode="wb",
+        )
+
+        self.assertIn("results/", dict(documented_sinks(self.root)))
 
 
 class ShadowedTrackedFileTests(TempRepoCase):
@@ -405,10 +510,212 @@ class IdentifierScanTests(TempRepoCase):
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("fabrikam-not-reserved.com", problems[0])
 
-    def test_a_binary_file_is_skipped_rather_than_crashing_the_scan(self):
+    def test_a_binary_file_yields_nothing_and_does_not_crash_the_scan(self):
         self.track("assets/logo.bin", b"\xff\xfe\x00\x01binary", mode="wb")
 
         self.assertEqual(scan_tracked_identifiers(self.root), [])
+
+    def test_an_identifier_in_a_binary_file_is_still_reported(self):
+        # Byte-wise scanning is the point: an ASCII identifier does not stop being
+        # tenant evidence because it sits in a file with an unreadable header.
+        self.track(
+            "assets/logo.bin",
+            b"\xff\xfe\x00\x01" + tenant_shaped_guid().encode("ascii") + b"\x00\x01",
+            mode="wb",
+        )
+
+        problems = scan_tracked_identifiers(self.root)
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn(tenant_shaped_guid(), problems[0])
+
+
+class NonUtf8ContentScanTests(TempRepoCase):
+    """Regression: 'not UTF-8' was treated as 'nothing textual to leak'.
+
+    The scan opened every tracked file as UTF-8 and swallowed ``UnicodeDecodeError``
+    with a comment claiming the file was binary. A UTF-16 document is neither
+    binary nor unreadable: the same GUID that was reported in a UTF-8 file went
+    unreported in its UTF-16 twin, and the failure mode was silence.
+
+    A BOM-less UTF-16 file is the sharper case -- it decodes as UTF-8 *without*
+    raising, because NUL is a valid UTF-8 byte, so a fallback triggered only by a
+    decode failure would still have missed it.
+    """
+
+    ENCODINGS = ("utf-8", "utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "utf-32", "cp1252")
+
+    def test_every_text_encoding_leaks_exactly_like_its_utf8_twin(self):
+        for encoding in self.ENCODINGS:
+            with self.subTest(encoding=encoding):
+                with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
+                    _git(root, "init", "-q")
+                    _write(
+                        root,
+                        "docs/example.md",
+                        f"first line\ntenant {tenant_shaped_guid()}\n".encode(encoding),
+                        mode="wb",
+                    )
+                    _git(root, "add", "--", "docs/example.md")
+
+                    problems = scan_tracked_identifiers(root)
+
+                    self.assertEqual(len(problems), 1, f"{encoding}: {problems}")
+                    self.assertIn(tenant_shaped_guid(), problems[0])
+                    # The line number must still point at the leak, not at line 1.
+                    self.assertTrue(problems[0].startswith("docs/example.md:2"), problems[0])
+
+    def test_a_utf16_document_of_placeholders_still_passes(self):
+        # Non-vacuity: the fallback reports identifiers, not encodings.
+        self.track(
+            "docs/example.md",
+            "id 00000000-0000-0000-0000-000000000001\nowner person@example.invalid\n".encode(
+                "utf-16"
+            ),
+            mode="wb",
+        )
+
+        self.assertEqual(scan_tracked_identifiers(self.root), [])
+
+    def test_a_tracked_file_that_cannot_be_read_is_reported_not_skipped(self):
+        # An unscanned file that reports nothing looks exactly like a clean one.
+        self.track("docs/example.md", "# synthetic\n")
+        os.remove(os.path.join(self.root, "docs", "example.md"))
+
+        problems = scan_tracked_identifiers(self.root)
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("docs/example.md", problems[0])
+        self.assertIn("never scanned", problems[0])
+
+
+class UndashedGuidTests(TempRepoCase):
+    """A tenant id copied from a token claim carries no dashes."""
+
+    def test_an_undashed_tenant_id_is_reported(self):
+        self.track("docs/example.md", f"tid {tenant_shaped_undashed_guid()}\n")
+
+        problems = scan_tracked_identifiers(self.root)
+
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn(tenant_shaped_undashed_guid(), problems[0])
+        self.assertIn("undashed", problems[0])
+
+    def test_an_undashed_placeholder_and_a_longer_hex_run_still_pass(self):
+        self.track(
+            "docs/example.md",
+            f"placeholder {'0' * 31}1\n"
+            # A 40-character commit sha must not be mistaken for a 32-hex id.
+            f"commit {'ab' * 20}\n",
+        )
+
+        self.assertEqual(scan_tracked_identifiers(self.root), [])
+
+    def test_a_dashed_guid_is_reported_once_not_twice(self):
+        self.track("docs/example.md", f"tenant {tenant_shaped_guid()}\n")
+
+        self.assertEqual(len(scan_tracked_identifiers(self.root)), 1)
+
+
+class NonAsciiTrackedPathTests(TempRepoCase):
+    """Regression: an octal-quoted path was invisible to every check.
+
+    Under the default ``core.quotePath`` git renders ``docs/café.md`` as the
+    literal ``"docs/caf\\303\\251.md"``. That string opens nothing (the OSError was
+    swallowed) and matches no ignore rule, so the file was silently exempt from
+    both the identifier scan and the shadowing check. Each test below pairs the
+    non-ASCII file with an ASCII twin, so a fix that broke *both* cannot pass.
+    """
+
+    NON_ASCII = "docs/caf\u00e9.md"
+
+    def test_a_non_ascii_path_round_trips_verbatim(self):
+        self.track(self.NON_ASCII, "# synthetic\n")
+
+        files = tracked_files(self.root)
+
+        self.assertIn(self.NON_ASCII, files, files)
+        self.assertFalse([path for path in files if path.startswith('"')], files)
+
+    def test_an_identifier_in_a_non_ascii_path_is_reported(self):
+        self.track("docs/ascii.md", f"tenant {tenant_shaped_guid()}\n")
+        self.track(self.NON_ASCII, f"tenant {tenant_shaped_guid()}\n")
+
+        problems = scan_tracked_identifiers(self.root)
+
+        self.assertEqual(len(problems), 2, problems)
+        self.assertTrue(any(p.startswith("docs/ascii.md:") for p in problems), problems)
+        self.assertTrue(any(p.startswith(f"{self.NON_ASCII}:") for p in problems), problems)
+
+    def test_a_shadowed_non_ascii_file_is_reported(self):
+        self.track("docs/ascii.md", "# synthetic\n")
+        self.track(self.NON_ASCII, "# synthetic\n")
+        self.ignore("*.md")
+
+        problems = check_tracked_not_shadowed(self.root)
+
+        self.assertEqual(len(problems), 2, problems)
+        self.assertTrue(any(p.startswith(self.NON_ASCII) for p in problems), problems)
+
+    def test_check_ignore_keys_a_non_ascii_path_by_the_name_it_was_given(self):
+        self.ignore("*.md")
+
+        matches = check_ignore(self.root, [self.NON_ASCII, "docs/ascii.md"])
+
+        self.assertEqual(set(matches), {self.NON_ASCII, "docs/ascii.md"})
+        for path, rule in matches.items():
+            with self.subTest(path=path):
+                self.assertIsNotNone(rule)
+                self.assertEqual(rule[2], "*.md")
+
+    def test_an_unshadowed_non_ascii_file_reports_nothing(self):
+        # Non-vacuity: the file is now visible, not reported unconditionally.
+        self.track(self.NON_ASCII, "# synthetic\n")
+        self.ignore("artifacts/")
+
+        self.assertEqual(check_tracked_not_shadowed(self.root), [])
+        self.assertEqual(scan_tracked_identifiers(self.root), [])
+
+    def test_a_path_holding_a_control_character_survives_the_parse(self):
+        """``-z`` is the other half of the quoting fix, and it needs its own proof.
+
+        ``core.quotePath=false`` stops git C-quoting *non-ASCII* names, but git
+        quotes a control character in a path unconditionally, whatever that setting
+        says. Only NUL-separated output is immune. Windows refuses such a filename
+        outright, so this test skips there and carries its weight on Linux CI.
+        """
+        weird = "docs/we\nird.md"
+        try:
+            _write(self.root, weird, f"tenant {tenant_shaped_guid()}\n")
+            _git(self.root, "add", "--", weird)
+        except (OSError, AssertionError) as error:
+            self.skipTest(f"this filesystem refuses a control character in a name: {error}")
+
+        self.assertIn(weird, tracked_files(self.root))
+        problems = scan_tracked_identifiers(self.root)
+        self.assertEqual(len(problems), 1, problems)
+        self.assertTrue(problems[0].startswith(f"{weird}:"), problems[0])
+
+    def test_tracked_files_reads_git_output_as_nul_separated_records(self):
+        """The same guarantee without a filesystem that has to cooperate.
+
+        Line-splitting ``git ls-files`` cannot represent a path that contains a
+        newline: the entry breaks into two names, neither of which exists, and both
+        the shadowing check and the identifier scan then look at nothing. The stub
+        returns exactly what ``ls-files -z`` documents, so the parse contract is
+        asserted on every platform.
+        """
+        record = "docs/we\nird.md"
+        stdout = "\0".join([".gitignore", record, "docs/plain.md"]) + "\0"
+        completed = subprocess.CompletedProcess(args=["git"], returncode=0, stdout=stdout, stderr="")
+
+        with unittest.mock.patch(
+            "scripts.check_evidence_sinks._git", return_value=completed
+        ) as fake:
+            files = tracked_files(self.root)
+
+        self.assertEqual(files, [".gitignore", record, "docs/plain.md"])
+        self.assertIn("-z", fake.call_args.args, fake.call_args)
 
 
 class AuditTests(TempRepoCase):

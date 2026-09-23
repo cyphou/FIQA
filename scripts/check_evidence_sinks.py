@@ -74,27 +74,41 @@ def _is_plausible_destination(candidate: str) -> bool:
     one positive signal of a path keeps documentation examples in scope while the
     English word following the flag drops out:
 
-    * a path separator (``artifacts/live-checkpoint.json``)
+    * a path separator (``artifacts/live-checkpoint.json``, a folder with a
+      trailing slash)
     * an explicit relative prefix (``./powerbi_report``)
     * an extension a writer emits (``run.jsonl``)
     * a known writer root (``artifacts``)
 
-    The cost is deliberate: documenting a brand-new *bare* root (``--out evidence``)
-    also requires adding it to :data:`SINK_ROOTS`, or writing it as ``./evidence``.
-    A missed root is caught by review; a prose word treated as a sink fails the gate
-    on every run and trains readers to ignore it.
+    The separator is tested on the *raw* candidate. Stripping first removed the very
+    character that proves a path: ``"/" in "results/".strip("/")`` is False, so a
+    single-level folder documented with a trailing slash was discarded as prose and
+    skipped the whole gate. Only a value that is nothing but separators (``/``)
+    names no destination.
+
+    The cost is deliberate: documenting a brand-new *bare* root still requires adding
+    it to :data:`SINK_ROOTS` or writing it with a ``./`` prefix, and prose that
+    happens to carry a slash (a stray "and/or" after the flag) is now treated as a
+    destination. A missed root is silent; a prose word treated as a sink fails the
+    gate loudly on every run, which is the direction this check must err in.
     """
+    bare = candidate.strip("/\\")
+    if not bare:
+        return False
     if candidate.startswith("./") or candidate.startswith(".\\"):
         return True
-    if "/" in candidate.strip("/") or "\\" in candidate.strip("\\"):
+    if "/" in candidate or "\\" in candidate:
         return True
-    if candidate.rstrip("/").lower().endswith(SINK_SUFFIXES):
+    if bare.lower().endswith(SINK_SUFFIXES):
         return True
-    return candidate.strip("/") in SINK_ROOTS
+    return bare in SINK_ROOTS
 
 # ── identifier scanning ──────────────────────────────────────────────────────
 
 _GUID = re.compile(r"\b[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\b")
+#: A tenant id is copied out of the portal dashed and out of a token claim undashed.
+#: The boundary excludes a longer hex run, so a 40-hex commit sha never matches.
+_GUID_UNDASHED = re.compile(r"(?<![0-9a-zA-Z])[0-9a-fA-F]{32}(?![0-9a-zA-Z])")
 _EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 _TENANT_HOST = re.compile(r"\b[A-Za-z0-9][A-Za-z0-9-]*\.onmicrosoft\.(?:com|us|de)\b")
 
@@ -133,8 +147,16 @@ def _is_placeholder_guid(guid: str) -> bool:
 
 
 def _git(repo_root: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run git with path quoting disabled, so a non-ASCII path stays usable.
+
+    Under the default ``core.quotePath`` git renders ``docs/café.md`` as the octal
+    literal ``"docs/caf\\303\\251.md"``. That literal cannot be opened and matches no
+    ignore rule, so such a file was invisible to *both* the shadowing check and the
+    identifier scan -- silently, which is the one failure mode this gate exists to
+    prevent. ``-c core.quotePath=false`` makes every path round-trip verbatim.
+    """
     return subprocess.run(
-        ["git", *args],
+        ["git", "-c", "core.quotePath=false", *args],
         cwd=repo_root,
         capture_output=True,
         text=True,
@@ -143,18 +165,15 @@ def _git(repo_root: str, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _unquote(pathname: str) -> str:
-    if pathname.startswith('"') and pathname.endswith('"'):
-        return pathname[1:-1].encode().decode("unicode_escape")
-    return pathname
-
-
 def check_ignore(repo_root: str, paths: list[str]) -> dict[str, tuple[str, str, str] | None]:
     """Map each path to the ignore rule that matches it, or ``None``.
 
     The returned rule is ``(source, line, pattern)``. Paths are passed as
     arguments rather than on stdin: git reads stdin verbatim and a Windows CRLF
-    would silently defeat an extension pattern such as ``*.pbip``.
+    would silently defeat an extension pattern such as ``*.pbip``. (``-z`` is not
+    an option here -- git rejects it without ``--stdin`` -- so the tab-separated
+    form is parsed, and any pathname git echoes back that was not asked for raises
+    rather than being dropped into an entry nobody reads.)
     """
     matches: dict[str, tuple[str, str, str] | None] = {path: None for path in paths}
     for start in range(0, len(paths), 200):
@@ -166,7 +185,8 @@ def check_ignore(repo_root: str, paths: list[str]) -> dict[str, tuple[str, str, 
             if not line.strip():
                 continue
             left, _, pathname = line.partition("\t")
-            pathname = _unquote(pathname)
+            if pathname not in matches:
+                raise RuntimeError(f"git check-ignore returned an unrequested path: {line!r}")
             if left == "::":
                 continue
             rest, _, pattern = left.rpartition(":")
@@ -176,10 +196,33 @@ def check_ignore(repo_root: str, paths: list[str]) -> dict[str, tuple[str, str, 
 
 
 def tracked_files(repo_root: str) -> list[str]:
-    result = _git(repo_root, "ls-files")
+    """Every path in the index, NUL-separated so no name can be mangled or lost."""
+    result = _git(repo_root, "ls-files", "-z")
     if result.returncode != 0:
         raise RuntimeError(f"git ls-files failed: {result.stderr.strip()}")
-    return [line for line in result.stdout.splitlines() if line.strip()]
+    return [path for path in result.stdout.split("\0") if path.strip()]
+
+
+def _decode_for_scan(raw: bytes) -> str:
+    """Decode tracked bytes for identifier scanning, never raising.
+
+    Skipping anything that is not UTF-8 was a privacy hole: a UTF-16 document is
+    textual and leaks exactly like its UTF-8 twin. Every identifier this scanner
+    looks for is ASCII, so a lossless byte-preserving fallback loses nothing --
+    latin-1 always decodes.
+
+    The NUL strip is separate from the fallback on purpose. A BOM-less UTF-16
+    document decodes as UTF-8 *without error* (NUL is a valid UTF-8 byte), so a
+    decode-failure-only fallback still missed it; the identifier survived as
+    ``7\\x00f\\x003...`` and matched nothing. Dropping NUL bytes puts ASCII runs
+    back together in either endianness and leaves newlines, so the reported line
+    number still points at the leak. A genuine UTF-8 document has no NUL in it.
+    """
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        text = raw.decode("latin-1")
+    return text.replace("\x00", "") if "\x00" in text else text
 
 
 # ── the three checks ─────────────────────────────────────────────────────────
@@ -247,10 +290,10 @@ def documented_sinks(repo_root: str) -> list[tuple[str, str]]:
             continue
         absolute = os.path.join(repo_root, path)
         try:
-            with open(absolute, encoding="utf-8") as handle:
-                text = handle.read()
-        except (OSError, UnicodeDecodeError):
-            continue
+            with open(absolute, "rb") as handle:
+                text = _decode_for_scan(handle.read())
+        except OSError:
+            continue  # unreadable here, and reported by name by the identifier scan
         for flag, value in _FLAG_EXAMPLE.findall(text):
             candidate = value.strip().rstrip(",.;")
             if not candidate or candidate.startswith("-"):
@@ -275,14 +318,22 @@ def check_sinks(repo_root: str, sinks: list[tuple[str, str]]) -> list[str]:
     """Report every writer destination that version control would accept.
 
     A match is only protection when it comes from a committed ``.gitignore`` *and*
-    carries a real pattern. A ``.gitignore`` checked out with CRLF endings (git
-    stores LF, ``core.autocrlf=true`` writes CRLF) turns every blank line into a
-    lone ``\\r``: git reports it as a match, with an empty pattern, for any path
-    ending in ``/``. Trusting that match makes this gate vacuous for every
-    directory destination on Windows while it still fails honestly on Linux, so an
-    empty or whitespace-only pattern counts as no rule at all.
+    carries a real pattern. Three ways a match can be worthless:
+
+    * The source is not tracked. ``.git/info/exclude`` protects one clone, and an
+      *untracked* ``.gitignore`` is exactly as private -- it can be deleted, or
+      simply never exist for a teammate, while this gate reports the tree as safe.
+      Checking the filename alone accepted it; the source is now intersected with
+      the index.
+    * The pattern is blank. A ``.gitignore`` checked out with CRLF endings (git
+      stores LF, ``core.autocrlf=true`` writes CRLF) turns every blank line into a
+      lone ``\\r``: git reports it as a match, with an empty pattern, for any path
+      ending in ``/``. Trusting that match makes this gate vacuous for every
+      directory destination on Windows while it still fails honestly on Linux.
+    * The pattern is a negation, which re-includes the destination.
     """
     problems: list[str] = []
+    tracked = {path.replace("\\", "/") for path in tracked_files(repo_root)}
     matches = check_ignore(repo_root, [path for path, _ in sinks])
     for path, why in sinks:
         rule = matches.get(path)
@@ -299,7 +350,11 @@ def check_sinks(repo_root: str, sinks: list[tuple[str, str]]) -> list[str]:
             problems.append(
                 f"{path} - re-included by negation rule {source}:{lineno}:{pattern} ({why})"
             )
-        elif os.path.isabs(source) or not source.endswith(".gitignore"):
+        elif (
+            os.path.isabs(source)
+            or not source.endswith(".gitignore")
+            or source.replace("\\", "/") not in tracked
+        ):
             problems.append(
                 f"{path} - ignored only by {source}, which is not a committed .gitignore ({why})"
             )
@@ -326,7 +381,13 @@ def scan_tracked_identifiers(
     allowed_domains: frozenset[str] | None = None,
     allowed_paths: dict[str, str] | None = None,
 ) -> list[str]:
-    """Report identifiers in tracked content that are not synthetic placeholders."""
+    """Report identifiers in tracked content that are not synthetic placeholders.
+
+    Nothing tracked is skipped for being hard to read. A file that cannot be
+    decoded is scanned byte-wise (:func:`_decode_for_scan`); a file that cannot be
+    *opened* is reported, because an unscanned file that reports nothing is
+    indistinguishable from a clean one.
+    """
     allowed_guids = ALLOWED_GUIDS if allowed_guids is None else allowed_guids
     allowed_domains = ALLOWED_EMAIL_DOMAINS if allowed_domains is None else allowed_domains
     allowed_paths = ALLOWED_PATHS if allowed_paths is None else allowed_paths
@@ -335,16 +396,26 @@ def scan_tracked_identifiers(
         if path in allowed_paths:
             continue
         absolute = os.path.join(repo_root, path)
+        if os.path.isdir(absolute):
+            continue  # a gitlink (submodule): its own checkout runs its own gate
         try:
-            with open(absolute, encoding="utf-8") as handle:
-                lines = handle.read().splitlines()
-        except (OSError, UnicodeDecodeError):
-            continue  # binary or unreadable: nothing textual to leak
-        for number, line in enumerate(lines, start=1):
+            with open(absolute, "rb") as handle:
+                raw = handle.read()
+        except OSError as error:
+            problems.append(
+                f"{path} - tracked but could not be read "
+                f"({type(error).__name__}), so it was never scanned"
+            )
+            continue
+        for number, line in enumerate(_decode_for_scan(raw).splitlines(), start=1):
             for guid in _GUID.findall(line):
                 if _is_placeholder_guid(guid) or guid.lower() in allowed_guids:
                     continue
                 problems.append(f"{path}:{number} - GUID {guid} is not a placeholder")
+            for guid in _GUID_UNDASHED.findall(line):
+                if _is_placeholder_guid(guid) or guid.lower() in allowed_guids:
+                    continue
+                problems.append(f"{path}:{number} - undashed GUID {guid} is not a placeholder")
             for host in _TENANT_HOST.findall(line):
                 problems.append(f"{path}:{number} - tenant host {host}")
             for address in _EMAIL.findall(line):
