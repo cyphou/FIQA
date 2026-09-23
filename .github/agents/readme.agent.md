@@ -17,6 +17,9 @@ in writing must be reproducible by someone who runs the commands.
 - `docs/RULES.md`
 - `docs/AGENTS.md`
 - `docs/KNOWN_LIMITATIONS.md`
+- `.github/skills/fabric-iq-readiness/SKILL.md` — the agent-facing Skill. It is what a
+  model treats as authoritative at prompt time, and it restates engine-owned thresholds
+  in prose, so it is gated like any other published claim.
 - `docs/IDENTITY_AND_RETENTION.md` — identity, scopes and retention: which identity runs
   the collector, what it may touch, where the evidence lands and how long it is kept.
   **@security** audits this document but owns no file by design, so the accountable

@@ -106,6 +106,17 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   updated to describe the deployed semantic model, report and installer notebook, which
   were previously undocumented.
 - Rule count corrected from 61 to 65 wherever it appeared stale.
+- [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
+  the agent-facing Skill is now claimed by **@readme** and reconciled against the engine:
+  every restated threshold (5 data sources, 25×25, 200-character description budget,
+  10,000-character AI instructions, ≥ 85% / ≥ 95% accuracy, the 39/59 caps, the 50%
+  coverage floor) was verified against its constant and is now labelled as
+  ruleset-encoded, with the reader routed to the generated `docs/RULES.md` and to the
+  dated product-limit table in `docs/KNOWN_LIMITATIONS.md` §8. The undated
+  "Power BI Q&A retires in December 2026" claim is replaced by the verifiable statement
+  that no rule depends on Q&A and that its retirement timing is unverified here. The
+  command list now teaches the current gate set, including
+  `python scripts/check_evidence_sinks.py` and documentation ownership.
 
 ## [0.1.0] — 2026-09-21
 
