@@ -1,10 +1,13 @@
 # Multi-Agent Environment
 
-Thirteen agents under [.github/agents/](../.github/agents), each owning a declared set of
-files. Ownership is enforced: `python scripts/check_agent_ownership.py` reports drift and
-`tests/test_agents.py` fails the build on it. The audit covers **two** populations — the
-**22** modules under `fabric_iq/`, and the **6** documents and skills that assert a
-privacy, identity or retention claim or that a model reads as instruction.
+Fourteen agents under [.github/agents/](../.github/agents), twelve of them owning a
+declared set of files. Ownership is enforced: `python scripts/check_agent_ownership.py`
+reports drift and `tests/test_agents.py` fails the build on it. The audit covers **two**
+populations — the **22** modules under `fabric_iq/`, and the **6** documents and skills
+that assert a privacy, identity or retention claim or that a model reads as instruction.
+
+Two agents own nothing on purpose: `@change-preceptor`, which reviews a code change
+before it lands, and `@security`, which audits privacy. Both are described below.
 
 ## Roster
 
@@ -16,7 +19,8 @@ privacy, identity or retention claim or that a model reads as instruction.
 | `@tenant` | Tenant and workspace rules | `rules/tenant_rules.py`, `rules/workspace_rules.py` |
 | `@semantic` | Model and report rules | `rules/semantic_model_rules.py`, `rules/report_rules.py` |
 | `@dataagent` | Data Agent rules, evaluation corpus | `rules/data_agent_rules.py` |
-| `@preceptor` | Assessment quality review | `preceptor.py`, `docs/SELF_ASSESSMENT.md` |
+| `@preceptor` | Assessment quality review — a **product feature** | `preceptor.py`, `docs/SELF_ASSESSMENT.md` |
+| `@change-preceptor` | Code-change review before it lands — a **development role** | *(nothing — it reviews changes, it does not make them)* |
 | `@remediation` | Backlog, priority, effort | `remediation.py` |
 | `@lakehouse` | Persistence and reporting | `lakehouse.py`, `reporting.py` |
 | `@tester` | Tests, fixtures, ownership and evidence-sink gates | `tests/`, `scripts/check_agent_ownership.py`, `scripts/check_evidence_sinks.py` |
@@ -27,7 +31,9 @@ privacy, identity or retention claim or that a model reads as instruction.
 `@security` deliberately owns no module. A reviewer who can edit the code they review
 eventually reviews their own edits. That is why the privacy documentation it audits is
 owned by another agent: the review stays independent, and the claim still has a name
-against it.
+against it. `@change-preceptor` owns nothing for the same reason, and
+`tests/test_agents.py` asserts both zero-ownership properties so a single added
+backticked path cannot quietly hand either agent a file it reviews.
 
 ### Documentation ownership — privacy, identity, retention and instruction
 
@@ -67,13 +73,116 @@ file carry a real tenant GUID, UPN, email or `onmicrosoft` host. Both checks are
 heuristic gates. They reduce, and never replace, the mandatory pre-push privacy audit in
 [shared.instructions.md](../.github/agents/shared.instructions.md).
 
+## Two Roles of Oversight
+
+The roster is arranged as an AI-assisted engineering team with **two distinct oversight
+roles** over the agents that write code:
+
+| Role | Agent | Question it asks | Owns files |
+|------|-------|------------------|------------|
+| **Tech lead** | `@orchestrator` | "What is the next right piece of work, and who should do it?" | yes |
+| **Preceptor** | `@change-preceptor` | "Does this change actually do what it reports?" | no |
+| **Implementers** | the eleven file-owning specialists | "How do I build this in my domain?" | yes |
+
+The eleven implementers are `@collector`, `@scorer`, `@tenant`, `@semantic`,
+`@dataagent`, `@preceptor`, `@remediation`, `@lakehouse`, `@tester`, `@readme` and
+`@roadmap-planner`. `@security` is a third reviewer, narrower in scope: it audits
+privacy, scopes and retention rather than change quality.
+
+Separating the two oversight roles is deliberate. A tech lead who also signs off the
+work assesses a plan they authored, and the failure mode is predictable — the review
+inherits the plan's blind spots. The preceptor never planned the change, so it reads
+the diff as a stranger would.
+
+### The Development Loop
+
+```
+              @orchestrator                              @change-preceptor
+               (tech lead)                                  (preceptor)
+                    │                                            │
+                    ▼                                            ▼
+   ──→ PLAN ──→ ASSIGN ──→ IMPLEMENT ──→ REVIEW ──→ ≥ 4.0★? ──YES──→ LAND
+  │                        (specialist)                  │
+  │                                                      NO
+  └────────────── COACH (feedback to the owner) ─────────┘
+                   (max 3 cycles, then the user arbitrates)
+```
+
+- **Plan** — `@orchestrator` decomposes the request against `docs/ROADMAP.md` and the
+  scoring contract, and identifies which owners the change touches.
+- **Assign** — work is routed to the agent that owns each file. A change spanning
+  several owners stays sequenced by `@orchestrator`; it is not merged into one edit.
+- **Implement** — the owning specialist makes the change and runs the gates.
+- **Review** — `@change-preceptor` reads the change before it lands. It coaches the
+  owning agent; it does not fix the code itself. Fixing would make it the author of
+  work it is about to approve, which is the independence the role exists to preserve.
+
+It scores six dimensions — gate integrity, mutation proof, evidence discipline,
+ownership and scope, contract preservation, environment honesty — on the same scale the
+assessment loop uses: **≥ 4.0★ approves**, below that the change is coached back to its
+owner, and after **3 cycles** it escalates to the user with land-with-recorded-risk or
+block stated as the two options. **Gate integrity scored 1★ blocks regardless of the
+average**, by the same logic as the blocking cap: one check that manufactures confidence
+voids the other five looking healthy.
+
+`@orchestrator` plans and assigns; it does not grade its own assignment. "The tests are
+green" is the claim under review, not a substitute for the review.
+
+### Two Agents Carry The Word "Preceptor"
+
+They are different roles with different subjects, and conflating them is the most
+likely misreading of this document.
+
+| | `@preceptor` | `@change-preceptor` |
+|---|---|---|
+| Reviews | the **assessment** a run produced | the **code change** before it lands |
+| Exists at | run time — `fabric_iq/preceptor.py`, invoked by `--review` | development time — it ships no code |
+| Asks | "is this verdict defensible?" | "does this change do what it reports?" |
+| Owns | `preceptor.py`, `docs/SELF_ASSESSMENT.md` | nothing, by design |
+| Outcome | ≥ 4★ publish, else coach; 3 cycles then escalate | ≥ 4★ land, else coach the author; 3 cycles then escalate |
+| Pinned by | `tests/test_preceptor.py` | `tests/test_agents.py` — roster and zero ownership |
+
+The short form: **`@preceptor` reviews the output, `@change-preceptor` reviews the
+change.** One is a product feature a customer can run; the other is a development-time
+role that never appears in a scorecard.
+
+### Why The Change Preceptor Exists
+
+Not as ceremony. It was added after a single session in which four gates **failed
+open** — each reported a safety that was not there, and each was reported green by the
+agent that wrote it:
+
+| Failure | What was believed | What was true |
+|---------|-------------------|---------------|
+| Missing document | ownership gate exits 0, so ownership is sound | a required document was absent entirely, and an absent file has no owner to be wrong |
+| Blank ignore pattern | `.gitignore` protects the evidence sinks | checked out CRLF, a blank line reads as a lone `\r` that matches every directory, so the check passed on nothing |
+| Dot-leading path | the Skill is claimed by `@readme` | the claim parser dropped the leading dot, so `.github/skills/…` matched nothing and the claim was invisible |
+| Local-only run | the commit is green | CI runs the suite on Linux under Python 3.12 **and** 3.13 plus six checks around it, and the commit went red there |
+
+Each is now pinned by a regression: `missing_docs()` in
+`scripts/check_agent_ownership.py` with `test_every_required_document_exists`,
+`BlankIgnorePatternTests` in `tests/test_evidence_sinks.py`,
+`test_a_dot_directory_path_is_recognised_as_a_claim` in `tests/test_agents.py`, and the
+gate list in [.github/workflows/ci.yml](../.github/workflows/ci.yml) — the stdlib-only
+dependency check, the suite, ownership, evidence sinks, rule-documentation currency, an
+end-to-end run, and the assertion that a blocking finding still exits `2`.
+
+A failing gate argues for itself. A gate that passes vacuously is indistinguishable from
+a gate that works, from the inside, which is why the agent that wrote it is the worst
+reader of it. `@change-preceptor` is the reader that did not write it.
+
 ## Why Ownership Is Enforced
 
-An unclaimed module has no agent to coach when the preceptorship loop raises a finding
-against it. A doubly claimed module has two agents editing the same file with different
-mental models. Both failure modes are silent until they cost a day.
+An unclaimed module has no agent to coach when a review raises a finding against it —
+whether that review is `@preceptor` coaching an assessment dimension or
+`@change-preceptor` coaching a change. A doubly claimed module has two agents editing
+the same file with different mental models. Both failure modes are silent until they
+cost a day.
 
-## The Preceptorship Loop
+## The Assessment Preceptorship Loop — `@preceptor`
+
+This loop belongs to `@preceptor` and is a **product feature**: it runs inside an
+assessment, over the assessment. It is not the development loop described above.
 
 ```
 DRAFT (assessment run) → REVIEW (@preceptor) → APPROVE? (≥ 4★?)
@@ -135,9 +244,9 @@ The rules that matter most:
 6. Synthetic fixtures only.
 7. Never weaken a rule, cap or threshold to make a review pass.
 
-Rule 7 is the one the loop is designed to detect. Lowering the bar to clear the bar is
-the natural response to a failing review, and it is the one response that destroys the
-value of having a review at all.
+Rule 7 is the one both review loops are designed to detect. Lowering the bar to clear
+the bar is the natural response to a failing review, and it is the one response that
+destroys the value of having a review at all.
 
 ## Working With The Agents
 
@@ -150,4 +259,4 @@ python scripts/build_rules_doc.py         # regenerate docs/RULES.md after a rul
 ```
 
 Route a change to the agent that owns the file. If a change spans several owners, the
-`@orchestrator` sequences it.
+`@orchestrator` sequences it, and `@change-preceptor` reviews it before it lands.

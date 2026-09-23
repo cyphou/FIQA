@@ -34,11 +34,16 @@ Invoke a specialist with `@name`. Each agent declares the files it owns; do not 
 another agent's files without routing through it.
 
 `@orchestrator` `@collector` `@scorer` `@tenant` `@semantic` `@dataagent`
-`@preceptor` `@remediation` `@lakehouse` `@tester` `@readme` `@roadmap-planner`
-`@security`
+`@preceptor` `@change-preceptor` `@remediation` `@lakehouse` `@tester` `@readme`
+`@roadmap-planner` `@security`
 
 `@preceptor` runs the preceptorship loop: DRAFT → REVIEW → APPROVE/COACH, 4★ threshold,
 maximum 3 cycles, then escalation. It reviews the **assessment**, not the tenant.
+
+`@change-preceptor` is a different agent: it reviews a **code change** before it lands,
+not an assessment. `@orchestrator` is the tech lead that plans and assigns; the owning
+specialist implements; `@change-preceptor` reviews and coaches, owns no file, and never
+fixes the code it reviews. See [docs/AGENTS.md](../docs/AGENTS.md).
 
 ## Language
 

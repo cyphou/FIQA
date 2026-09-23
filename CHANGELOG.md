@@ -89,7 +89,7 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
   check alongside the ownership and rule-documentation checks.
 
-**Tests** — grown from 138 to **345 tests**, all green.
+**Tests** — grown from 138 to **348 tests**, all green.
 
 ### Documentation
 
@@ -134,6 +134,25 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   updated to describe the deployed semantic model, report and installer notebook, which
   were previously undocumented.
 - Rule count corrected from 61 to 65 wherever it appeared stale.
+- [`docs/AGENTS.md`](./docs/AGENTS.md), [`README.md`](./README.md) and
+  [`.github/copilot-instructions.md`](./.github/copilot-instructions.md) — document the
+  **two-role oversight model** and the fourteenth agent, `@change-preceptor`. Development
+  work runs **Plan → Assign → Implement → Review**: `@orchestrator` is the tech lead that
+  plans and assigns, the eleven file-owning specialists implement, and `@change-preceptor`
+  reviews a change before it lands. It owns no file — like `@security`, a reviewer that
+  can edit what it reviews eventually reviews its own edits — and it coaches the owning
+  agent rather than fixing the code. The roster documentation is explicit that **two
+  agents carry the word "preceptor" and are not the same role**: `@preceptor` reviews the
+  **assessment** a run produced (a product feature behind `--review`, pinned by
+  `tests/test_preceptor.py`), while `@change-preceptor` reviews a **code change** and
+  ships no code. The section records why the role exists — four gates that *failed open*
+  in one session, each now pinned by a regression: a required document missing entirely
+  while the ownership check exited 0, a CRLF blank line in `.gitignore` matching every
+  directory so the sink check passed on nothing, a dot-leading path the claim parser
+  could not read so an ownership claim was invisible, and a locally-green commit that
+  went red on the four gates CI runs beyond the unittest suite. The existing
+  preceptorship section is retitled "The Assessment Preceptorship Loop — `@preceptor`"
+  so a reader knows which preceptor it belongs to.
 - [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
   the agent-facing Skill is now claimed by **@readme** and reconciled against the engine:
   every restated threshold (5 data sources, 25×25, 200-character description budget,

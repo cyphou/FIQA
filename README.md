@@ -12,10 +12,10 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 345 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity |
+| ✅ **Tests** | 348 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
-| 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 13-agent environment |
+| 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 14-agent environment |
 
 For every object the tool produces:
 
@@ -294,18 +294,21 @@ re-measurement cadence have completed.
 
 ## 🤖 Multi-Agent Environment
 
-The repository ships a 13-agent environment under [.github/agents/](./.github/agents).
-Each agent owns a declared set of files; ownership drift fails the build.
+The repository ships a 14-agent environment under [.github/agents/](./.github/agents).
+Twelve agents own a declared set of files; ownership drift fails the build. Two own
+nothing by design — `@change-preceptor`, which reviews changes, and `@security`, which
+audits privacy.
 
 | Agent | Owns |
 |-------|------|
-| 🎼 `@orchestrator` | End-to-end run, CLI surface, exit codes |
+| 🎼 `@orchestrator` | End-to-end run, CLI surface, exit codes — the **tech lead** that plans and assigns |
 | 🔎 `@collector` | Evidence acquisition, Silver inventory normalization |
 | 🧮 `@scorer` | Scoring engine, dimension weights, rule registry |
 | 🏢 `@tenant` | Tenant & workspace-level rules |
 | 📐 `@semantic` | Semantic model & report rules |
 | 🕵️ `@dataagent` | Fabric Data Agent readiness rules |
 | 🎓 `@preceptor` | Reviews the assessment itself — the preceptorship loop |
+| 🧑‍🏫 `@change-preceptor` | Reviews a **code change** before it lands — nothing, by design |
 | 🛠️ `@remediation` | Backlog prioritization, owner routing |
 | 🏛️ `@lakehouse` | Gold marts, persistence, Power BI model & report |
 | 🧪 `@tester` | Fixtures, regression coverage, ownership enforcement |
@@ -313,7 +316,20 @@ Each agent owns a declared set of files; ownership drift fails the build.
 | 🗺️ `@roadmap-planner` | Phase sequencing, release gates |
 | 🔐 `@security` | Privacy, least-privilege, secret handling |
 
-### 🔁 The Preceptorship Loop
+### 🧑‍🏫 Two Roles of Oversight
+
+Development work runs a **Plan → Assign → Implement → Review** loop with two separate
+overseers: `@orchestrator` plans and assigns, the owning specialist implements, and
+`@change-preceptor` reviews the change before it lands and coaches the owner rather
+than fixing the code. It owns no file, so it never approves its own work.
+
+> [!IMPORTANT]
+> Two agents carry the word *preceptor* and they are not the same role.
+> `@preceptor` reviews the **assessment** a run produced — a product feature you can
+> invoke with `--review`. `@change-preceptor` reviews a **code change** to this
+> repository and ships no code at all.
+
+### 🔁 The Preceptorship Loop (`@preceptor`)
 
 `@preceptor` reviews the **assessment itself**, not the tenant:
 
