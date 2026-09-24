@@ -4,9 +4,9 @@ Fourteen agents under [.github/agents/](../.github/agents), twelve of them ownin
 declared set of files. Ownership is enforced: `python scripts/check_agent_ownership.py`
 reports drift and `tests/test_agents.py` fails the build on it. The audit covers **three**
 populations — the **22** modules under `fabric_iq/`, the **4** gate and generator scripts
-under `scripts/`, and the **6** documents and skills that assert a privacy, identity or
-retention claim or that a model reads as instruction. The first two are reported together
-as **26** audited modules, which is the count the check prints.
+under `scripts/`, and the **7** documents and skills that assert a privacy, identity,
+retention or collection-capability claim or that a model reads as instruction. The first
+two are reported together as **26** audited modules, which is the count the check prints.
 
 `scripts/` is audited on the same terms as the package, `__init__.py` included. An unowned
 gate is worse than an unowned module: it keeps exiting 0 while the thing it was written to
@@ -20,7 +20,7 @@ before it lands, and `@security`, which audits privacy. Both are described below
 | Agent | Domain | Owns |
 |-------|--------|------|
 | `@orchestrator` | Run lifecycle, CLI, exit codes | `assess.py`, `__init__.py`, `errors.py`, `deployment.py`, `fabric/`, `docs/INSTALL.md` |
-| `@collector` | Evidence acquisition, quotas, fixtures | `collectors/`, `examples/` |
+| `@collector` | Evidence acquisition, quotas, fixtures | `collectors/`, `examples/`, `docs/API_REALITY_MATRIX.md` |
 | `@scorer` | Scoring maths, data model, rule primitives | `scoring.py`, `models.py`, `rules/base.py` |
 | `@tenant` | Tenant and workspace rules | `rules/tenant_rules.py`, `rules/workspace_rules.py` |
 | `@semantic` | Model and report rules | `rules/semantic_model_rules.py`, `rules/report_rules.py` |
@@ -41,20 +41,23 @@ against it. `@change-preceptor` owns nothing for the same reason, and
 `tests/test_agents.py` asserts both zero-ownership properties so a single added
 backticked path cannot quietly hand either agent a file it reviews.
 
-### Documentation ownership — privacy, identity, retention and instruction
+### Documentation ownership — privacy, identity, retention, capability and instruction
 
 A promise about which identity is used, where evidence lands, and how long it is kept is
-a promise to a customer; a Skill is the same kind of promise made to a model at prompt
-time. `REQUIRED_DOCS` in `scripts/check_agent_ownership.py` names the accountable owner
-of each such file, and the check fails if one is unclaimed, claimed twice, claimed by an
-agent other than the one named, **or missing from the repository entirely** — otherwise
-the guarantee could be met by deleting the document that carries it:
+a promise to a customer; a statement about what the collectors can and cannot read is the
+same kind of promise about the engine's own blind spots; a Skill is that promise made to
+a model at prompt time. `REQUIRED_DOCS` in `scripts/check_agent_ownership.py` names the
+accountable owner of each such file, and the check fails if one is unclaimed, claimed
+twice, claimed by an agent other than the one named, **or missing from the repository
+entirely** — otherwise the guarantee could be met by deleting the document that carries
+it:
 
 | Document | Accountable owner | Why it carries a claim |
 |----------|-------------------|------------------------|
 | `docs/IDENTITY_AND_RETENTION.md` | `@readme` | Names which identities are read, where they land, and how long they are kept |
 | `docs/INTERPRETING_RESULTS.md` | `@readme` | Tells an operator how to act on a verdict, and is the path the console and the HTML report hardcode (`fabric_iq.reporting.INTERPRETATION_GUIDE`) |
 | `.github/skills/fabric-iq-readiness/SKILL.md` | `@readme` | A model reads it as authoritative instruction and it restates engine-owned thresholds in prose |
+| `docs/API_REALITY_MATRIX.md` | `@collector` | States field by field and endpoint by endpoint what a live read actually exposes; a stale row reads as evidence that was never collectable, and only the owner of `collectors/` can answer for it |
 | `docs/INSTALL.md` | `@orchestrator` | Tells an operator where evidence is written and which paths stay untracked |
 | `docs/SELF_ASSESSMENT.md` | `@preceptor` | Publishes the tool's own readiness evidence and its retention |
 | `fabric/README.md` | `@orchestrator` | Deployment surface: workspace items, lakehouse destination, run evidence — covered by the `fabric/` claim |

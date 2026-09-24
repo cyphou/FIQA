@@ -12,7 +12,7 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 375 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity (one skips on Windows by design: it needs a filename Windows refuses) |
+| ✅ **Tests** | 379 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity (one skips on Windows by design: it needs a filename Windows refuses) |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 14-agent environment |
@@ -66,12 +66,13 @@ No dependencies. Python 3.12+ standard library only.
 
 `check_agent_ownership.py` asserts that every module under `fabric_iq/` **and** under
 `scripts/` is claimed by exactly one agent, and that each document carrying a privacy,
-identity or retention claim — or that a model reads as instruction, which is the same
-promise made at prompt time — names exactly one accountable owner. Twenty-six modules
-and six documents and skills are in that audited set today; the check also fails if one
-of the documents is deleted outright, so the guarantee cannot be met by removing the
-document that carries it. The gate scripts are inside the audited set on purpose: a
-check nobody owns keeps exiting `0` and nobody is accountable for noticing.
+identity, retention or collection-capability claim — or that a model reads as
+instruction, which is the same promise made at prompt time — names exactly one
+accountable owner. Twenty-six modules and seven documents and skills are in that audited
+set today; the check also fails if one of the documents is deleted outright, so the
+guarantee cannot be met by removing the document that carries it. The gate scripts are
+inside the audited set on purpose: a check nobody owns keeps exiting `0` and nobody is
+accountable for noticing.
 
 `check_evidence_sinks.py` asserts three things about the repository as it stands: every
 writer destination — defaults, the extensions the writers emit, and the `--out`,
@@ -84,6 +85,17 @@ never replaces, the pre-push privacy audit, and it says nothing about a path wri
 outside the working tree. Both checks run in CI and exit `1` with the offending path on
 drift. Sinks and retention are documented in
 [docs/IDENTITY_AND_RETENTION.md](./docs/IDENTITY_AND_RETENTION.md).
+
+> [!IMPORTANT]
+> **Git-ignored is not share-safe, and `artifacts/` is for synthetic output only.**
+> An ignore rule only stops git from offering to commit a file; it does not stop a zip
+> of the folder, a shared or synced directory, a backup sweep, or an editor that indexes
+> the workspace. **Point a live run at a path outside the repository** — `--inventory`,
+> `--out`, `--lakehouse`, `--powerbi` and `--checkpoint` all accept any absolute path —
+> and give the evidence an expiry date when the run is authorised, not afterwards. The
+> rendered `_readiness.html` is the artifact most likely to escape, because it is the one
+> built to be shown. See
+> [docs/IDENTITY_AND_RETENTION.md §3.5](./docs/IDENTITY_AND_RETENTION.md#35-live-evidence-lives-outside-the-repository).
 
 ### 🚦 Exit Codes
 
@@ -207,7 +219,10 @@ powerbi_report/
 > git-ignored and must never be committed. Treat the output like any other assessment
 > artifact: share it under the same handling rules as the tenant data it describes.
 > `python scripts/check_evidence_sinks.py` enforces that this ignore rule stays
-> committed, instead of leaving the guarantee to this paragraph.
+> committed, instead of leaving the guarantee to this paragraph. That rule protects the
+> in-repository default only, and being ignored is not the same as being safe to share:
+> for a live tenant, point `--powerbi` at the external evidence store instead
+> ([docs/IDENTITY_AND_RETENTION.md §3.5](./docs/IDENTITY_AND_RETENTION.md#35-live-evidence-lives-outside-the-repository)).
 
 Constraints: the semantic model's CSV partitions reference **absolute file paths**
 generated at write time, so re-open the `.pbip` from the same machine (or update the
@@ -368,12 +383,19 @@ The engine, rule catalogue, scoring, review loop and persistence run against off
 fixtures. Live collection supplies a stdlib-only, read-only foundation:
 it accepts an injected bearer token, reads tenant settings and Scanner workspace
 metadata, follows page links, backs off on `429`, and can resume from a checkpoint.
-Use a token environment-variable name rather than placing a token on the command line:
+Use a token environment-variable name rather than placing a token on the command line,
+and write every live artifact outside the repository — `<evidence-store>` below is a
+folder outside the working tree and outside any synced folder, never `artifacts/`:
 
 ```bash
 FABRIC_ACCESS_TOKEN=... python assess.py --live --tenant-id <tenant-id> \
-  --bearer-token-env FABRIC_ACCESS_TOKEN --checkpoint artifacts/live-checkpoint.json
+  --bearer-token-env FABRIC_ACCESS_TOKEN \
+  --out <evidence-store>/report --checkpoint <evidence-store>/live-checkpoint.json
 ```
+
+Delete the checkpoint as soon as the scan it resumes has finished: it is the most
+identity-dense file a run produces, and nothing deletes it for you
+([docs/IDENTITY_AND_RETENTION.md §3.3](./docs/IDENTITY_AND_RETENTION.md#33-retention-decision)).
 
 The transport, Scanner normalisation, selected capacity fields, and both Fabric
 pipeline gate branches have been exercised against a live tenant. Complete API/SKU

@@ -3,7 +3,7 @@
 The most important document in this repository. A readiness assessor that does not state
 what it cannot see invites over-trust, and over-trust is how a tool like this causes harm.
 
-Last reviewed: **2026-09-23**, ruleset `2026.09.1`.
+Last reviewed: **2026-09-24**, ruleset `2026.09.1`.
 
 ## 1. Live Collection Is A Foundation With Partial Field Validation
 
@@ -146,6 +146,37 @@ and records an error, it never invents the missing workspaces) rather than eithe
 silently succeeding or aborting the whole scan. Multi-process quota contention and
 activity-log throttling remain open for future work.
 
+### 1.4 What A Read-Only Live Read Established About The Read Surfaces
+
+A user-authorised, read-only proof read a real tenant through an authenticated session
+and produced five findings about the **read surfaces themselves**. They are published
+here in redacted form — ratios only, no estate size, no workspace name, identifier,
+portal link or host — because the shape of the gap is the reusable knowledge and the
+values are not. The collected evidence lives outside this repository under the practice
+in [`IDENTITY_AND_RETENTION.md` §3.5](./IDENTITY_AND_RETENTION.md#35-live-evidence-lives-outside-the-repository),
+with a retention date set at authorisation.
+
+| Observation | Consequence for scoring |
+|---|---|
+| `capacityId` came back `null` for **100%** of the workspaces enumerated on the OneLake listing surface | No capacity-dependent rule can be evaluated from that surface at all. `WKS-001` and every other rule that needs an SKU stays `NOT_EVALUATED` unless the capacity signal arrives from a different endpoint. |
+| The OneLake listing and the catalog search returned **disjoint** workspace sets — **0%** overlap by GUID and **0%** by name | A collector reading one surface does not see a subset of the other; it sees a different population. Neither surface alone supports a tenant-level claim, and a union cannot be assumed to be complete either. |
+| Workspace `id` on that surface is an **opaque non-GUID string** | The two surfaces cannot be joined on identity, so "same workspace seen twice" is not decidable from the payloads. Identifier *shape* is not portable across surfaces and must not be assumed. |
+| **No Data Agent item type** was exposed | The `AGT-*` inputs in §2 remain unconfirmed by this read; nothing here upgrades their status. |
+| **No tenant admin settings** were reachable through this session | Every `TEN-*` rule reading a tenant switch stays `NOT_EVALUATED` on this path. Admin-surface access is a distinct permission story from item enumeration, not a degraded version of it. |
+
+**Consequence.** *Which* read surface a collector uses changes *which* rules can be
+evaluated, and the difference is not a matter of degree. A run that enumerates objects
+successfully can still be unable to say anything about capacity, tenant configuration or
+Data Agents — which is exactly the situation where a coverage number looks healthy and
+the verdict is not supported. Coverage is counted per rule against observed evidence, so
+this surfaces as `NOT_EVALUATED` rather than as a score; the failure mode to guard
+against is a reader treating "the collector ran" as "the tenant was read".
+
+**Where the detail lives.** The endpoint-by-endpoint, field-by-field record is
+[`API_REALITY_MATRIX.md`](./API_REALITY_MATRIX.md), owned by `@collector`. It is not
+duplicated here: two copies of an availability table drift, and the stale one is always
+the one being quoted.
+
 ## 2. Metadata Availability Is Unconfirmed
 
 Several rules consume fields whose availability through public read-only APIs has not
@@ -163,9 +194,10 @@ been verified against a live tenant:
 `NOT_EVALUATED` — which is honest, but means the corresponding readiness dimension is a
 blind spot rather than a measurement.
 
-**Resolution gate.** Phase 5 Sprints 5.1–5.2 produce the API reality matrix and reconcile
-every rule input with confirmed, unavailable, permission-dependent, SKU-dependent, or
-unverified evidence. Unsupported inputs must continue to produce `NOT_EVALUATED`.
+**Resolution gate.** Phase 5 Sprints 5.1–5.2 produce the API reality matrix
+([`API_REALITY_MATRIX.md`](./API_REALITY_MATRIX.md)) and reconcile every rule input with
+confirmed, unavailable, permission-dependent, SKU-dependent, or unverified evidence.
+Unsupported inputs must continue to produce `NOT_EVALUATED`.
 
 ## 3. Agent Quality Is Declared, Not Measured
 

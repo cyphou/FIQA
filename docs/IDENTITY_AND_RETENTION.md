@@ -148,7 +148,32 @@ mandatory pre-push privacy audit in
 [`.github/agents/shared.instructions.md`](../.github/agents/shared.instructions.md), and
 it says nothing about a path outside the repository: pointing `--out`, `--lakehouse`,
 `--powerbi` or `--checkpoint` at a synced folder, a network share, or a ticket attachment
-moves the evidence beyond anything this repository can defend.
+moves the evidence beyond anything this repository can defend. Choosing that path
+deliberately, rather than defaulting into the working tree, is the practice described in
+§3.5.
+
+### 3.1.1 Git-ignored is not share-safe
+
+An ignore rule answers exactly one question: *will git offer to commit this file?* It
+says nothing about every other way a file leaves a machine. Evidence sitting inside the
+working tree still escapes through a zip of the repository folder, a shared or synced
+directory, a backup sweep, or an editor that indexes the whole workspace — none of which
+consult `.gitignore`.
+
+The **HTML readiness report is the artifact most likely to escape**, precisely because it
+is the one designed to be shown: it is self-contained, it opens in a browser, it renders
+every assessed workspace by name, and it is therefore the file an operator is most
+tempted to forward. A Bronze `.jsonl` gets archived; a presentation-ready report gets
+sent.
+
+Two consequences, both practice rather than preference:
+
+- `artifacts/` inside this checkout is for **synthetic output only** — the sample tenant,
+  the self-assessment fixture, a local test run. Nothing collected from a real tenant
+  belongs there, ignored or not.
+- Live evidence is written to the external store in §3.5 at the moment it is produced,
+  not moved there afterwards. A file that never entered the working tree cannot be
+  swept up by anything that reads the working tree.
 
 ### 3.2 What the payloads actually contain
 
@@ -167,6 +192,19 @@ metadata authored by the tenant's own staff, not third-party or customer data.
 
 ### 3.3 Retention decision
 
+> [!WARNING]
+> **A checkpoint is live evidence, not scratch.** `--checkpoint` holds the tenant id next
+> to unredacted Bronze payloads (§3.1). Nothing deletes it when a run completes, because
+> its whole purpose is to outlive a throttled scan. **Delete it the moment the run it
+> resumes has finished** — the same working session, not "next time I tidy up".
+>
+> This rule has been broken in practice: a checkpoint from a live proof survived three
+> days past the run it resumed, carrying a tenant identifier, dozens of UPN occurrences
+> across two real domains and raw admin Bronze payloads, inside a git-ignored folder that
+> everyone read as safe. It was ignored; it was not share-safe (§3.1.1). The file was
+> destroyed and the practice in §3.5 exists so the next one is never written into the
+> working tree at all.
+
 - **Bronze evidence is retained only as long as the run's artifact directory or Lakehouse
   table is retained by the operator.** This tool sets no retention policy of its own and
   runs no scheduled deletion — it is the responsibility of whoever owns the output
@@ -175,7 +213,15 @@ metadata authored by the tenant's own staff, not third-party or customer data.
 - **The `--checkpoint` file outlives the run that created it.** It exists to let a
   throttled scan resume, so nothing deletes it when the run completes — and it holds the
   tenant ID next to unredacted Bronze payloads. Delete it once the run it resumes has
-  finished, and treat a surviving checkpoint as live evidence, not as scratch.
+  finished, and treat a surviving checkpoint as live evidence, not as scratch. A
+  checkpoint that no unfinished scan needs has no remaining purpose and every remaining
+  risk.
+- **A live run gets its expiry date at authorisation, not afterwards.** The date is
+  agreed when the run is approved and written into the evidence store's `README.md`
+  (§3.5) before the first call is made. Deciding retention after the evidence exists
+  means deciding it while looking at something useful, which is how a 30-day window
+  becomes indefinite. This is **@security**'s standing recommendation, adopted here as
+  practice.
 - **Recommended default: align Bronze retention with the shortest useful audit window.**
   This document recommends 30–90 days as a starting point; it is an operational judgement
   made here, not a Microsoft product limit and not a figure sourced from
@@ -202,6 +248,66 @@ default — doing so silently would make Bronze a lossy, unverifiable record, wh
 contradicts its purpose as "immutable proof of one upstream call." Redaction, if wanted,
 belongs at export/sharing time, on a copy, never on the evidence trail itself.
 
+### 3.5 Live evidence lives outside the repository
+
+**Practice for every live run: no tenant-derived byte is written inside the working
+tree.** Both the input and the output of a run are free-form paths, so nothing forces
+evidence into the checkout — `--inventory`, `--out`, `--lakehouse`, `--powerbi` and
+`--checkpoint` all accept an absolute path anywhere on the machine.
+
+#### The store
+
+```text
+C:\FabricIQ-Evidence\<date>_<purpose>\
+├── README.md          # the rules below, plus the per-run expiry table
+├── inventory\         # collected evidence for this run
+└── report\            # --out: assessment, backlog, review, readiness.html
+```
+
+The location is chosen for two properties, not for tidiness:
+
+- **outside the working tree**, so nothing that reads the repository folder — a zip, a
+  `git add .`, a workspace-wide editor index — can reach it (§3.1.1);
+- **outside any synced folder**, which is why it sits at a drive root rather than under a
+  user profile directory that a consumer sync client (OneDrive and equivalents) backs up
+  to cloud storage by default. Evidence that syncs has been copied to a second place
+  nobody scheduled for deletion.
+
+The store's own `README.md` carries the handling rules and a per-run expiry table, so the
+retention decision travels with the evidence instead of living in someone's memory:
+
+| Run | Purpose | Authorised | Expires | Contents |
+|---|---|---|---|---|
+| `<date>_<purpose>` | read-only readiness proof | `<date>` | `<date + window>` | raw collected evidence, no report retained |
+
+**Verified, not assumed.** A full `python assess.py --inventory … --review --out …` run
+was executed with both paths outside the repository: it read its inventory, scored, ran
+the preceptorship review and wrote all five artifacts — including `_readiness.html` — to
+the external path, with nothing created in the checkout.
+
+```powershell
+python assess.py --inventory C:\FabricIQ-Evidence\<date>_<purpose>\inventory `
+                 --review --out C:\FabricIQ-Evidence\<date>_<purpose>\report
+```
+
+#### What this does and does not buy
+
+It removes the accidental-disclosure paths that `.gitignore` never covered. It does
+**not** make the evidence safe: an external folder has no ignore rule, no gate and no
+`check_evidence_sinks.py` watching it — `python scripts/check_evidence_sinks.py` is blind
+to every path outside the repository by construction. What protects it is the expiry date
+agreed at authorisation (§3.3), the operator deleting it on that date, and the redaction
+rule in §3.4 before anything is shared.
+
+#### Reports are deleted first
+
+Of everything a run leaves behind, the rendered readiness report is the artifact with the
+highest onward-disclosure risk and usually the shortest useful life: once its findings
+have been discussed, the file is a browser-ready list of real workspace names with no
+remaining purpose. Delete rendered reports as soon as the conversation they supported is
+over, ahead of the raw evidence they were derived from, and re-render from retained
+evidence if the discussion reopens.
+
 ## 4. No write scope anywhere — audit trail
 
 This decision is not only documented; it is defended by tests, so a future change that
@@ -217,7 +323,8 @@ introduces a write cannot pass CI silently:
   invariant, not merely a current default.
 
 **Privacy audit on a real run's artifacts:** after any live scan, an operator should
-confirm — by inspecting the produced Bronze/Silver/Gold artifacts — that (a) no
+confirm — by inspecting the produced Bronze/Silver/Gold artifacts in the external
+evidence store (§3.5) — that (a) no
 row-level model data is present (only schema metadata), (b) no Copilot/Data Agent
 conversation content is present, and (c) any display-name/email fields are acceptable for
 the artifact's intended audience, redacting per §3.4 if not. This is a manual check today

@@ -68,18 +68,19 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   heuristic gate over this repository: it reduces, and never replaces, the mandatory
   pre-push privacy audit, and it cannot see a path written outside the working tree.
 - [`scripts/check_agent_ownership.py`](./scripts/check_agent_ownership.py) extended
-  beyond `fabric_iq/` modules to documentation that asserts a privacy, identity or
-  retention claim, and to the files a model reads as instruction. Six such documents and
-  skills now name exactly one accountable owner —
+  beyond `fabric_iq/` modules to documentation that asserts a privacy, identity,
+  retention or collection-capability claim, and to the files a model reads as
+  instruction. Seven such documents and skills now name exactly one accountable owner —
   [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md),
   [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md) and
   [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md)
-  (**@readme**), [`docs/INSTALL.md`](./docs/INSTALL.md) and
+  (**@readme**), [`docs/API_REALITY_MATRIX.md`](./docs/API_REALITY_MATRIX.md)
+  (**@collector**), [`docs/INSTALL.md`](./docs/INSTALL.md) and
   [`fabric/README.md`](./fabric/README.md) (**@orchestrator**), and
   [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md) (**@preceptor**). The check also
   fails when a required document is missing from the repository entirely, so the
   guarantee cannot be satisfied by deleting the document that carries it.
-  **@security** reviews all six and owns no file by design: a reviewer
+  **@security** reviews all seven and owns no file by design: a reviewer
   that can edit what it reviews eventually reviews its own edits.
 - Both checks fail with exit code `1` and name the offending path, and both carry
   negative tests over synthetic fixtures — a temporary git repository for the sink check,
@@ -89,7 +90,7 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
   check alongside the ownership and rule-documentation checks.
 
-**Tests** — grown from 138 to **375 tests**, all green. One test skips by design on
+**Tests** — grown from 138 to **379 tests**, all green. One test skips by design on
 Windows — it plants a control character in a tracked filename to prove the NUL-separated
 `git ls-files -z` parse, and Windows refuses such a name; it carries its weight on Linux
 CI.
@@ -134,7 +135,7 @@ directory, whose own checkout runs its own gate.
 universe from the modules under `fabric_iq/` plus `REQUIRED_DOCS`, so the two gate scripts
 `@tester` claims were parsed but never verified, and `scripts/build_rules_doc.py` and
 `scripts/__init__.py` were owned by nobody. The universe is now `fabric_iq/` **plus**
-`scripts/` plus the required documents — **26** audited modules and **6** documents and
+`scripts/` plus the required documents — **26** audited modules and **7** documents and
 skills — with the gate scripts and the package marker claimed by **@tester** and the
 generator behind [`docs/RULES.md`](./docs/RULES.md) claimed by **@readme**, which owns its
 output and runs `python scripts/build_rules_doc.py --check` as part of the documentation
@@ -204,7 +205,7 @@ thing it was written to catch walks past it, and no agent is accountable for not
   preceptorship section is retitled "The Assessment Preceptorship Loop — `@preceptor`"
   so a reader knows which preceptor it belongs to.
 - [`docs/AGENTS.md`](./docs/AGENTS.md) — the audited universe is described as **three**
-  populations (the 22 modules under `fabric_iq/`, the 4 scripts under `scripts/`, the 6
+  populations (the 22 modules under `fabric_iq/`, the 4 scripts under `scripts/`, the 7
   documents and skills), the roster records who owns each script, and a new
   "Script ownership — the gates and the generator" table states the split: `@tester` owns
   the checks that fail the build, `@readme` owns the generator whose output is a
@@ -220,6 +221,65 @@ thing it was written to catch walks past it, and no agent is accountable for not
   that no rule depends on Q&A and that its retirement timing is unverified here. The
   command list now teaches the current gate set, including
   `python scripts/check_evidence_sinks.py` and documentation ownership.
+
+- **Evidence handling: live runs now write outside the repository.**
+  [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) documents the
+  practice and the reasoning behind it, after a privacy audit of a user-authorised,
+  read-only live proof. The audit returned **CONTAINED** — no tenant identifier reached
+  any tracked file, the index, or the repository's history — and surfaced that the
+  guarantee everyone was relying on was the wrong one: *git-ignored is not share-safe*.
+  An ignore rule only stops git from offering to commit a file; it stops nothing that a
+  zip, a shared or synced directory, a backup sweep or a workspace-indexing editor does.
+  Three new or hardened pieces:
+  - §3.1.1 states the distinction, and that `artifacts/` inside the checkout is for
+    **synthetic output only**. The rendered `_readiness.html` is called out as the
+    artifact most likely to escape, precisely because it is the one built to be shown.
+  - §3.5 describes the external evidence store (`<date>_<purpose>` folders outside both
+    the working tree and any synced folder, carrying their own `README.md` with the
+    handling rules and a per-run expiry table), and records that a full
+    `--inventory … --review --out …` run was executed end to end with both paths outside
+    the repository — all five artifacts, HTML included, written there and nothing created
+    in the checkout. It also states what the practice does *not* buy: no gate, including
+    `check_evidence_sinks.py`, can see a path outside the repository.
+  - §3.3 turns the checkpoint rule into a warning callout instead of a bullet, because it
+    was breached: a checkpoint survived three days past the run it resumed, holding a
+    tenant identifier, UPNs across two real domains and raw admin Bronze payloads. It
+    also records **@security**'s standing recommendation, now practice — *a live run gets
+    its expiry date at authorisation, not afterwards*, written into the store's `README.md`
+    before the first call is made.
+  Acted on at the same time, and described here as the reason the rules changed: the
+  breaching checkpoint, the live run outputs carrying real UPNs, the rendered readiness
+  reports and two duplicate run triplets were destroyed; `artifacts/` was verified to
+  hold synthetic output only; the surviving raw evidence carries a dated expiry.
+- [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §1.4 (new) — what a
+  read-only live read established about the **read surfaces themselves**, published as
+  ratios with no estate size, workspace name, identifier, portal link or host:
+  `capacityId` returned `null` for **100%** of workspaces on the OneLake listing surface,
+  so no capacity-dependent rule is evaluable from it; that listing and the catalog search
+  returned **disjoint** workspace sets (**0%** overlap by GUID *and* by name), so a
+  single-surface collector misses the other population entirely rather than seeing a
+  subset of it; workspace `id` on that surface is an **opaque non-GUID string**, so the
+  two surfaces cannot be joined on identity; **no Data Agent item type** was exposed; and
+  **no tenant admin settings** were reachable through that session, leaving every
+  tenant-switch rule `NOT_EVALUATED` on that path. The consequence recorded is that which
+  read surface a collector uses changes which rules are evaluable at all — the case where
+  "the collector ran" reads as "the tenant was read". The endpoint-by-endpoint detail is
+  cross-linked to [`docs/API_REALITY_MATRIX.md`](./docs/API_REALITY_MATRIX.md) rather than
+  duplicated, because two availability tables drift and the stale one is the one quoted.
+- [`docs/AGENTS.md`](./docs/AGENTS.md) — `docs/API_REALITY_MATRIX.md` is claimed by
+  **@collector** in the roster and in the documentation-ownership table, which is retitled
+  to cover a **collection-capability** claim alongside privacy, identity, retention and
+  instruction. A statement about what the collectors cannot read is a claim about the
+  engine's own blind spots, and a stale row in it reads as evidence that was never
+  collectable. The audited documentation set is **7** documents and skills, reproduced
+  from `python scripts/check_agent_ownership.py`; the module count is unchanged at **26**.
+- [`README.md`](./README.md) — reconciled against the above: the gate paragraph now says
+  seven documents and skills and names the collection-capability claim; a new callout
+  states that git-ignored is not share-safe and that `artifacts/` is synthetic-only; the
+  live-run example writes its `--out` and `--checkpoint` to an external evidence store
+  instead of `artifacts/`, and tells the operator to delete the checkpoint as soon as the
+  scan it resumes has finished; and the Power BI warning notes that the committed ignore
+  rule protects the in-repository default only.
 
 ## [0.1.0] — 2026-09-21
 
