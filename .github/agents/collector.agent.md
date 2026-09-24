@@ -15,6 +15,7 @@ into a validated inventory, and you leave behind proof of everything you read.
 - `fabric_iq/collectors/offline.py` — fixture-based collection
 - `fabric_iq/collectors/fabric_api.py` — live Fabric/Power BI REST collection
 - `examples/sample_tenant/` — synthetic fixtures
+- `docs/API_REALITY_MATRIX.md` — field-to-endpoint availability, per rule input
 
 ## Read-Only Collection Is Absolute
 

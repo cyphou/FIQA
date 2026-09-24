@@ -6,6 +6,7 @@ ownership. Drift here is silent until someone edits a module nobody owns.
 
 import os
 import re
+import shutil
 import tempfile
 import unittest
 
@@ -209,6 +210,65 @@ class TestDocumentationOwnership(unittest.TestCase):
         self.assertEqual(
             REQUIRED_DOCS.get(".github/skills/fabric-iq-readiness/SKILL.md"), "readme"
         )
+
+    def test_the_api_reality_matrix_has_an_accountable_owner(self):
+        # It states what the collectors can and cannot acquire from a live tenant.
+        # That claim goes stale the moment a collector gains or loses an endpoint,
+        # and only the agent that owns fabric_iq/collectors/ can answer for it.
+        from scripts.check_agent_ownership import REQUIRED_DOCS
+
+        self.assertEqual(REQUIRED_DOCS.get("docs/API_REALITY_MATRIX.md"), "collector")
+
+    def test_the_collector_has_claimed_the_api_reality_matrix(self):
+        from scripts.check_agent_ownership import claims
+
+        self.assertEqual(
+            claims().get("docs/API_REALITY_MATRIX.md"),
+            ["collector"],
+            "docs/API_REALITY_MATRIX.md must be claimed exactly once, by @collector, "
+            "in the 'Your Files (You Own These)' block of "
+            ".github/agents/collector.agent.md",
+        )
+
+    def test_dropping_the_collector_claim_fails_the_document_audit(self):
+        # Non-vacuity proof against the real agent tree: with the claim line
+        # removed the audit must name the document and its accountable owner,
+        # otherwise the REQUIRED_DOCS entry enforces nothing.
+        from scripts.check_agent_ownership import REQUIRED_DOCS, audit_docs
+
+        doc = "docs/API_REALITY_MATRIX.md"
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            agents = os.path.join(tmp, "agents")
+            shutil.copytree(AGENTS_DIR, agents)
+            path = os.path.join(agents, "collector.agent.md")
+            text = read(path)
+            self.assertIn(f"`{doc}`", text, "the claim must exist before it is removed")
+
+            self.assertEqual(audit_docs(agents, REPO_ROOT), ([], {}, {}))
+
+            kept = [line for line in text.splitlines(True) if f"`{doc}`" not in line]
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.writelines(kept)
+
+            unclaimed, duplicated, misassigned = audit_docs(agents, REPO_ROOT)
+
+            self.assertEqual(unclaimed, [doc])
+            self.assertEqual((duplicated, misassigned), ({}, {}))
+            self.assertEqual(REQUIRED_DOCS[doc], "collector")
+
+    def test_the_api_reality_matrix_disappearing_is_reported(self):
+        from scripts.check_agent_ownership import missing_docs
+
+        required = {"docs/API_REALITY_MATRIX.md": "collector"}
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
+            os.makedirs(os.path.join(root, "docs"))
+            self.assertEqual(missing_docs(root, required), list(required))
+
+            with open(
+                os.path.join(root, "docs", "API_REALITY_MATRIX.md"), "w", encoding="utf-8"
+            ) as handle:
+                handle.write("# API Reality Matrix\n")
+            self.assertEqual(missing_docs(root, required), [])
 
     def test_every_required_document_is_claimed_by_exactly_one_agent(self):
         from scripts.check_agent_ownership import REQUIRED_DOCS, audit_docs

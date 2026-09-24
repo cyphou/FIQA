@@ -12,12 +12,12 @@ finding against it; a doubly claimed module has two agents editing the same file
 included. An unowned gate is worse than an unowned module: nobody answers for it,
 so it degrades into a check that fails open in silence.
 
-The same rule applies to the documentation that makes a privacy, identity, or
-retention claim, and to the agent-facing Skill (:data:`REQUIRED_DOCS`, Phase 5
-release gate criterion 10). A document that tells a reader what the tool
-collects, who is named in it, and how long it is kept is a promise to a customer;
-a Skill is the same promise made to a model at prompt time. A promise nobody owns
-goes stale silently. The required set is explicit rather than inferred: guessing
+The same rule applies to the documentation that makes a privacy, identity,
+retention or collection-capability claim, and to the agent-facing Skill
+(:data:`REQUIRED_DOCS`, Phase 5 release gate criterion 10). A document that tells
+a reader what the tool collects, what it cannot collect, who is named in it, and
+how long it is kept is a promise to a customer; a Skill is the same promise made
+to a model at prompt time. A promise nobody owns goes stale silently. The required set is explicit rather than inferred: guessing
 which file "looks like" a privacy claim would let the gate move on its own.
 
 Usage:
@@ -36,10 +36,16 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGENTS_DIR = os.path.join(REPO_ROOT, ".github", "agents")
 PACKAGE_DIR = os.path.join(REPO_ROOT, "fabric_iq")
 
-#: Documentation that asserts a privacy, identity, or retention claim -- or that a
-#: model reads as instruction -- mapped to the agent accountable for it. @security
-#: owns no file by design: it audits, it does not maintain.
+#: Documentation that asserts a privacy, identity, retention or collection-capability
+#: claim -- or that a model reads as instruction -- mapped to the agent accountable
+#: for it. @security owns no file by design: it audits, it does not maintain.
 REQUIRED_DOCS: dict[str, str] = {
+    # States what the collectors can and cannot acquire from a live tenant, field by
+    # field and endpoint by endpoint. It is a standing claim about the engine's own
+    # blind spots: it goes stale the moment a collector gains or loses an endpoint,
+    # and a stale row here reads as evidence that was never collectable. Only the
+    # agent that owns `fabric_iq/collectors/` can answer for it.
+    "docs/API_REALITY_MATRIX.md": "collector",
     # Names which identities are read, where they land, and how long they are kept.
     "docs/IDENTITY_AND_RETENTION.md": "readme",
     # Tells an operator how to act on a verdict, and it is the path the console and
@@ -244,8 +250,8 @@ def main() -> int:
             print("Ownership is clean: every module is claimed exactly once.")
 
         print(
-            "\nDocuments and skills carrying a privacy/identity/retention or "
-            f"instruction claim: {len(REQUIRED_DOCS)}"
+            "\nDocuments and skills carrying a privacy/identity/retention, "
+            f"collection-capability or instruction claim: {len(REQUIRED_DOCS)}"
         )
         if doc_unclaimed:
             print("\nUnclaimed documentation (no agent owns these):")
