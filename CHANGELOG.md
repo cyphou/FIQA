@@ -144,6 +144,29 @@ thing it was written to catch walks past it, and no agent is accountable for not
 
 ### Documentation
 
+- [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §8 "Product Limits Age" —
+  all eight encoded product limits individually re-verified 2026-09-24 against live
+  Microsoft Learn / REST API reference pages (fetched, not just link-resolved as on
+  2026-09-23), closing the product-fact-verification half of the Phase 5 Sprint 5.3
+  release gate. Three source links corrected to the page that actually states the
+  quoted fact rather than a generic page that only links out to it or omits the number
+  entirely: `SEM-006`/`SEM-007` (200-character description budget) and `SEM-011`
+  (10,000-character AI-instruction max) now cite the specific Power BI Copilot
+  documentation pages/anchors; `TEN-012` (Purview DLP/access-restriction GA vs. preview
+  split) and the Scanner `getInfo` rate-limit constants (500/hour, 16 concurrent, 100
+  workspaces/request) now cite the pages that actually state those facts. No rule value,
+  threshold, or test fixture changed — sourcing and dating only. The Sprint 5.3
+  calibration sub-criterion (blinded practitioner labelling, owned by `@scorer`) remains
+  open and is unaffected by this change.
+- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — Phase 2 exit gate, the Sprint 5.3 entry, the
+  Phase 5 release gate (criterion 2), and the sequencing notes reconciled to reflect that
+  product-limit sourcing/dating closed 2026-09-24 while calibration remains open, so the
+  sprint and phase are not misrepresented as either fully closed or fully unstarted.
+- [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
+  the "What To Check, By Level" preamble and the tenant-capacity-floor callout updated
+  from "source candidate link resolved 2026-09-23, fact verification open" to reflect
+  the 2026-09-24 confirmation, without claiming this Skill is itself a source of
+  Microsoft fact — it still routes to `docs/KNOWN_LIMITATIONS.md` §8.
 - [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md) (new) — the
   operational guide to reading a run, written for a human at a console rather than for a
   model. It moves the interpretation knowledge that previously existed only in

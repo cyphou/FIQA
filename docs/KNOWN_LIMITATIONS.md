@@ -255,20 +255,30 @@ as a context and validation surface rather than as an endorsed asset.
 ## 8. Product Limits Age
 
 The values below are encoded or quoted by the current ruleset. On **2026-09-23** the
-linked public pages resolved, but the project did **not** complete a line-by-line
-product-fact re-verification. Link availability is not factual verification; therefore
-the Phase 5 Sprint 5.3 product-limit release gate remains open.
+linked public pages merely resolved (link availability, not factual verification). On
+**2026-09-24**, all eight rows were individually re-verified by fetching the live
+current Microsoft Learn / REST API reference page for each row and matching the exact
+quoted product fact against that page's text. Two rows (`SEM-006`/`SEM-007` and
+`SEM-011`) had a source-quality gap closed: the previously cited page did not itself
+contain the quoted number, so the source link was corrected to the page that does. One
+further row (`TEN-012`) and the scanner-constants row also had their sources corrected
+to the page that actually states the fact, without changing the fact itself. This
+closes the product-fact-verification sub-criterion of the Phase 5 Sprint 5.3 release
+gate. It does **not** close Sprint 5.3 as a whole: the sprint's second, independent
+sub-criterion — a blinded practitioner-calibration exercise comparing current rule
+weights against independently labelled real objects, owned by `@scorer` — has not yet
+started. See `docs/ROADMAP.md` Sprint 5.3 for that open item.
 
-| Limit currently encoded/quoted | Used by | Public source candidate | Verification status |
+| Limit currently encoded/quoted | Used by | Verified public source | Verification status |
 |--------------------------------|---------|-------------------------|---------------------|
-| 5 data sources per agent | `AGT-002` | [Fabric Data Agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact verification open; link resolved 2026-09-23 |
-| 25 rows × 25 columns | `AGT-013` | [Fabric Data Agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact verification open; link resolved 2026-09-23 |
-| First 200 description characters read by Copilot | `SEM-006`, `SEM-007` | [Prepare data for AI](https://learn.microsoft.com/power-bi/create-reports/copilot-prepare-data-ai) | Fact verification open; link resolved 2026-09-23 |
-| 10,000-character AI-instruction maximum | `SEM-011` | [Prepare data for AI](https://learn.microsoft.com/power-bi/create-reports/copilot-prepare-data-ai) | Fact verification open; link resolved 2026-09-23 |
-| F2+ / P1+ eligible-capacity floor | `TEN-004`, `WKS-001` | [Fabric Copilot capacity](https://learn.microsoft.com/fabric/enterprise/fabric-copilot-capacity) | Fact verification open; link resolved 2026-09-23 |
-| Purview policy support/status by item type | `TEN-012` | [Microsoft Purview and Fabric](https://learn.microsoft.com/fabric/governance/microsoft-purview-fabric) | Fact verification open; link resolved 2026-09-23 |
-| Scanner `getInfo`: 500/hour, 16 concurrent, 100 workspaces/request | collector | [Run metadata scanning](https://learn.microsoft.com/fabric/governance/metadata-scanning-run) | Fact verification open; link resolved 2026-09-23 |
-| Activity Events: 1 UTC day/request, 28-day retention, 200/hour | collector constants; no collector yet | [Get Activity Events](https://learn.microsoft.com/rest/api/power-bi/admin/get-activity-events) | Fact verification open; link resolved 2026-09-23 |
+| 5 data sources per agent | `AGT-002` | [Fabric data agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact confirmed 2026-09-24 against live Microsoft Learn page |
+| 25 rows × 25 columns | `AGT-013` | [Fabric data agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact confirmed 2026-09-24 against live Microsoft Learn page |
+| First 200 description characters read by Copilot | `SEM-006`, `SEM-007` | [Optimize your semantic model for Copilot in Power BI § Considerations for semantic models](https://learn.microsoft.com/power-bi/create-reports/copilot-evaluate-data#considerations-for-semantic-models-for-copilot-use) | Fact confirmed 2026-09-24 against live Microsoft Learn page; **source corrected** — the previously cited `copilot-prepare-data-ai` page does not contain this number |
+| 10,000-character AI-instruction maximum | `SEM-011` | [Prepare your data for AI: AI instructions § Considerations and limitations](https://learn.microsoft.com/power-bi/create-reports/copilot-prepare-data-ai-instructions#considerations-and-limitations) | Fact confirmed 2026-09-24 against live Microsoft Learn page; **source corrected** — the previously cited generic `copilot-prepare-data-ai` page only links out to this page, it does not state the number itself |
+| F2+ / P1+ eligible-capacity floor | `TEN-004`, `WKS-001` | [Fabric Copilot capacity](https://learn.microsoft.com/fabric/enterprise/fabric-copilot-capacity) | Fact confirmed 2026-09-24 against live Microsoft Learn page |
+| Purview policy support/status by item type | `TEN-012` | [Fabric data agent concepts § Governance prerequisites](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | Fact confirmed 2026-09-24 against live Microsoft Learn page; **source corrected** — the previously cited generic `microsoft-purview-fabric` overview page does not state the GA/preview split by item type |
+| Scanner `getInfo`: 500/hour, 16 concurrent, 100 workspaces/request | collector | [Admin - WorkspaceInfo PostWorkspaceInfo](https://learn.microsoft.com/rest/api/power-bi/admin/workspace-info-post-workspace-info) (primary; states all three limits) — [Run metadata scanning](https://learn.microsoft.com/fabric/governance/metadata-scanning-run) (secondary how-to reference; states only 16-concurrent and 100/request, not the 500/hour figure) | Fact confirmed 2026-09-24 against live Microsoft Learn page; **source corrected** — the previously cited `metadata-scanning-run` page is missing the 500/hour figure |
+| Activity Events: 1 UTC day/request, 28-day retention, 200/hour | collector constants; no collector yet | [Get Activity Events](https://learn.microsoft.com/rest/api/power-bi/admin/get-activity-events) | Fact confirmed 2026-09-24 against live Microsoft Learn page |
 
 The following capacity paragraphs describe the behaviour encoded by ruleset
 `2026.09.1`, not newly re-verified product facts. The capacity floor carries a nuance
@@ -315,11 +325,16 @@ because no scriptable Admin API signal exists yet for this setting.
 
 Finally, `TEN-012` encodes the position that Microsoft Purview data loss prevention
 policies and access restriction policies do not replace review of effective workspace
-and OneLake permissions. The earlier ruleset record classified access restriction
-policies for KQL Database, SQL Database and Data Warehouse as preview and Data Warehouse
-DLP policies as generally available. That status has not been re-verified for this
-review; do not rely on it as a current product claim until Sprint 5.3 closes the table
-above.
+and OneLake permissions. As confirmed 2026-09-24 against the live "Fabric data agent
+concepts" page (Governance prerequisites section), the current split is: Purview DLP
+policies in Fabric Data Warehouse are **generally available** and can detect/restrict
+access to sensitive data in warehouse assets the agent queries, while access restriction
+policies for Fabric KQL Database, Fabric SQL Database, and Fabric Data Warehouse remain
+**preview** and can prevent the agent from accessing or returning results from assets
+classified as sensitive. This status is current as of the verification date above; the
+GA/preview split is a Microsoft product state that can change independently of this
+ruleset, so re-check it at the next scheduled limits review rather than treating it as
+permanent.
 
 `RULESET_VERSION` pins what was believed true when a score was produced. **Scores are
 only comparable across runs with the same ruleset version**; the trend view must refuse

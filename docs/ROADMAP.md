@@ -146,10 +146,13 @@ gate does not accept, so the gate is unmoved.
 ## Phase 2 — Static Readiness Scoring 🟡
 
 The engine, rule catalogue, actionable backlog, and output formats are delivered.
-Product-limit sourcing and practitioner calibration remain open and move to Sprint 5.3.
+Product-limit sourcing closed 2026-09-24 (`docs/KNOWN_LIMITATIONS.md` §8); practitioner
+calibration remains open under Sprint 5.3.
 
-**Exit gate.** Open: every encoded limit has a public source and exact verification
-date, and calibration disagreements are recorded without tenant-specific tuning.
+**Exit gate.** Partially open: every encoded limit now has a public source and exact
+verification date (closed 2026-09-24). Calibration disagreements recorded without
+tenant-specific tuning is not yet done; the gate does not close until that half lands
+too.
 
 ## Phase 3 — Agentic Readiness 🟡
 
@@ -624,21 +627,25 @@ tenant-derived evidence.
 
 1. **Outcome** — Encoded limits are dated facts, and any proposed scoring change is
    supported by practitioner disagreement evidence rather than intuition.
-2. **Current evidence** — The catalogue and scoring engine are executable, but the
-   documented limits lack complete source/date records and current weights have not been
-   compared with independently labelled real objects.
-3. **Smallest slice** — `@readme` records a public source and exact `YYYY-MM-DD`
-   verification date for each encoded limit. In parallel, `@scorer` defines a blinded
-   calibration worksheet; two practitioners independently label a bounded 20–30 object
-   sample without seeing tool scores.
+2. **Current evidence** — The catalogue and scoring engine are executable.
+   `@readme` closed the product-fact-verification half 2026-09-24: all eight rows in
+   `docs/KNOWN_LIMITATIONS.md` §8 now carry a public source and exact verification date,
+   individually re-verified against the live Microsoft Learn / REST API reference pages
+   (three sources were also corrected to the page that actually states the fact). The
+   calibration half has not started: current weights have not been compared with
+   independently labelled real objects.
+3. **Smallest slice** — Done: `@readme` recorded a public source and exact `YYYY-MM-DD`
+   verification date for each encoded limit (2026-09-24). Still open: `@scorer` defines a
+   blinded calibration worksheet; two practitioners independently label a bounded 20–30
+   object sample without seeing tool scores.
 4. **Dependencies** — `@readme` owns limit documentation; domain rule owners confirm rule
    interpretation; `@scorer` owns calibration and any maths proposal; `@security`
    approves de-identification and retention. Sprint 5.2 supplies honest coverage.
 5. **Validation** — Focused check: a documentation test fails when an encoded limit lacks
    a source/date; calibration records agreement and every disagreement. Release gate:
-   limits are current and traceable; any weight/threshold change has rationale,
-   scorer sign-off, regression tests, and ruleset-version handling. No change is required
-   merely to increase agreement.
+   limits are current and traceable (**met 2026-09-24**); any weight/threshold change has
+   rationale, scorer sign-off, regression tests, and ruleset-version handling (**open** —
+   calibration has not started). No change is required merely to increase agreement.
 6. **Risks and non-goals** — A small sample cannot establish universal validity and must
    not be tuned to improve one tenant. This sprint does not merge confidence into score,
    relabel `NOT_EVALUATED`, or alter blocking cap 39.
@@ -726,6 +733,12 @@ The phase closes only when all of the following are executable or evidenced:
    Sprint 5.1 re-run under an approved read-only service principal, with the identity
    that obtained each classification recorded alongside it.
 2. All encoded product limits have a public source and exact verification date.
+   **Met at this revision** for the fact itself: all eight rows in
+   `docs/KNOWN_LIMITATIONS.md` §8 were individually re-verified 2026-09-24 against live
+   Microsoft Learn / REST API reference pages (three source links were corrected in the
+   same pass). This criterion does not require or imply the separate Sprint 5.3
+   calibration sub-criterion (item 5 below covers score/threshold stability, not
+   calibration); calibration is tracked under Sprint 5.3 and has not started.
 3. Full tests, generated-rule check, ownership check, documentation links, rule counts,
    and synthetic self-assessment are green.
 4. Read-only enforcement is tested; no write scope or write operation is introduced.
@@ -791,8 +804,10 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
   assuming a field. The 2026-09-24 exploratory read does **not** advance it: an
   observation made under a delegated over-privileged identity, with scope and retention
   review after the fact, is knowledge to re-test, not a gate that ran.
-- Sprints 5.3 limit verification may begin while 5.2 is in progress, but scoring
-  calibration waits for honest coverage.
+- Sprint 5.3 limit verification did not wait for 5.2: it closed 2026-09-24
+  (`docs/KNOWN_LIMITATIONS.md` §8), independent of 5.1/5.2 status, exactly as this
+  sequencing policy allows. Scoring calibration, the sprint's other half, still waits
+  for honest coverage.
 - Sprint 5.4 implementation is conditional on its API proof; a failed proof produces an
   explicit limitation, not a substitute design.
 - Sprint 5.5's schedule-contract definition has landed early, but its proof run and

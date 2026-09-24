@@ -69,18 +69,23 @@ tenant-level score.
 ## What To Check, By Level
 
 > Every number below is the value **encoded by ruleset `2026.09.1`**, not an
-> independently re-verified product fact. [`docs/RULES.md`](../../../docs/RULES.md) is
-> the generated source of truth for the rules, their severities and their thresholds —
-> when it disagrees with this summary, it wins. Source links and verification status for
-> each product limit are tracked in
+> independently re-verified product fact in its own right — it is a value this Skill
+> restates, and [`docs/RULES.md`](../../../docs/RULES.md) is the generated source of
+> truth for the rules, their severities and their thresholds; when it disagrees with
+> this summary, it wins. Source links and verification status for each product limit
+> are tracked in
 > [Known limitations §8 — Product Limits Age](../../../docs/KNOWN_LIMITATIONS.md#8-product-limits-age):
-> on **2026-09-23** each linked source page resolved, but line-by-line product-fact
-> re-verification is still open. Do not quote a limit from this Skill as a Microsoft
-> fact; quote it as what the ruleset encodes.
+> on **2026-09-24** each limit below was individually re-verified against the live
+> Microsoft Learn / REST API reference page, closing the product-fact-verification
+> sub-criterion of the Phase 5 Sprint 5.3 release gate. That gate's second
+> sub-criterion — blinded practitioner calibration of the weights and thresholds these
+> facts feed — has not started; a confirmed product fact is not the same claim as a
+> calibrated weight. Do not quote a limit from this Skill as freestanding Microsoft
+> documentation; quote it as what the ruleset encodes, sourced and dated in §8.
 
 **Tenant** — Fabric and Copilot switches scoped to the right security groups, an
 eligible capacity (**F2+ / P1+**, the floor encoded by `TEN-004` / `WKS-001`; source
-candidate link resolved 2026-09-23, fact verification open), healthy and unthrottled
+confirmed 2026-09-24, see KNOWN_LIMITATIONS.md §8), healthy and unthrottled
 capacity, cross-geo consent, scanner enabled with a dedicated service principal,
 sensitivity labels, named owners.
 
