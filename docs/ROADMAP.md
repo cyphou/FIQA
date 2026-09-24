@@ -74,7 +74,7 @@ records, not earlier roadmap labels.
 | Scale and incrementality | Synthetic tests cover proactive per-process quota handling, interrupted-run resume, and honest partial coverage for 500 workspaces. | Scans are sequential; quota state is not tenant-wide; `modified_since_days` is not wired to incremental scanning. These are explicit limitations, not delivered capabilities. | 🟡 Bounded |
 | Scoring and backlog | Explainable scorecards, CSV/JSON backlog, owner role, effort, trend classification, and remediation burn-down are implemented and tested. | Weights and thresholds have not been calibrated against independently labelled real objects. Product-limit verification remains open. | 🟡 Calibration open |
 | Data Agent readiness | Fifteen static rules consume supplied evidence and degrade missing inputs to `NOT_EVALUATED`. | No harness executes a corpus against a real agent; behavioural accuracy, refusal, latency, and persona isolation are therefore not measured by this repository. | 🟡 Static only |
-| Fabric publication | Notebook, Data Pipeline, Lakehouse, Gold Delta marts, Direct Lake semantic model/report, run summary, trends, burn-down, and CI exit gates exist. The model/report synthetic self-assessment gate is executable. | The pipeline is schedulable, but no versioned schedule/recurrence artifact or unattended monthly-run evidence exists. “Scheduled” and “unattended” are not yet delivered claims. | 🟡 Schedulable |
+| Fabric publication | Notebook, Data Pipeline, Lakehouse, Gold Delta marts, Direct Lake semantic model/report, run summary, trends, burn-down, and CI exit gates exist. The model/report synthetic self-assessment gate is executable. A versioned schedule contract covering cadence, `concurrency: 1` overlap prevention, identity requirement, schedule-run housekeeping, failure notification, and rerun procedure is documented in `fabric/README.md` and `docs/INSTALL.md`; the Bronze/Silver/Gold retention contract is documented as 90/180/730 days in `fabric_iq/lakehouse.py` and `docs/IDENTITY_AND_RETENTION.md`. | No actual unattended/scheduled run has been evidenced. Retention enforcement is also open: the retention contract is documented, but `LakehouseWriter` has no pruning capability. “Scheduled” and “unattended” are not yet delivered claims. | 🟡 Schedulable |
 | Re-measurement | Comparable-run trends, automatic baseline selection, coverage-loss classification, and remediation-state comparison are implemented. | A repeatable operational cadence, ruleset-compatible baseline policy, and recorded remediation/re-measure cycle are not yet proven end to end. | 🟡 Mechanism delivered |
 
 ### Verified Repository Baseline
@@ -163,8 +163,13 @@ explicitly `NOT_EVALUATED`.
 ## Phase 4 — Industrialisation 🟡
 
 Pipeline execution, Delta persistence, the semantic model/report, trends, remediation
-burn-down, self-assessment, and CI gates are delivered. The pipeline is schedulable, but
-a versioned schedule and two-run unattended re-measurement cycle are not proven.
+burn-down, self-assessment, and CI gates are delivered. Schedule contract v1 is now
+versioned and documented in `fabric/README.md` and `docs/INSTALL.md`, including
+cadence, `concurrency: 1` overlap prevention, identity requirement, schedule-run
+housekeeping, failure notification, and rerun procedure. The pipeline remains only
+schedulable: no actual unattended/scheduled run or two-run re-measurement cycle has
+been proven, and the documented 90/180/730-day Lakehouse retention contract is not
+enforced because `LakehouseWriter` has no pruning capability yet.
 
 **Exit gate.** Open: two ruleset-compatible unattended runs demonstrate scheduling,
 reviewed publication, compatible baseline selection, trend classification, and burn-down.
@@ -182,8 +187,10 @@ into verdicts.
 
 **Concrete anchor.** [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) records partial
 live validation while Prep-for-AI, AI instructions, verified answers, and Data Agent
-metadata remain unconfirmed; the repository also has a Data Pipeline but no schedule
-artifact. Since 2026-09-24 a second, sharper anchor exists:
+metadata remain unconfirmed; the repository also has a Data Pipeline with a versioned
+schedule contract, but no proven unattended/scheduled run and no retention-enforcement
+mechanism for the documented Lakehouse retention contract. Since 2026-09-24 a second,
+sharper anchor exists:
 [`docs/API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md) states field by field what two live
 read surfaces did and did not return — provisionally, under an identity Sprint 5.1 does
 not accept.
@@ -673,14 +680,20 @@ tenant-derived evidence.
    next compatible run.
 2. **Current evidence** — Pipeline execution, persistence, baseline selection, trends,
    coverage-loss classification, burn-down, self-assessment, and CI exit codes exist.
-   There is no versioned schedule artifact or recorded unattended monthly cycle. Per the
-   **Architecture Principle** above, the unattended run this sprint must prove is the
-   Notebook executing inside Fabric against the `FabricIQReadiness` Lakehouse — a
-   scheduled local CLI run, or a run writing to an external evidence folder, does not
-   satisfy this sprint's outcome no matter how automated it is.
-3. **Smallest slice** — `@orchestrator` and `@lakehouse` define one deployment-owned
-   schedule contract with cadence, overlap prevention, identity, retention, failure
-   notification, and rerun procedure; prove one unattended synthetic-safe run before
+   A versioned schedule contract now exists in `fabric/README.md` and `docs/INSTALL.md`;
+   it defines cadence, `concurrency: 1` overlap prevention, identity requirement,
+   schedule-run housekeeping, failure notification, and rerun procedure. The
+   Bronze/Silver/Gold retention contract is documented as 90/180/730 days in
+   `fabric_iq/lakehouse.py` and `docs/IDENTITY_AND_RETENTION.md`, but no retention
+   pruning/enforcement mechanism exists. There is still no recorded unattended monthly
+   cycle or proven scheduled run. Per the **Architecture Principle** above, the
+   unattended run this sprint must prove is the Notebook executing inside Fabric against
+   the `FabricIQReadiness` Lakehouse — a scheduled local CLI run, or a run writing to an
+   external evidence folder, does not satisfy this sprint's outcome no matter how
+   automated it is.
+3. **Smallest slice** — The contract-definition slice is complete. The remaining
+   smallest operational slice is for `@orchestrator` and `@lakehouse` to prove one
+   unattended synthetic-safe run from that deployment-owned schedule contract before
    waiting for a full monthly cycle.
 4. **Dependencies** — `@orchestrator` owns run lifecycle and exit codes; `@lakehouse`
    owns persistence/reporting; `@security` reviews identity and retention; `@preceptor`
@@ -782,8 +795,8 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
   calibration waits for honest coverage.
 - Sprint 5.4 implementation is conditional on its API proof; a failed proof produces an
   explicit limitation, not a substitute design.
-- Sprint 5.5 schedule-contract work can begin early, but its release gate waits for the
-  preceding evidence and scoring gates.
+- Sprint 5.5's schedule-contract definition has landed early, but its proof run and
+  release gate wait for the preceding evidence and scoring gates.
 - Ruleset-incompatible runs are not plotted as improvement/regression. They require a
   new baseline or an explicit migration approved by `@scorer`.
 
