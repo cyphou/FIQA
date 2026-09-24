@@ -46,6 +46,7 @@ same `run_id` is idempotent, and a new run appends.
 ## Constraints
 
 - Do NOT mutate or delete a prior run's data
+- Sole explicit exception: `LakehouseRetentionPruner.prune()` may delete expired partitions only when deliberately invoked by an operator/deployment, never from the normal write path
 - Do NOT reshape a Gold mart without updating the downstream semantic model and docs
 - Do NOT write Bronze payloads containing secrets or PII — coordinate with `@security`
 - Do NOT emit raw HTML from object names; escape every interpolated value
@@ -62,4 +63,5 @@ first needs failures fast, the second needs the shape of the problem and its cos
 
 - `LakehouseWriter(root, run_id).write_run(run, backlog, inventory=..., bronze=...)`
 - `write_bronze()` / `write_silver()` / `write_gold()`
+- `LakehouseRetentionPruner(root, now).prune()` — explicit operator/deployment action only
 - `to_console(run, backlog)` / `to_html(run, backlog)`

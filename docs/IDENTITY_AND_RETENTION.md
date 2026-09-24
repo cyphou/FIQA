@@ -333,17 +333,36 @@ partition, not a date inferred from `run_id`:
 | Gold readiness marts | 730 days | Longer retention supports trend and remediation comparison across compatible runs, but Gold is still tenant data: object names, findings, and nested outcome fields are not anonymous. |
 
 Expiry means deletion from the active Lakehouse, not archival. No layer has an
-indefinite default. A future deployment-owned housekeeping job must delete every table
-partition for an expired `run_id` in the applicable layer and retain enough durable
-lifecycle metadata to determine expiry for completed, failed and partial runs. A
-partition with no trustworthy lifecycle timestamp must fail visibly for operator action
-rather than be kept indefinitely.
+indefinite default. `LakehouseWriter.write_run` now persists durable lifecycle metadata
+for completed and partial runs, and the separately invoked
+`LakehouseRetentionPruner.prune` applies each layer's cutoff only to manifest-declared
+NDJSON partitions. A missing, malformed or incomplete manifest fails visibly for
+operator action and never authorizes deletion.
 
-This is a documented contract, not current enforcement. As of 2026-09-24,
-`LakehouseWriter` writes each `run_id` partition but has no listing, expiry, archival or
-deletion mechanism, and this repository does not yet provide a scheduled housekeeping
-job. Building that job — including durable lifecycle metadata and failure handling
-across OneLake/Delta tables and NDJSON partitions — is follow-on engineering work.
+Manifests are authoritative for retention classification, but they are mutable and not
+tamper-evident. Anyone able to edit both a manifest and its partitions already has
+destructive access to the evidence store, so storage ACLs must protect manifests to the
+same standard as the evidence itself. The pruner validates manifest shape, declared
+scope and root containment; it does not authenticate the truth of a retention timestamp
+against an independent lifecycle source.
+
+On platforms with directory-handle (`dir_fd`) support, such as Linux and macOS, expired
+partition deletion is anchored to the already validated table directory handle, closing
+the directory-swap race **@security** identified. On platforms without those portable
+stdlib primitives, including Windows, a narrow residual race remains: a concurrently
+running process with filesystem write access to the Lakehouse root could, in principle,
+redirect a deletion by replacing a directory with a reparse point at the exact moment
+between the pre-delete check and the delete call. This requires an already-present,
+concurrently active, filesystem-privileged local process — a threat model far beyond
+this tool's single-operator/deployment-identity execution model — and is accepted as a
+stated residual risk on that platform rather than fixed, given the added complexity a
+full fix would require without portable stdlib primitives. This is a deliberate,
+disclosed trade-off, not an oversight.
+
+The enforcement mechanism is implemented and tested, but it is not automatic. This
+repository does not yet wire the pruner into a recurring Fabric deployment schedule or
+claim a live scheduled retention cycle; that deployment-owned invocation, including its
+Delta housekeeping boundary, remains follow-on operational work.
 
 Before an unattended production schedule goes live, **@security** must review the
 identity, scopes, retention windows, missing-timestamp failure path and housekeeping
