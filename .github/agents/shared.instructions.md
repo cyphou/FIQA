@@ -80,6 +80,18 @@ defect, regardless of how much nicer the output looks.
     `python scripts/check_agent_ownership.py` reports the current state and
     `tests/test_agents.py` fails the build on drift.
 12. **Pre-push privacy and provenance audit** — see below. Required before every push.
+13. **Production execution, storage, and consumption happen in Fabric, not on a
+    laptop** — the deployed target is Notebook → `FabricIQReadiness` Lakehouse
+    (Bronze/Silver/Gold via OneLake) → Direct Lake semantic model → report, exactly as
+    `fabric_iq/deployment.py` and `fabric_iq/lakehouse.py` already implement. Running
+    `assess.py` against a local folder or an external evidence store (for example
+    `C:\FabricIQ-Evidence\`) is a development/test convenience only; it must never be
+    presented as, or substituted for, a production run. A live proof of this pipeline
+    counts only when the Notebook executes inside the workspace, writes Gold marts to
+    OneLake, and the model/report are refreshed from there — not when evidence is
+    pulled to a local machine through an interactive session. This does not relax rule
+    2 or the identity/scope prerequisites of Sprint 5.1: the Notebook's own read-only
+    service principal still needs prior `@security` review before any real collection.
 
 ### Documentation Gate
 

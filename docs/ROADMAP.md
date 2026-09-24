@@ -33,6 +33,33 @@ Every increment and release gate preserves these constraints:
   operator must know to act on a verdict lives in human documentation, and any engine
   value an AI-facing file restates is held to the constant by an executable check.
 
+## Architecture Principle: Fabric Is the Production Target
+
+Production execution, storage, and consumption for this project happen **inside
+Fabric**, not on a laptop: Notebook → `FabricIQReadiness` Lakehouse (Bronze/Silver/Gold
+via OneLake) → Direct Lake semantic model → report. This is already implemented, not
+aspirational. `fabric_iq/deployment.py`'s `build_notebook_content` binds the deployed
+`Fabric_IQ_Readiness_Assessment` Notebook to that Lakehouse through the
+`dependencies.lakehouse` metadata block — without which the Notebook has no
+`/lakehouse/default` mount and every path in it would fail at runtime — and
+`fabric_iq/lakehouse.py`'s `LakehouseWriter` documents its own `root` as "a local folder
+during development and a OneLake `Files/` path when executed from a Fabric notebook."
+
+Local CLI runs against `examples/sample_tenant`, a local `artifacts/` output, or an
+external evidence folder (for example, a path outside the repository used to hold
+findings from an interactive exploratory session) are development/test conveniences
+only. They exercise the same engine, but they are **not** a production run: no such run
+may be described, cited, or accepted as production evidence, and none satisfies a
+release gate that requires Fabric execution. A live proof of this pipeline counts only
+when the Notebook executes inside the workspace under its own configured identity,
+writes Gold marts to OneLake, and the Direct Lake model/report refresh from there — not
+when evidence is pulled to a local machine through an interactive session.
+
+This does not relax the Sprint 5.1 identity/scope prerequisite: the Notebook's own
+read-only service principal still needs prior `@security` review before any real
+collection, whether that collection happens through the Notebook or through an
+interactive session.
+
 ## Evidence-Based Development State
 
 The status below reflects executable repository evidence and bounded live-validation
@@ -67,7 +94,7 @@ At this review the documentation gate reported:
   map. The seventh is [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md), owned by
   `@collector`;
 - `python scripts/check_evidence_sinks.py` exit 0 — **62 writer destinations** and
-  documented output examples each resolve to a committed `.gitignore` rule, all **102
+  documented output examples each resolve to a committed `.gitignore` rule, all **103
   tracked files** remain trackable (none shadowed by a broad pattern such as `*.jsonl`
   or `Mart*.csv`), and no tracked file carries a real tenant identifier, UPN, email, or
   non-placeholder GUID. Both figures move with the working tree and are properties of the
@@ -436,6 +463,33 @@ later as something it was not.
    restated below. Sprint 5.2 inherits a **provisional shortlist to re-confirm**, not a
    confirmed field set, plus one new design constraint recorded in its own entry.
 
+### Re-Verification Attempt — 2026-09-24 — Live Workspace Unreachable
+
+Later the same day, this session attempted to re-probe the live "Fabric IQ Readiness"
+workspace exercised by the exploratory read above, as a sanity check before further
+planning. The attempt failed on every path tried. It is recorded factually, without
+elaboration beyond what was actually observed, because it changes how Sprint 5.1's
+evidence must be produced even though it changes nothing about the sprint's scope:
+
+- `Fabric-MCP-onelake_list-items` against the workspace ID recorded earlier in the
+  session returned `WorkspaceNotFound` (404).
+- The workspace does not appear at all in a full 81-entry OneLake workspace listing by
+  name.
+- `Fabric-MCP-core_search-catalog` returned `403 InsufficientScopes` — the same call
+  that had succeeded earlier in this same session.
+
+Nothing beyond these three observations is claimed. In particular, this does **not**
+establish *why* the workspace became unreachable (deletion, rename, a permission change,
+or session/token state) — only that it did. What it does establish, consistent with the
+**Architecture Principle** above: ad hoc interactive-session probing of a live tenant is
+not a stable or appropriate way to validate this pipeline, and was never the target
+architecture. The deployed pipeline's actual functioning must be proven by running the
+`Fabric_IQ_Readiness_Assessment` Notebook inside Fabric under its own configured
+identity — once Sprint 5.1's scoped-service-principal prerequisite is met — not by
+further interactive-session probing from outside. This finding does not reopen, close,
+or change the scope of Sprint 5.1; it reinforces why the sprint's prerequisite is a
+service-principal proof rather than a repeatable interactive read.
+
 ### Sprint 5.1 — Close the API Reality Matrix (3–5 days) — 🟥 **OPEN**, next actionable sprint
 
 **Status: not cleared.** The 2026-09-24 exploratory read did **not** satisfy this sprint,
@@ -446,6 +500,13 @@ privileges rather than a **read-only service principal**. What is still required
 **re-run under a service principal whose scopes and evidence expiry `@security` approves
 first**. Until that exists, every availability classification in the matrix is
 provisional, however plausible it looks.
+
+The same-day **Re-Verification Attempt** recorded above adds a second reason this cannot
+be closed by further interactive probing: the workspace it exercised became unreachable
+the same way it had been reached earlier in the session. Per the **Architecture
+Principle**, the re-run this sprint requires is the `Fabric_IQ_Readiness_Assessment`
+Notebook executing inside Fabric under its own configured identity — not another
+interactive-session read, however it is authenticated.
 
 **Blocked on one prerequisite that is not repository work:** an authorised test tenant
 and service principal with read-only scope. Every slice below is an evidence-acquisition
@@ -612,7 +673,11 @@ tenant-derived evidence.
    next compatible run.
 2. **Current evidence** — Pipeline execution, persistence, baseline selection, trends,
    coverage-loss classification, burn-down, self-assessment, and CI exit codes exist.
-   There is no versioned schedule artifact or recorded unattended monthly cycle.
+   There is no versioned schedule artifact or recorded unattended monthly cycle. Per the
+   **Architecture Principle** above, the unattended run this sprint must prove is the
+   Notebook executing inside Fabric against the `FabricIQReadiness` Lakehouse — a
+   scheduled local CLI run, or a run writing to an external evidence folder, does not
+   satisfy this sprint's outcome no matter how automated it is.
 3. **Smallest slice** — `@orchestrator` and `@lakehouse` define one deployment-owned
    schedule contract with cadence, overlap prevention, identity, retention, failure
    notification, and rerun procedure; prove one unattended synthetic-safe run before
