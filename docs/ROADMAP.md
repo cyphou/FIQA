@@ -83,7 +83,7 @@ At this review the documentation gate reported:
 
 - ruleset `2026.09.1`, **65 rules** across five object types — tenant 12, workspace 11,
   semantic model 17, report 10, Data Agent 15;
-- **397** passing unit tests, **2 skipped by design on Windows** —
+- **403** passing unit tests, **2 skipped by design on Windows** —
   `tests.test_evidence_sinks` cannot create a filename containing a control character
   on NTFS, so the `-z` quoting proof skips rather than passing vacuously; and
   `tests.test_lakehouse`'s `dir_fd`-anchored deletion proof skips because Windows

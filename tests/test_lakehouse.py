@@ -412,6 +412,71 @@ class LakehouseRetentionTests(unittest.TestCase):
             self.assertEqual(len(result.pruned), 1)
             self.assertFalse(result.failures)
 
+    def test_fallback_delete_reports_partition_swap_race_and_deletes_nothing(self):
+        """The non-``dir_fd`` deletion path must refuse to remove a swapped partition.
+
+        On Windows this fallback is the only deletion path, so the ``_same_file``
+        check between ``partition_stat`` and the pre-delete ``delete_stat`` is the
+        sole protection against the partition being replaced between authorisation
+        and ``os.remove``. The swap is injected at the moment the pre-delete
+        ``_safe_existing_path`` re-check reads the path, so ``delete_stat`` describes
+        a *different* file than the one retention actually authorised; the guard must
+        fire, nothing may be pruned, and the substituted file must survive on disk.
+        """
+        run_id = "fallback_partition_swap"
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as external:
+            partition_path, _, _ = self._write_expired_partition_with_manifest(tmp, run_id)
+            original_inode = os.stat(partition_path).st_ino
+            substitute_source = os.path.join(external, "substitute.jsonl")
+            substitute_marker = "substituted file must survive\n"
+            with open(substitute_source, "w", encoding="utf-8") as handle:
+                handle.write(substitute_marker)
+
+            original_stat = lakehouse_module.os.stat
+            target = os.path.normcase(os.path.abspath(partition_path))
+            partition_stat_calls = 0
+            race_injected = False
+
+            def racing_stat(path, *args, **kwargs):
+                nonlocal partition_stat_calls, race_injected
+                if (
+                    isinstance(path, (str, bytes, os.PathLike))
+                    and kwargs.get("dir_fd") is None
+                    and os.path.normcase(os.path.abspath(os.fspath(path))) == target
+                ):
+                    partition_stat_calls += 1
+                    # Call 1 authorises the partition; call 2 is the pre-delete
+                    # re-check that produces ``delete_stat``. Swap the file in
+                    # between so the re-check observes the substituted inode.
+                    if partition_stat_calls == 2 and not race_injected:
+                        race_injected = True
+                        os.replace(substitute_source, partition_path)
+                return original_stat(path, *args, **kwargs)
+
+            with (
+                mock.patch.object(
+                    lakehouse_module, "_dir_fd_deletion_supported", return_value=False
+                ),
+                mock.patch.object(lakehouse_module.os, "stat", side_effect=racing_stat),
+            ):
+                result = LakehouseRetentionPruner(tmp, self.NOW).prune()
+
+            self.assertTrue(race_injected, "the swap hook never fired; the test proves nothing")
+            self.assertTrue(
+                os.path.exists(partition_path),
+                "the substituted file was deleted without authorisation",
+            )
+            with open(partition_path, encoding="utf-8") as handle:
+                self.assertEqual(handle.read(), substitute_marker)
+            self.assertNotEqual(os.stat(partition_path).st_ino, original_inode)
+            self.assertFalse(result.pruned)
+            self.assertFalse(result.kept)
+            self.assertEqual(len(result.failures), 1)
+            failure = result.failures[0]
+            self.assertEqual(failure.reason, "partition changed during retention check")
+            self.assertEqual(failure.run_id, run_id)
+            self.assertEqual(failure.path, partition_path)
+
     def test_symlinked_manifest_file_is_reported_and_not_trusted(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as external:
             partition_path, manifest_path, manifest = self._write_expired_partition_with_manifest(
