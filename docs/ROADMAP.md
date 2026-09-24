@@ -76,6 +76,7 @@ records, not earlier roadmap labels.
 | Data Agent readiness | Fifteen static rules consume supplied evidence and degrade missing inputs to `NOT_EVALUATED`. | No harness executes a corpus against a real agent; behavioural accuracy, refusal, latency, and persona isolation are therefore not measured by this repository. | 🟡 Static only |
 | Fabric publication | Notebook, Data Pipeline, Lakehouse, Gold Delta marts, Direct Lake semantic model/report, run summary, trends, burn-down, and CI exit gates exist. The model/report synthetic self-assessment gate is executable. A versioned schedule contract covering cadence, `concurrency: 1` overlap prevention, identity requirement, schedule-run housekeeping, failure notification, and rerun procedure is documented in `fabric/README.md` and `docs/INSTALL.md`; the Bronze/Silver/Gold retention contract is documented as 90/180/730 days in `fabric_iq/lakehouse.py` and `docs/IDENTITY_AND_RETENTION.md`, with a durable per-run manifest and a tested, explicitly invoked `LakehouseRetentionPruner.prune()` mechanism now implemented. | No actual unattended/scheduled run has been evidenced. Retention enforcement is a tested library mechanism only: no live deployment schedule invokes the pruner yet. “Scheduled” and “unattended” are not yet delivered claims. | 🟡 Schedulable |
 | Re-measurement | Comparable-run trends, automatic baseline selection, coverage-loss classification, and remediation-state comparison are implemented. | A repeatable operational cadence, ruleset-compatible baseline policy, and recorded remediation/re-measure cycle are not yet proven end to end. | 🟡 Mechanism delivered |
+| Consumption-surface coverage | Nothing. The 65 rules assess tenant, workspace, semantic model, report and Data Agent objects. | A 2026-09-24 documentation review found the **GA** Microsoft 365 consumption surface (Cowork, Copilot Chat) assessed by no rule, the **preview** Fabric IQ ontology item enumerated by the collector but judged by nothing, and one headline verdict standing for four different reachability paths. Planned as Phase 6; nothing is started. | 🟥 Not started |
 
 ### Verified Repository Baseline
 
@@ -83,21 +84,21 @@ At this review the documentation gate reported:
 
 - ruleset `2026.09.1`, **65 rules** across five object types — tenant 12, workspace 11,
   semantic model 17, report 10, Data Agent 15;
-- **403** passing unit tests, **2 skipped by design on Windows** —
+- **486** passing unit tests, **2 skipped by design on Windows** (488 run) —
   `tests.test_evidence_sinks` cannot create a filename containing a control character
   on NTFS, so the `-z` quoting proof skips rather than passing vacuously; and
   `tests.test_lakehouse`'s `dir_fd`-anchored deletion proof skips because Windows
   supports neither `os.O_DIRECTORY` nor `dir_fd` for `os.stat`/`os.unlink` — the test
   runs (0 skipped) and passes on Linux/macOS, where the anchored delete is live;
 - clean generated rule documentation, internal links, and synthetic self-assessment gate;
-- `python scripts/check_agent_ownership.py` exit 0 — **26** modules under `fabric_iq/`
+- `python scripts/check_agent_ownership.py` exit 0 — **27** modules under `fabric_iq/`
   and `scripts/` claimed exactly once, and the **7** documents and skills asserting a
   privacy, identity, retention or collection-capability claim — or read by a model as
   instruction — each claimed by exactly one agent through an explicit `REQUIRED_DOCS`
   map. The seventh is [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md), owned by
   `@collector`;
-- `python scripts/check_evidence_sinks.py` exit 0 — **62 writer destinations** and
-  documented output examples each resolve to a committed `.gitignore` rule, all **103
+- `python scripts/check_evidence_sinks.py` exit 0 — **75 writer destinations** and
+  documented output examples each resolve to a committed `.gitignore` rule, all **105
   tracked files** remain trackable (none shadowed by a broad pattern such as `*.jsonl`
   or `Mart*.csv`), and no tracked file carries a real tenant identifier, UPN, email, or
   non-placeholder GUID. Both figures move with the working tree and are properties of the
@@ -110,9 +111,16 @@ At this review the documentation gate reported:
   registers them with the gate — both resolve to the ignored `artifacts/` rule. Prose
   that names an output path *is* an output example; that is the design, and it is the
   lesson of the 2026-09-23 exposure, which arrived through a documented path and not
-  through a collector. The tracked-file figure rises to 103 when the currently untracked
-  API reality matrix is committed; the destination figure will not move with it, because
-  the `artifacts/live` example it carries is already registered here.
+    through a collector. The API reality matrix has since been committed, which is part of
+    why the tracked-file figure now reads 105; the destination figure did not move with
+    it, because the `artifacts/live` example it carries was already registered here.
+
+  All five figures above were re-verified against the current revision on **2026-09-24**
+  by running the four gate commands directly, and the stale values they replaced (403
+  tests, 26 modules, 62 destinations, 103 tracked files) had drifted since the previous
+  review. **The Phase 6 addition below moved none of them**: it is a documentation-only
+  change to this file, it adds no module, no rule, no test and no output path, and it must
+  never be cited as having changed a count.
 
 Both checks were shown to be non-vacuous by deliberate negative tests on 2026-09-23:
 removing the `powerbi_report/` ignore rule, planting a UPN in a tracked file, and
@@ -804,12 +812,354 @@ The phase closes only when all of the following are executable or evidenced:
     stubbed, unclaimed, moved to a Skill, or stripped of a single concept, while a
     reasonable rewording still passes.
 
+---
+
+## Phase 6 — Consumption-Surface Readiness 🟥
+
+**Nothing in this phase is delivered.** Every sprint below is **open** and none may be
+marked met, closed, or partially credited. This phase adds no rule, no object type, and
+no scoring behaviour at the revision that introduces it; it records a scope finding and
+the smallest increments that would close it.
+
+**Outcome.** A readiness verdict names the **consumption surface** it is about. An
+organisation learns whether its estate is reachable by the Microsoft 365 surfaces that
+are generally available today, by the in-Fabric agent surfaces, and by the preview
+ontology workload — as distinct answers, not as one number.
+
+**Concrete anchor.** The project is named `IsFabricReadyForIQ` and its 65 rules cover
+tenant, workspace, semantic model, report and Data Agent objects. A documentation review
+on 2026-09-24 (recorded below) found that the Microsoft 365 consumption surface — which
+is **GA** — is assessed by nothing in the repository, while the Fabric IQ **ontology**
+item, which is **preview**, is named in the product title and has zero rules. The
+repository facts behind that statement were verified directly: `fabric_iq/models.py`
+declares exactly six `ObjectType` members and stops at `DATA_AGENT`; the words `M365`,
+`Microsoft 365`, `Cowork` and `Copilot Chat` appear nowhere in the repository except one
+unrelated `CHANGELOG.md` line; `python assess.py --list-rules` at ruleset `2026.09.1`
+returns no endorsement rule and exactly one rule mentioning geography, `TEN-006`.
+
+**Falsifiable hypothesis.** The readiness properties that govern the GA Microsoft 365
+path — two tenant settings, artifact endorsement and discoverability, and whether an
+object's type is reachable at all — are either observable through the same read-only
+surfaces this project already uses, or they are not, in which case the rules that depend
+on them stay `NOT_EVALUATED` and the phase says so rather than inferring them.
+
+**Cheap check.** Before any rule is written, `@collector` confirms whether the two
+uncovered tenant settings and the item-level endorsement field are returned by an already
+exercised read surface, and records the answer in
+[`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md) with the identity that obtained it.
+A setting that cannot be read is a documented blind spot, not a default-on assumption —
+even though Microsoft documents one of the two as enabled by default. Encoding a vendor
+default as an observed tenant value is exactly how a collection gap becomes a verdict.
+
+**Exit gate.** All five criteria in **Release Gate for Phase 6** are met; in particular,
+no single headline verdict is presented as readiness for a consumption surface whose
+reachability the run did not assess, and every ontology and Microsoft 365 rule without
+confirmed evidence remains `NOT_EVALUATED` rather than passing or scoring zero.
+
+### Documentation Review — 2026-09-24 — Fabric IQ Product-Fit Against Public Sources
+
+**Not a sprint, and explicitly not a live-tenant observation.** It clears no Phase 5
+gate, moves no Phase 5 criterion, and evidences no rule. It is recorded here on the same
+terms as the **Exploratory Read** entry above: it produced durable knowledge that
+constrains later design, and an unrecorded review is the kind of thing that gets
+re-quoted later as something it was not.
+
+1. **What happened** — A product-fit review compared this project's assessed scope with
+   the documented Fabric IQ surface. Every fact below comes from a **public Microsoft
+   Learn page read on 2026-09-24**. **None of it has been verified against a live
+   tenant.** No API was called for readiness evidence, no tenant setting was observed, no
+   object was assessed, and no fixture was produced. Product documentation states what a
+   product is designed to do; it does not state what a given tenant is configured to do,
+   and this project has never accepted the first as evidence of the second.
+2. **The core finding — the GA/preview inversion** — *Microsoft IQ* is an umbrella of
+   three layers: **Fabric IQ** (business entity and data context), **Work IQ** (Microsoft
+   365 work context) and **Foundry IQ** (developer and agent grounding); Fabric IQ is a
+   Fabric workload and the IQ workload is **preview**
+   (`https://learn.microsoft.com/fabric/fundamentals/fabric-terminology#fabric-iq`,
+   2026-09-24). Against that frame, the project's scope is inverted:
+   - The **Fabric IQ plugin in Microsoft 365 Copilot Cowork is GA** and is **installed by
+     default** in Cowork
+     (`https://learn.microsoft.com/fabric/iq/connectors/cowork-overview`, 2026-09-24).
+   - **Data answering from Power BI content in Microsoft 365 Copilot Chat is GA**
+     (`https://learn.microsoft.com/fabric/iq/connectors/microsoft-365-copilot-overview`,
+     2026-09-24).
+   - The **ontology** item — the Fabric IQ semantic layer in OneLake carrying entity
+     types, properties, relationships, constraints, data bindings to real OneLake data, a
+     graph representation and a concept-level query surface — is **preview**
+     (`https://learn.microsoft.com/fabric/iq/ontology/overview`, 2026-09-24).
+   The GA surface is assessed by nothing; the preview artifact is in the product name.
+   That ordering is the finding, and it is why Sprint 6.1 precedes Sprint 6.3.
+3. **What the GA Microsoft 365 path actually depends on** — All from the two connector
+   pages, read 2026-09-24:
+   - **Three tenant settings gate the Copilot Chat path.** *Fabric data available in M365
+     Copilot* lives in the **Microsoft 365 admin center** and is enabled by default.
+     *Share Fabric data with your Microsoft 365 services* lives in the **Fabric admin
+     portal** and controls whether Fabric proactively shares metadata; when it is off,
+     Power BI content stops appearing in Copilot search and the item-attachment menu,
+     though users can still paste links or name reports. *Data sent to Azure OpenAI can
+     be processed outside your capacity's geographic region…* is required for tenants
+     outside the United States and European Union. Of these three, **only the cross-geo
+     setting has a rule** (`TEN-006`); the other two have none.
+   - **Reachability is type-dependent.** Cowork grounds only on Power BI reports and the
+     semantic models behind them. It does **not** ground on dashboards, paginated (RDL)
+     reports, share links, a semantic model referenced directly by name, or other Fabric
+     items — the page names **ontologies and data agents** among the excluded items.
+     Copilot Chat likewise does not support paginated reports, dashboards, top-level apps
+     or report **share links** (the resolved long-form URL is required), though a
+     semantic model URL may be pasted.
+   - **Discoverability is a ranking problem.** Cowork artifact discovery uses
+     **endorsements, cross-item relationships and most-recently-used activity** as
+     signals; it supports **Verified Answers** and schema selection, and reports in
+     **workspace apps** are supported. The 65-rule catalogue contains **no endorsement
+     rule**, so a property that decides whether the right report is found at all is
+     currently unassessed.
+   - **Answers carry no citation in Cowork.** Microsoft advises opening the source report
+     to confirm a value before acting on it. Sensitivity labels propagate: the
+     conversation takes the **most restrictive** label of any content used, and content
+     Cowork subsequently creates — emails, meeting invites, files — **inherits** it.
+   - **Copilot Chat prerequisites and security** — a **Microsoft 365 Copilot Premium**
+     license for all users, plus Power BI permission and licensed access; **RLS and OLS**
+     are both honoured.
+4. **Three refinements this review made to its own starting statement** — recorded
+   because a review that only confirms what it set out to confirm has not been run:
+   - **DLP differs between the two GA surfaces.** The Copilot Chat page states DLP
+     policies apply and can stop Copilot using Power BI content with a prohibited
+     sensitivity label. The Cowork page states **DLP is not currently supported in
+     Cowork**. Two GA surfaces, two different data-protection answers; any rule phrased
+     as "M365 Copilot enforces DLP" would be wrong for one of them.
+   - **The Copilot Chat exclusion of agents and ontologies is conditional, not
+     absolute.** The page states Fabric data agents and ontologies "can't answer
+     questions in Copilot Chat **without an explicitly published Microsoft 365 agent**".
+     For **Cowork** the exclusion is unqualified. So the reachability statement must be
+     made per surface: Cowork — not reachable; Copilot Chat — reachable only through an
+     explicitly published Microsoft 365 agent.
+   - **The ontology agent list has five entries, not four.** Alongside the **Fabric
+     operations agent**, **Fabric data agent**, **Foundry IQ agent** and **Copilot Studio
+     agent**, the page lists **custom agents using the ontology MCP server**
+     (`https://learn.microsoft.com/fabric/iq/ontology/concepts-agent-integration`,
+     2026-09-24). Separately, a Fabric data agent may use an **ontology as one of its
+     data sources**, alongside a warehouse, lakehouse, Power BI semantic model, KQL
+     database or mirrored database
+     (`https://learn.microsoft.com/fabric/data-science/data-agent-microsoft-copilot-studio-tool`,
+     2026-09-24).
+5. **The scoring-validity finding, which is the one that matters** — Cowork cannot reach
+   data agents or ontologies at all. An organisation can therefore score **100/100 on all
+   fifteen Data Agent rules and get nothing in Cowork**. The current headline verdict does
+   not state *which consumption surface* it means, so four different reachability paths —
+   Cowork, Copilot Chat, in-Fabric agents, and the ontology workload — are collapsed into
+   one answer. This is the same category of error the **Non-Negotiable Contract** already
+   forbids when it keeps eligibility, score and confidence separate and never lets one
+   substitute for another. It is raised here as a `@scorer`-owned **design question**
+   under Sprint 6.2, not as a defect to be patched quietly in a rule or a report.
+6. **Repository gaps confirmed at this revision** — verified directly, not inferred:
+   `ObjectType` has six members and **no `ONTOLOGY`**, and there are **zero ontology
+   rules**; yet `fabric_iq/collectors/fabric_api.py` already enumerates the `Ontology`
+   item type and already maps an `OntologyPreview/AgentsEnabled` tenant setting — the
+   engine can **see** ontologies and never **judges** them. `M365`, `Microsoft 365`,
+   `Cowork` and `Copilot Chat` occur nowhere in the repository outside one unrelated
+   `CHANGELOG.md` line. Of the three gating settings only cross-geo is covered
+   (`TEN-006`). There is no endorsement rule. All ten `REP-*` rules assess report
+   **quality**; none assesses **reachability** by a consumption surface.
+7. **Consequences carried forward** — Phase 5's sequence and blockers are unchanged.
+   Nothing here evidences a field, so Sprint 5.1 is still the next actionable sprint and
+   its prerequisite is still an authorised test tenant and an approved read-only service
+   principal. Every fact above is a **documented product behaviour to be re-confirmed at
+   implementation time**, with its verification date restated, exactly as
+   `docs/KNOWN_LIMITATIONS.md` §8 requires of any encoded limit.
+
+### Sprint 6.1 — Assess the GA Microsoft 365 Consumption Surface — 🟥 **OPEN**, not started
+
+Ordered first on purpose, and the ordering is counter-intuitive. The artifact in the
+product name — the ontology — is scheduled **last**, and the surface the product is not
+named after is scheduled **first**. The reason is that Cowork and Copilot Chat are **GA
+today** and completely unassessed, while the ontology workload is **preview** and will
+keep changing shape under any rule written against it now. Assessing the stable,
+shipping, unassessed surface before the moving, preview, named one is the cheaper and
+more defensible order. It is also the smaller change: this sprint adds no object type.
+
+1. **Outcome** — A run states whether the tenant's Microsoft 365 consumption path is
+   open, and whether the estate is discoverable and reachable through it — or records
+   explicitly that it could not tell.
+2. **Current evidence** — **Open**, and nothing exists. Zero repository occurrences of
+   `M365`, `Microsoft 365`, `Cowork` or `Copilot Chat` outside one unrelated
+   `CHANGELOG.md` line. Of the three documented gating settings only cross-geo is covered
+   by `TEN-006`. No endorsement rule exists in the 65-rule catalogue. No rule flags an
+   object whose **type** cannot be reached by either GA surface.
+3. **Smallest slice** — Not a rule. The first change is `@collector` establishing, in
+   [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md), whether *Share Fabric data with your
+   Microsoft 365 services* is readable from the Fabric admin settings surface this
+   project already uses, and whether item endorsement is returned by an enumeration
+   surface already exercised. The Microsoft 365 admin center setting is a **different
+   control plane** and may not be readable by a Fabric-scoped principal at all; if so it
+   is recorded as `absent` and its rule is born `NOT_EVALUATED`. Only after that record
+   exists does `@tenant` add the tenant-setting rules, and `@semantic`/`@tenant` the
+   endorsement and type-reachability rules, one field family at a time under the Sprint
+   5.2 discipline.
+4. **Dependencies** — `@collector` owns the availability record and any new read;
+   `@tenant` owns tenant and workspace rules; `@semantic` owns report and semantic-model
+   rules, including endorsement and reachability by type; `@readme` owns the Cowork and
+   Copilot Chat product limits, which belong in `docs/KNOWN_LIMITATIONS.md` §8 style with
+   a public source and an exact verification date — **this roadmap does not write them
+   there and must not be cited as if it had**; `@security` reviews any new scope. Sprint
+   5.1's identity prerequisite binds any live confirmation performed here.
+5. **Validation** — Focused check: synthetic present, absent, null, forbidden and
+   malformed cases for each new setting and for endorsement produce the expected evidence
+   and rule outcome, and a fixture with a paginated report and a dashboard produces a
+   reachability finding without altering either object's existing quality score. Release
+   gate: no Microsoft 365 rule passes on an unread setting, a documented vendor default is
+   never substituted for an observed value, and every encoded Cowork or Copilot Chat limit
+   carries a source and verification date.
+6. **Risks and non-goals** — The Microsoft 365 admin center setting may be unreadable
+   from Fabric, which would leave one of the three gates permanently `NOT_EVALUATED`;
+   that is an honest outcome and not a reason to assume it. Cowork and Copilot Chat are
+   moving GA surfaces and their limitation lists will change. This sprint does **not**
+   assess Work IQ or Foundry IQ, does not evaluate Copilot answer quality, does not
+   measure whether users find the right report, does not license-check individual users,
+   and does not lower any existing report or model score because an object is
+   unreachable — reachability is a separate statement, not a quality deduction.
+7. **Commit boundary** — The availability record is a `@collector` boundary and lands
+   first, alone. Each rule family — tenant settings, endorsement, type reachability —
+   is its own owner's boundary with its own synthetic fixtures. The limitations
+   documentation is a separate `@readme` boundary. None of them may be bundled with the
+   Sprint 6.2 verdict change.
+
+### Sprint 6.2 — Separate Consumption Surfaces in the Verdict — 🟥 **OPEN**, not started
+
+**A `@scorer`-owned design question, deliberately left undecided here.** This entry
+states the problem and the constraint. It does not propose a shape, a field, a weight, a
+new number, or a report layout, because pre-deciding the design in a planning document is
+how a scoring change arrives without scorer review.
+
+1. **Outcome** — A reader can tell which consumption surface a verdict is about, and
+   cannot mistake readiness for one surface as readiness for another.
+2. **Current evidence** — **Open.** The engine produces one readiness verdict per run
+   with no notion of a consumption surface. Because Cowork reaches neither data agents nor
+   ontologies, an estate can score **100/100 across all fifteen Data Agent rules** and
+   deliver nothing in Cowork; the verdict would not say so. Four reachability paths —
+   Cowork, Copilot Chat, in-Fabric agents, the ontology workload — are currently collapsed
+   into one answer.
+3. **Smallest slice** — A `@scorer`-owned design note in `docs/SCORING.md` that states the
+   problem, enumerates the candidate shapes with their failure modes, and is reviewed
+   before any code moves. No engine change, no model change, and no report change lands in
+   the same increment as that note.
+4. **Dependencies** — `@scorer` owns the shared data model, the maths and the decision;
+   `@lakehouse` owns any downstream mart or report consequence and must not pre-empt it;
+   `@preceptor` reviews whether the resulting output is defensible to an operator;
+   `@readme` and `@remediation` follow the decision rather than anticipating it. Sprint
+   6.1 should land first so the reachability inputs exist before the verdict tries to
+   express them.
+5. **Validation** — Focused check: a regression fixture in which an estate is strong on
+   Data Agent rules and unreachable from Cowork must not produce an output a reader can
+   read as "ready for Cowork". Release gate: whatever shape is chosen, eligibility, score
+   and confidence remain three separate results; blocking cap 39, major cap 59 and the
+   50% coverage floor keep their regression coverage; and an unassessed surface reports
+   `NOT_EVALUATED` rather than contributing a flattering component.
+6. **Risks and non-goals** — **The binding constraint: this must not become a single
+   merged number.** Averaging per-surface readiness into one figure would recreate the
+   exact defect it exists to fix, and adding a fourth headline result carries its own
+   cost in comprehensibility — which is why the trade-off is `@scorer`'s to make and not
+   this document's. Surface definitions will drift as Microsoft changes the products.
+   Non-goals: this sprint invents no new severity, does not re-weight any existing rule,
+   does not reinterpret `NOT_EVALUATED` as a low score, and does not hide an unassessed
+   surface behind an assessed one.
+7. **Commit boundary** — The design note is one boundary and is reviewed alone. Any
+   accepted model or maths change is a separate `@scorer` boundary with a ruleset
+   increment, migration handling and regression tests. Report and mart changes follow in
+   a third, never in the same commit as the maths.
+
+### Sprint 6.3 — Ontology as an Assessed Object Type (preview) — 🟥 **OPEN**, not started
+
+Largest of the three, scheduled last, and the only one that adds an object type. It
+assesses a **preview** workload, which changes what a rule is allowed to claim: a preview
+surface that cannot be read must degrade to `NOT_EVALUATED`, and every encoded fact must
+carry its source and exact verification date so a product change is detectable rather
+than silently wrong.
+
+1. **Outcome** — Ontologies are assessed as first-class objects, with readiness
+   statements about their bindings, keys and relationships — or explicitly not assessed,
+   with the reason recorded.
+2. **Current evidence** — **Open.** `fabric_iq/models.py` declares six `ObjectType`
+   members and has **no `ONTOLOGY`**; there are **zero ontology rules**. The asymmetry
+   that makes this tractable: `fabric_iq/collectors/fabric_api.py` **already** enumerates
+   the `Ontology` item type and **already** maps an `OntologyPreview/AgentsEnabled`
+   tenant setting. The engine can see ontologies and never judges them, so the first
+   increment extends judgement over evidence that collection already reaches, rather than
+   opening a new read surface.
+3. **Smallest slice** — Not the object type. The first change is a `@collector` record of
+   what an ontology item actually returns beyond its name and type: whether entity-type
+   keys, data bindings, time-series bindings and relationship bindings are exposed to a
+   read-only caller at all. Documentation describes them
+   (`https://learn.microsoft.com/fabric/iq/ontology/overview`, read 2026-09-24); nothing
+   has confirmed they are **readable**. Only if that record shows readable fields does
+   `@scorer` add the object type and a rule owner add the first rule. If it does not,
+   the sprint's honest output is a limitation entry and no object type at all — an
+   `ObjectType` with no readable evidence produces a scorecard-shaped hole, which is
+   worse than no object type.
+4. **Dependencies** — `@collector` owns the read record; `@scorer` owns the `ObjectType`
+   addition and every downstream rollup consequence, since a new object type touches
+   coverage, confidence and the marts; `@dataagent` owns the ontology-as-data-source
+   relationship for Fabric data agents; `@lakehouse` owns mart and report impact;
+   `@readme` owns dated sourcing of every preview fact; `@tester` owns fixtures. Sprints
+   5.1 and 6.2 both precede this: the identity prerequisite governs any live read, and
+   adding an object type before the verdict knows about consumption surfaces would bake
+   the collapse this phase exists to undo.
+5. **Validation** — Focused check: an ontology fixture with unbound time-series data,
+   a missing multi-key entity-type key, and an unbound relationship type produces the
+   expected findings, while an ontology with no readable binding metadata produces
+   `NOT_EVALUATED` for every affected rule and **reduces object confidence** rather than
+   scoring zero. Release gate: adding the object type moves no existing object's score;
+   coverage, confidence and rollups account for the new type correctly; every encoded
+   preview fact carries a public source and exact verification date; and the ruleset
+   version increments with a migration note so trends do not silently join across it.
+6. **Risks and non-goals** — **This is preview.** Generating an ontology from a semantic
+   model leaves documented manual follow-up — bind time-series data, which is not created
+   automatically; review entity-type keys and add missing ones, especially multi-key;
+   bind relationship types to data; review the whole ontology for completeness
+   (`https://learn.microsoft.com/fabric/iq/ontology/concepts-generate`, read 2026-09-24).
+   Those are the natural rule candidates and they are also the most likely to change
+   before GA. A preview API may not exist, may be gated, or may change shape between
+   runs. Non-goals: this sprint does not author ontologies, does not generate or repair
+   bindings, does not evaluate ontology answer quality, does not assess Foundry IQ or
+   Work IQ, and does not let a preview object type contribute to a readiness score on
+   evidence it could not read.
+7. **Commit boundary** — The read record is one `@collector` boundary and comes first.
+   The `ObjectType` addition with its rollup, coverage and mart consequences is a single
+   `@scorer`-led boundary — a new object type is never split across commits, because a
+   half-registered type is invisible to exactly the checks that would catch it. Each rule
+   family and its fixtures follow separately. Dated preview sourcing is a `@readme`
+   boundary.
+
+## Release Gate for Phase 6
+
+The phase closes only when all of the following are executable or evidenced. **All five
+are open.**
+
+1. Every consumption surface the tool names in a verdict has at least one assessed
+   input, and every surface it does **not** assess is stated as unassessed rather than
+   omitted. **Open.**
+2. The two currently uncovered Microsoft 365 gating settings each map to a confirmed
+   field or to an explicit unavailable classification recorded with the identity that
+   obtained it, and a documented vendor default is never stored as an observed tenant
+   value. **Open.**
+3. Type reachability is reported separately from object quality: a paginated report or a
+   dashboard is flagged as unreachable by a GA surface without its existing quality
+   score moving. **Open.**
+4. The per-surface verdict decision is made by `@scorer`, recorded in `docs/SCORING.md`,
+   and does not merge surfaces into a single number; eligibility, score and confidence
+   remain three separate results throughout. **Open.**
+5. Ontology rules, if any exist, degrade to `NOT_EVALUATED` without readable evidence,
+   carry a public source and exact verification date for every preview fact, and their
+   introduction increments the ruleset version with a migration note. **Open.**
+
 ## Sequencing and Release Policy
 
 `5.0 evidence-sink hygiene ✅ → 5.0.1 standalone operability ✅ → (2026-09-24 exploratory
 read — knowledge only, clears no gate) → 5.1 API proof (next, open)
 → 5.2 evidence reconciliation → 5.3 facts/calibration → 5.4 agent proof
 → 5.5 operational re-measurement`
+
+`(2026-09-24 documentation review — knowledge only, clears no gate) → 6.1 GA Microsoft
+365 surface → 6.2 per-surface verdict decision → 6.3 ontology object type (preview)`
 
 - Sprint 5.0 is closed. It gated the live-tenant sprints: no proof run against a real
   tenant starts before every writer default and documented output path is confirmed
@@ -834,6 +1184,24 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
   release gate wait for the preceding evidence and scoring gates.
 - Ruleset-incompatible runs are not plotted as improvement/regression. They require a
   new baseline or an explicit migration approved by `@scorer`.
+- **Phase 6 does not jump the queue.** Phase 5's external blockers are unchanged by it:
+  5.1 still needs an authorised test tenant and an approved read-only service principal,
+  5.4 still needs its API proof, and 5.5 still depends on both. A documentation review
+  changes none of that, because reading a product page is not observing a tenant.
+- Like Sprint 5.0.1, **most Phase 6 work carries no external blocker** — rule authoring,
+  fixtures, the `@scorer` design note and dated limitation sourcing are all repository
+  work — so it could proceed while 5.1 waits. That is a scheduling convenience and
+  nothing more: **it does not substitute for 5.1 and closes no Phase 5 criterion.** Any
+  Phase 6 slice that needs a live confirmation inherits Sprint 5.1's identity
+  prerequisite in full and waits behind it.
+- Within Phase 6 the order is deliberate and counter-intuitive: the **GA** Microsoft 365
+  surface (6.1) precedes the **preview** ontology workload (6.3), even though the
+  preview artifact is the one in the product name. Assess the shipping surface that
+  nothing currently covers before the moving surface that will change shape under any
+  rule written against it today.
+- Sprint 6.3 must not start before 6.2 has a recorded decision. Adding an object type
+  while the verdict still collapses every consumption surface into one number would bake
+  in the defect Phase 6 exists to remove.
 
 ## Risks Across the Phase
 
@@ -856,6 +1224,10 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
 | Operator knowledge lives only in an AI-facing file, so the tool stops working without an agent | Release-gate criterion 11. Human documentation is the source and the Skill is the pointer, never the reverse: `docs/INTERPRETING_RESULTS.md` carries the reading order, the `NOT_EVALUATED` rule and the triage table, the reports print a `HOW TO READ THIS` block, and both are owned in `REQUIRED_DOCS`. A capability that only works when a model is in the room is not a capability this tool ships. |
 | A hand-written AI-facing file contradicts the engine it describes | `docs/RULES.md` is generated and checked; a Skill is not. `tests/test_skill_drift.py` holds every stated value to the imported constant and matches on the claim sentence over every occurrence, so a stale or contradictory number fails the build instead of being quoted to a model as authoritative. Any new AI-facing file restating a constant must arrive with its drift assertion. |
 | A gate fails open rather than failing loudly | Sprint 5.0.1 found the ownership claim parser could not begin a path with a dot, so a `.github/...` entry matched nothing and the check reported clean while covering it. Negative-testing a gate must include *what it cannot see*, not only what it rejects: every new gate needs a test that proves it detects the absence it exists to detect. |
+| One verdict answers for several consumption surfaces that reach different objects | Recorded 2026-09-24: Cowork reaches neither data agents nor ontologies, so an estate can score 100/100 on all fifteen Data Agent rules and deliver nothing in Cowork. A single headline verdict that does not name its surface is four answers collapsed into one — the same defect the contract already forbids when it keeps eligibility, score and confidence separate. Sprint 6.2 is the `@scorer`-owned decision; the binding constraint is that the fix must **not** be a merged per-surface number. |
+| A documented product default is stored as an observed tenant value | *Fabric data available in M365 Copilot* is documented as enabled by default, and it lives in the Microsoft 365 admin center, not the Fabric admin portal. Assuming the default because the setting is hard to read would convert a collection gap into a verdict. An unread setting is `NOT_EVALUATED`; a vendor default is never evidence about a tenant. |
+| A rule is written against a preview surface as though it were stable | The Fabric IQ workload and the ontology item are preview at 2026-09-24. Sprint 6.3 schedules the read-confirmation before the object type, requires `NOT_EVALUATED` without readable evidence, and requires a public source with an exact verification date on every encoded preview fact so a product change is detectable rather than silently wrong. |
+| Product documentation is mistaken for tenant observation | The 2026-09-24 product-fit review read public Microsoft Learn pages and called no API for readiness evidence. Documentation states what a product is designed to do, never what a tenant is configured to do. The review is recorded as a documentation review, clears no Phase 5 gate, and every fact it carries is marked for re-confirmation at implementation time. |
 
 ## Explicitly Out of Scope
 
@@ -880,6 +1252,13 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
 - Crediting a release gate to a run that did not meet its stated preconditions —
   including any read taken under an over-privileged or delegated identity, or before
   `@security` approved its scopes, retention and expiry.
+- Assessing **Work IQ** or **Foundry IQ**. This project assesses the Fabric estate and
+  the surfaces that consume it; the other two Microsoft IQ layers are named here only to
+  place Fabric IQ correctly, never as scope.
+- Stating readiness for a consumption surface the run did not assess, or letting one
+  surface's result stand in for another's.
+- Treating a documented product default, a Microsoft Learn statement, or any other
+  vendor documentation as an observation of a tenant's configuration.
 
 ## Per-Change Quality Gate
 
