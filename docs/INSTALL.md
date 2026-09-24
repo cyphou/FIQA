@@ -71,6 +71,36 @@ Same as a manual deploy — see [`fabric/README.md`](../fabric/README.md#prerequ
    assess, and run it. Once it publishes the Gold Delta tables, open the
    `IsFabricReadyForIQ` report to see scores, findings, and the remediation backlog.
 
+## 🗓️ Production Schedule Contract
+
+The installer deploys the same schedule contract described in
+[`fabric/README.md`](../fabric/README.md#schedule-contract-v1): the Data Pipeline is
+safe to schedule weekly by default, has `concurrency=1` to prevent overlapping runs,
+and generates a fresh timestamped `run_id` for each pipeline run. Operators set the
+actual recurrence in the deployed pipeline's **Schedule** panel; the repository does not
+ship a tenant-specific calendar artifact.
+
+Before enabling a recurring production schedule, make the pipeline owner/execution
+identity the Sprint 5.1 `@security`-approved read-only service principal referenced in
+[`ROADMAP.md`](./ROADMAP.md#sprint-51--close-the-api-reality-matrix-35-days---open-next-actionable-sprint).
+Fabric documents this production path as setting a service principal as the pipeline
+owner by having it update the pipeline. The delegated human identity that imports this
+installer may deploy the items, but it must not be the unattended schedule identity.
+
+For schedule-run housekeeping, keep failed or orphaned scheduler run records and
+incident notes for at least 30 days or until a successful rerun has been reviewed,
+whichever is later. That boundary covers only operational schedule attempts; the
+Bronze/Silver/Gold evidence-retention decision remains separate. A production deployment
+must also configure Fabric monitoring/alerting, or its chosen Teams/email/ITSM route, to
+notify a human on pipeline failures. When `fail_on_blocking=true`, the deployed pipeline
+raises `FabricIQReadinessBlocked` so the alert can distinguish a readiness gate from an
+infrastructure failure without parsing notebook logs.
+
+The Sprint 5.5 proof run is still open: the roadmap's Re-Verification Attempt records
+that the previously deployed `Fabric IQ Readiness` workspace is unreachable. Do not use
+this repository contract alone to claim an unattended synthetic-safe run, Sprint 5.5
+completion, or Phase 5 release-gate item 8 completion.
+
 ## 🔐 Confidentiality Guarantees
 
 This was a hard requirement for the installer and is enforced by its design, not just

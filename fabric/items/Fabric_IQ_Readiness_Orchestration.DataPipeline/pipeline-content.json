@@ -23,6 +23,7 @@
         "defaultValue": false
       }
     },
+    "concurrency": 1,
     "activities": [
       {
         "name": "Assess readiness",

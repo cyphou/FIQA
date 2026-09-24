@@ -102,13 +102,59 @@ Open **Fabric IQ Readiness Orchestration** and run it. Parameters:
 | `run_review` | `true` | Run the preceptorship quality loop |
 | `fail_on_blocking` | `false` | Fail the pipeline run when blocking findings exist |
 
-Schedule it from the pipeline's **Schedule** panel. Weekly is a reasonable starting
-cadence: readiness debt moves slowly, and the Scanner window defaults to seven days.
+#### Schedule contract v1
 
-`fail_on_blocking` is off by default on purpose. A first run against a real estate
-almost always surfaces blocking findings, and a red pipeline on day one teaches people
-to ignore it. Turn it on once you have worked the backlog down and want to defend the
-line.
+This repository owns the deployed pipeline contract, not a tenant-specific recurrence
+artifact. Configure the recurrence in the pipeline's **Schedule** panel after deployment.
+The contract is versioned here so it can be reviewed with the item definition, but it
+has **not** yet proven Sprint 5.5's unattended synthetic-safe run: the roadmap's
+Re-Verification Attempt records that the previously deployed `Fabric IQ Readiness`
+workspace is unreachable, so the proof run remains open until stable workspace access
+exists. Do not mark Sprint 5.5 or Phase 5 release-gate item 8 satisfied from this
+contract alone.
+
+- **Cadence** — Weekly is the supported starting cadence. It aligns with the default
+  `modified_since_days=7` Scanner window, produces comparable runs quickly enough to
+  see whether remediation is moving, and avoids polling a slowly changing readiness
+  posture more often than the current collector contract needs. A monthly cadence is
+  acceptable for steady-state governance after the proof run exists; set
+  `modified_since_days=30` because the pipeline parameter is capped at 30 days. Do not
+  schedule production runs more frequently than weekly without a collector/quotas review.
+- **Overlap prevention** — The shipped Data Pipeline definition sets `concurrency` to
+  `1`. Microsoft documents this pipeline property as the maximum number of concurrent
+  pipeline runs; when the limit is reached, additional runs queue until the earlier run
+  completes. Keep that cap at `1` for scheduled deployments so two assessments cannot
+  write competing snapshots for the same tenant at the same time.
+- **Identity** — The recurring pipeline must be owned and run by the Sprint
+  5.1-gated, `@security`-approved read-only service principal described in
+  [`docs/ROADMAP.md`](../docs/ROADMAP.md#sprint-51--close-the-api-reality-matrix-35-days---open-next-actionable-sprint),
+  never by the delegated human identity that imported or deployed the solution. Fabric
+  documents the production path as setting a service principal as the pipeline owner by
+  having it update the pipeline, making that principal the `LastModifiedBy` identity for
+  production runs. The `tenant_id` parameter selects which tenant to assess; the
+  notebook's `dependencies.lakehouse` binding is injected by
+  `fabric_iq.deployment.build_notebook_content` so output lands in this solution's
+  Lakehouse. Neither setting is a permission grant.
+- **Schedule-run housekeeping** — Keep failed/orphaned scheduler run records, exported
+  run details, and incident notes for at least 30 days or until a successful rerun has
+  been reviewed, whichever is later. This is only operational housekeeping for schedule
+  attempts; it is not the Bronze/Silver/Gold evidence-retention policy.
+- **Failure notification** — `fail_on_blocking` is off by default on purpose. A first
+  run against a real estate almost always surfaces blocking findings, and a red
+  pipeline on day one teaches people to ignore it. Turn it on once you have worked the
+  backlog down and want to defend the line. With it on, the pipeline's `Fail` activity
+  ends the run with `errorCode: FabricIQReadinessBlocked` and a message naming the
+  `run_id` and blocking-finding count. Production deployments must configure Fabric's
+  monitoring/alerting surface, or the tenant's chosen Teams/email/ITSM integration, to
+  notify the owner on failed runs; the notification channel is environment-owned rather
+  than encoded in this repository.
+- **Rerun procedure** — Re-trigger the same pipeline manually from Fabric after fixing
+  the platform issue or deciding to accept a blocking-findings failure. Use the same
+  parameters unless the incident owner records a reason to change them. Do not edit the
+  `run_id`: the notebook activity recomputes it from `utcNow()` for each pipeline run,
+  and the `concurrency=1` cap prevents overlapping retries. If a failed run is retried
+  immediately, wait until the previous run is fully terminal before starting the next
+  one.
 
 ### From the notebook
 

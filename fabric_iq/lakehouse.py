@@ -4,6 +4,45 @@ Bronze holds immutable evidence, Silver the normalized inventory, Gold the
 marts consumed by the governance semantic model. The writer emits newline
 delimited JSON so it works both locally (stdlib only) and from a Fabric
 notebook writing to OneLake paths.
+
+Scheduled Lakehouse retention contract (not yet enforced by this writer)
+==========================================================================
+
+An unattended deployment of ``FabricIQReadiness`` must enforce these maximum
+retention periods, measured from the completed timestamp of the run that
+materialized the partition:
+
+* Bronze raw evidence: 90 days.
+* Silver normalized inventory: 180 days.
+* Gold readiness marts: 730 days.
+
+Bronze can contain raw API payloads, including tenant-authored metadata and,
+when artifact-user collection is enabled, owner UPNs. Silver remains
+identifying tenant inventory. Gold is retained longer so compatible runs can
+support trend and remediation comparison, but it is not anonymous: its object
+names, findings, and nested outcome fields remain tenant data. No layer has an
+indefinite default, and expiry means deletion from the active Lakehouse, not an
+unapproved archival copy.
+
+The deployment-owned retention job must delete every table partition for an
+expired ``run_id`` in the applicable layer and must retain enough durable run
+metadata to determine expiry for both completed and failed/partial runs. A
+``run_id`` is opaque, so the job must not infer age from its value. If a
+partition has no trustworthy lifecycle timestamp, the job must surface a
+retention failure for operator action rather than preserve it indefinitely.
+
+This module currently does none of that: :class:`LakehouseWriter` writes each
+``run_id`` partition but has no listing, expiry, archival, or deletion method.
+Implementing a safe housekeeper requires durable lifecycle metadata and
+failure handling across OneLake/Delta and NDJSON, so it is a follow-on
+engineering task rather than an implicit side effect of a write.
+
+"Append, never overwrite" therefore applies only to unexpired historical
+partitions: a new ``run_id`` adds a snapshot and an idempotent re-run may
+replace its own same-``run_id`` partition. Retention deletion is the explicit
+lifecycle boundary, not a rewrite of a prior retained run. This reconciliation
+must remain explicit if enforcement is added; describing history as retained
+forever would contradict this contract.
 """
 
 from __future__ import annotations
