@@ -8,8 +8,10 @@ import tempfile
 import unittest
 
 from fabric_iq.lakehouse import GOLD_TABLES
+from fabric_iq.models import ReadinessStatus
 from fabric_iq.powerbi import PowerBiReportWriter, build_definition_pbir_live, build_model_bim_directlake
 from fabric_iq.remediation import build_backlog
+from fabric_iq.reporting import STATUS_COLOR
 from fabric_iq.scoring import assess
 from tests.helpers import minimal_inventory, ready_model
 
@@ -43,6 +45,22 @@ class TestPowerBiReportWriter(unittest.TestCase):
     def _read_csv(self, name):
         with open(os.path.join(self.root, "data", f"{name}.csv"), encoding="utf-8", newline="") as handle:
             return list(csv.DictReader(handle))
+
+    def _single_visuals(self, section_index=0):
+        report = self._load_json("IsFabricReadyForIQ.Report", "report.json")
+        return [
+            json.loads(visual["config"])["singleVisual"]
+            for visual in report["sections"][section_index]["visualContainers"]
+        ]
+
+    def _status_colors(self, single_visual):
+        colors = {}
+        for data_point in single_visual["objects"]["dataPoint"]:
+            comparison = data_point["selector"]["data"][0]["scopeId"]["Comparison"]
+            status = comparison["Right"]["Literal"]["Value"].strip("'")
+            color = data_point["properties"]["fill"]["solid"]["color"]["expr"]["Literal"]["Value"].strip("'")
+            colors[status] = color
+        return colors
 
     def test_expected_files_exist(self):
         expected = [
@@ -162,8 +180,8 @@ class TestPowerBiReportWriter(unittest.TestCase):
                 "Trend & Regression",
             ],
         )
-        # Overview page carries six KPI cards.
-        self.assertEqual(len(report["sections"][0]["visualContainers"]), 6)
+        # Overview page carries six KPI cards and three charts.
+        self.assertEqual(len(report["sections"][0]["visualContainers"]), 9)
         # Tenant & Workspaces stacks two tables (tenant + workspace).
         self.assertEqual(len(report["sections"][1]["visualContainers"]), 2)
         # Every other data page carries exactly one tableEx visual.
@@ -173,9 +191,45 @@ class TestPowerBiReportWriter(unittest.TestCase):
     def test_visual_configs_are_valid_json(self):
         report = self._load_json("IsFabricReadyForIQ.Report", "report.json")
         for section in report["sections"]:
+            json.loads(section["config"])
             for visual in section["visualContainers"]:
                 config = json.loads(visual["config"])
                 self.assertIn("singleVisual", config)
+
+    def test_overview_gauge_has_verified_projection_and_scale_properties(self):
+        gauge = next(visual for visual in self._single_visuals() if visual["visualType"] == "gauge")
+        self.assertEqual(gauge["projections"]["Y"], [{"queryRef": "MartObjectReadiness.Avg Score"}])
+        axis = gauge["objects"]["axis"][0]["properties"]
+        self.assertEqual(set(axis), {"min", "max", "target"})
+        self.assertEqual(axis["min"]["expr"]["Literal"]["Value"], "0D")
+        self.assertEqual(axis["max"]["expr"]["Literal"]["Value"], "100D")
+        self.assertEqual(axis["target"]["expr"]["Literal"]["Value"], "70D")
+        self.assertIn("calloutValue", gauge["objects"])
+
+    def test_overview_donut_projects_status_and_uses_shared_status_colors(self):
+        donut = next(visual for visual in self._single_visuals() if visual["visualType"] == "donutChart")
+        self.assertEqual(
+            donut["projections"],
+            {
+                "Category": [{"queryRef": "MartObjectReadiness.status", "active": True}],
+                "Y": [{"queryRef": "MartObjectReadiness.Objects Assessed"}],
+            },
+        )
+        expected = {status.value: STATUS_COLOR[status] for status in ReadinessStatus}
+        self.assertEqual(self._status_colors(donut), expected)
+
+    def test_overview_bar_projects_object_type_count_and_status_series(self):
+        bar = next(visual for visual in self._single_visuals() if visual["visualType"] == "barChart")
+        self.assertEqual(
+            bar["projections"],
+            {
+                "Category": [{"queryRef": "MartObjectReadiness.object_type", "active": True}],
+                "Y": [{"queryRef": "MartObjectReadiness.Objects Assessed"}],
+                "Series": [{"queryRef": "MartObjectReadiness.status"}],
+            },
+        )
+        expected = {status.value: STATUS_COLOR[status] for status in ReadinessStatus}
+        self.assertEqual(self._status_colors(bar), expected)
 
     def test_csv_row_counts_match_run(self):
         object_rows = self._read_csv("MartObjectReadiness")
@@ -195,9 +249,42 @@ class TestPowerBiReportWriter(unittest.TestCase):
         expected_ids = {i.object_id for i in self.backlog.items}
         self.assertEqual({row["object_id"] for row in rows}, expected_ids)
 
-    def test_theme_has_brand_palette(self):
+    def test_theme_has_brand_and_semantic_status_palette(self):
         theme = self._load_json("FabricIQ_Theme.json")
+        semantic_order = (
+            ReadinessStatus.READY,
+            ReadinessStatus.READY_WITH_CONDITIONS,
+            ReadinessStatus.REMEDIATION_REQUIRED,
+            ReadinessStatus.NOT_READY,
+            ReadinessStatus.NOT_EVALUATED,
+        )
+        self.assertEqual(theme["dataColors"][:5], [STATUS_COLOR[status] for status in semantic_order])
         self.assertIn("#0f6d5c", theme["dataColors"])
+        for visual_type in ("card", "tableEx", "gauge", "donutChart", "barChart"):
+            self.assertIn(visual_type, theme["visualStyles"])
+
+    def test_theme_applies_global_background_and_border_to_cards_and_tables(self):
+        theme = self._load_json("FabricIQ_Theme.json")
+        global_style = theme["visualStyles"]["*"]["*"]
+        self.assertEqual(
+            global_style["background"],
+            [{"show": True, "color": {"solid": {"color": "#ffffff"}}, "transparency": 0}],
+        )
+        self.assertEqual(
+            global_style["border"],
+            [{"show": True, "color": {"solid": {"color": "#e3e5e1"}}, "width": 1}],
+        )
+        for visual_type in ("card", "tableEx"):
+            self.assertIn(visual_type, theme["visualStyles"])
+            self.assertNotIn("background", theme["visualStyles"][visual_type]["*"])
+            self.assertNotIn("border", theme["visualStyles"][visual_type]["*"])
+
+    def test_generated_readme_describes_overview_charts(self):
+        with open(os.path.join(self.root, "README.md"), encoding="utf-8") as handle:
+            readme = handle.read()
+        self.assertIn("0--100 average", readme)
+        self.assertIn("readiness-status donut", readme)
+        self.assertIn("status-split object-type bar", readme)
 
 
 if __name__ == "__main__":

@@ -2,12 +2,21 @@
 
 Produces a hand-authored Power BI Project (``.pbip``) that a reviewer can open
 in Power BI Desktop without any pipeline, gateway or write access to the
-assessed tenant: three flat CSV exports feed a small semantic model (TMSL
+assessed tenant: flat CSV exports feed a small semantic model (TMSL
 ``model.bim``, the long-stable Analysis Services Tabular format) and a
-handful of report pages (legacy ``report.json``, kept deliberately simple:
-only ``card`` and ``tableEx`` visuals, no custom visuals, no complex
-filters) so the generated JSON stays inside what can be reasoned about and
-validated (``json.loads`` + structural checks) without opening Desktop.
+set of report pages styled after FUAM/FCA.  The legacy ``report.json`` now uses the
+built-in ``card``, ``tableEx``, ``gauge``, ``donutChart`` and ``barChart``
+visuals, with explicit status-category colors on charts.
+
+The chart projection and category-selector shapes are based on decompiled
+Microsoft Power BI sample PBIX files, and the visual styles use Microsoft's
+published Report Theme JSON schema.  Native gauge color bands and table
+background-color scales were considered but deliberately omitted: no reliable
+legacy ``report.json`` example or public schema for those exact structures was
+available, and guessing would make the project more likely to fail in Desktop.
+Repository CI can verify JSON syntax, projections, selectors and expected key
+shapes only; it cannot verify that Power BI Desktop will accept or render every
+visual correctly.
 
 Design constraints, matching the rest of the project:
 
@@ -35,14 +44,24 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from fabric_iq.lakehouse import GOLD_TABLES, gold_mart_rows
-from fabric_iq.models import AssessmentRun
+from fabric_iq.models import AssessmentRun, ReadinessStatus
 from fabric_iq.remediation import RemediationBacklog
+from fabric_iq.reporting import STATUS_COLOR
 
 #: Brand palette, matching the HTML report (see reporting.py).
 BRAND_DARK = "#0b4f43"
 BRAND = "#0f6d5c"
 BRAND_LIGHT = "#1a8a72"
 BRAND_BG = "#f4f6f4"
+
+STATUS_ORDER = (
+    ReadinessStatus.READY,
+    ReadinessStatus.READY_WITH_CONDITIONS,
+    ReadinessStatus.REMEDIATION_REQUIRED,
+    ReadinessStatus.NOT_READY,
+    ReadinessStatus.NOT_EVALUATED,
+)
+STATUS_CHART_COLORS = {status.value: STATUS_COLOR[status] for status in STATUS_ORDER}
 
 PROJECT_NAME = "IsFabricReadyForIQ"
 
@@ -733,6 +752,283 @@ def _select_measure(table: str, alias: str, measure_name: str) -> dict[str, Any]
     }
 
 
+def _literal(value: str) -> dict[str, Any]:
+    return {"expr": {"Literal": {"Value": value}}}
+
+
+def _report_color(color: str) -> dict[str, Any]:
+    return {"solid": {"color": _literal(f"'{color}'")}}
+
+
+def _visual_container(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    single_visual: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "x": x,
+        "y": y,
+        "z": 0,
+        "width": width,
+        "height": height,
+        "config": json.dumps(
+            {
+                "name": _new_guid(),
+                "layouts": [
+                    {
+                        "id": 0,
+                        "position": {
+                            "x": x,
+                            "y": y,
+                            "z": 0,
+                            "width": width,
+                            "height": height,
+                            "tabOrder": 0,
+                        },
+                    }
+                ],
+                "singleVisual": single_visual,
+            }
+        ),
+    }
+
+
+def _chart_vc_objects(title: str) -> dict[str, Any]:
+    return {
+        "title": [
+            {
+                "properties": {
+                    "text": _literal(f"'{title}'"),
+                    "show": _literal("true"),
+                    "fontColor": _report_color(BRAND_DARK),
+                    "fontSize": _literal("'13'"),
+                }
+            }
+        ],
+        "background": [
+            {
+                "properties": {
+                    "show": _literal("true"),
+                    "color": _report_color("#ffffff"),
+                    "transparency": _literal("0L"),
+                }
+            }
+        ],
+        "border": [
+            {
+                "properties": {
+                    "show": _literal("true"),
+                    "color": _report_color("#e3e5e1"),
+                }
+            }
+        ],
+    }
+
+
+def _status_data_points(table: str) -> list[dict[str, Any]]:
+    data_points = []
+    for status, color in STATUS_CHART_COLORS.items():
+        data_points.append(
+            {
+                "properties": {"fill": _report_color(color)},
+                "selector": {
+                    "data": [
+                        {
+                            "scopeId": {
+                                "Comparison": {
+                                    "ComparisonKind": 0,
+                                    "Left": {
+                                        "Column": {
+                                            "Expression": {"SourceRef": {"Entity": table}},
+                                            "Property": "status",
+                                        }
+                                    },
+                                    "Right": {"Literal": {"Value": f"'{status}'"}},
+                                }
+                            }
+                        }
+                    ]
+                },
+            }
+        )
+    return data_points
+
+
+def _gauge_visual(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    table: str,
+    measure: str,
+    title: str,
+) -> dict[str, Any]:
+    alias = table[0].lower()
+    query_ref = f"{table}.{measure}"
+    single_visual = {
+        "visualType": "gauge",
+        "projections": {"Y": [{"queryRef": query_ref}]},
+        "prototypeQuery": {
+            "Version": 2,
+            "From": [{"Name": alias, "Entity": table, "Type": 0}],
+            "Select": [_select_measure(table, alias, measure)],
+        },
+        "objects": {
+            "axis": [
+                {
+                    "properties": {
+                        "min": _literal("0D"),
+                        "max": _literal("100D"),
+                        "target": _literal("70D"),
+                    }
+                }
+            ],
+            "dataPoint": [
+                {
+                    "properties": {
+                        "fill": _report_color(BRAND),
+                        "target": _report_color(STATUS_COLOR[ReadinessStatus.READY_WITH_CONDITIONS]),
+                    }
+                }
+            ],
+            "labels": [
+                {
+                    "properties": {
+                        "show": _literal("true"),
+                        "labelPrecision": _literal("0L"),
+                    }
+                }
+            ],
+            "calloutValue": [{"properties": {"show": _literal("true")}}],
+            "target": [{"properties": {"show": _literal("true"), "labelPrecision": _literal("0L")}}],
+        },
+        "vcObjects": _chart_vc_objects(title),
+    }
+    return _visual_container(x, y, width, height, single_visual)
+
+
+def _donut_visual(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    table: str,
+    category: str,
+    measure: str,
+    title: str,
+) -> dict[str, Any]:
+    alias = table[0].lower()
+    category_ref = f"{table}.{category}"
+    measure_ref = f"{table}.{measure}"
+    measure_select = _select_measure(table, alias, measure)
+    single_visual = {
+        "visualType": "donutChart",
+        "projections": {
+            "Category": [{"queryRef": category_ref, "active": True}],
+            "Y": [{"queryRef": measure_ref}],
+        },
+        "prototypeQuery": {
+            "Version": 2,
+            "From": [{"Name": alias, "Entity": table, "Type": 0}],
+            "Select": [
+                _select_column(table, alias, category),
+                measure_select,
+            ],
+            "OrderBy": [{"Direction": 2, "Expression": measure_select["Measure"]}],
+        },
+        "objects": {
+            "dataPoint": _status_data_points(table),
+            "legend": [
+                {
+                    "properties": {
+                        "show": _literal("true"),
+                        "showTitle": _literal("false"),
+                        "labelColor": _report_color(BRAND_DARK),
+                    }
+                }
+            ],
+            "labels": [
+                {
+                    "properties": {
+                        "show": _literal("true"),
+                        "labelStyle": _literal("'Both'"),
+                    }
+                }
+            ],
+        },
+        "vcObjects": _chart_vc_objects(title),
+    }
+    return _visual_container(x, y, width, height, single_visual)
+
+
+def _bar_visual(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    table: str,
+    category: str,
+    series: str,
+    measure: str,
+    title: str,
+) -> dict[str, Any]:
+    alias = table[0].lower()
+    measure_select = _select_measure(table, alias, measure)
+    single_visual = {
+        "visualType": "barChart",
+        "projections": {
+            "Category": [{"queryRef": f"{table}.{category}", "active": True}],
+            "Y": [{"queryRef": f"{table}.{measure}"}],
+            "Series": [{"queryRef": f"{table}.{series}"}],
+        },
+        "prototypeQuery": {
+            "Version": 2,
+            "From": [{"Name": alias, "Entity": table, "Type": 0}],
+            "Select": [
+                _select_column(table, alias, category),
+                measure_select,
+                _select_column(table, alias, series),
+            ],
+            "OrderBy": [{"Direction": 2, "Expression": measure_select["Measure"]}],
+        },
+        "objects": {
+            "dataPoint": _status_data_points(table),
+            "legend": [
+                {
+                    "properties": {
+                        "show": _literal("true"),
+                        "showTitle": _literal("false"),
+                        "labelColor": _report_color(BRAND_DARK),
+                    }
+                }
+            ],
+            "labels": [{"properties": {"show": _literal("true")}}],
+            "categoryAxis": [
+                {
+                    "properties": {
+                        "show": _literal("true"),
+                        "labelColor": _report_color(BRAND_DARK),
+                        "gridlineShow": _literal("false"),
+                    }
+                }
+            ],
+            "valueAxis": [
+                {
+                    "properties": {
+                        "show": _literal("true"),
+                        "gridlineShow": _literal("true"),
+                        "gridlineColor": _report_color("#e3e5e1"),
+                    }
+                }
+            ],
+        },
+        "vcObjects": _chart_vc_objects(title),
+    }
+    return _visual_container(x, y, width, height, single_visual)
+
+
 def _card_visual(x: int, y: int, width: int, height: int, table: str, measure: str, title: str) -> dict[str, Any]:
     alias = table[0].lower()
     query_ref = f"{table}.{measure}"
@@ -852,10 +1148,37 @@ def _overview_page() -> dict[str, Any]:
         ("MartRemediationBacklog", "Backlog Items", "Backlog Items"),
     ]
     visuals = []
-    card_width, card_height, gap, margin = 195, 140, 15, 20
+    card_width, card_height, gap, margin = 190, 120, 15, 20
     for i, (table, measure, title) in enumerate(cards):
-        x = margin + i * (card_width + gap)
-        visuals.append(_card_visual(x, margin, card_width, card_height, table, measure, title))
+        x = margin + (i % 3) * (card_width + gap)
+        y = margin + (i // 3) * (card_height + gap)
+        visuals.append(_card_visual(x, y, card_width, card_height, table, measure, title))
+    visuals.extend(
+        [
+            _gauge_visual(650, 20, 285, 255, "MartObjectReadiness", "Avg Score", "Average readiness score"),
+            _donut_visual(
+                950,
+                20,
+                310,
+                255,
+                "MartObjectReadiness",
+                "status",
+                "Objects Assessed",
+                "Readiness status distribution",
+            ),
+            _bar_visual(
+                20,
+                300,
+                PAGE_WIDTH - 40,
+                400,
+                "MartObjectReadiness",
+                "object_type",
+                "status",
+                "Objects Assessed",
+                "Object portfolio by type and readiness status",
+            ),
+        ]
+    )
     return _page("ReportSection", "Overview", 0, visuals)
 
 
@@ -1051,25 +1374,32 @@ def build_theme() -> dict[str, Any]:
     return {
         "name": "IsFabricReadyForIQ Teal",
         "dataColors": [
+            *STATUS_CHART_COLORS.values(),
             BRAND, BRAND_LIGHT, BRAND_DARK,
-            "#7a6a00", "#a95c00", "#a4262c",
-            "#0c5aa6", "#5f6b73",
         ],
         "background": "#ffffff",
         "foreground": "#1b1f1e",
         "tableAccent": BRAND,
-        "good": "#107c10",
-        "neutral": "#d18b00",
-        "bad": "#a4262c",
+        "good": STATUS_COLOR[ReadinessStatus.READY],
+        "neutral": STATUS_COLOR[ReadinessStatus.REMEDIATION_REQUIRED],
+        "bad": STATUS_COLOR[ReadinessStatus.NOT_READY],
         "visualStyles": {
             "*": {
                 "*": {
-                    "*": [
+                    "background": [
                         {
-                            "background": {"solid": {"color": {"solid": {"color": "#ffffff"}}}},
-                            "border": {"show": True, "color": {"solid": {"color": "#e3e5e1"}}},
+                            "show": True,
+                            "color": {"solid": {"color": "#ffffff"}},
+                            "transparency": 0,
                         }
-                    ]
+                    ],
+                    "border": [
+                        {
+                            "show": True,
+                            "color": {"solid": {"color": "#e3e5e1"}},
+                            "width": 1,
+                        }
+                    ],
                 }
             },
             "card": {
@@ -1081,6 +1411,35 @@ def build_theme() -> dict[str, Any]:
             "tableEx": {
                 "*": {
                     "columnHeaders": [{"fontColor": {"solid": {"color": BRAND_DARK}}, "backColor": {"solid": {"color": "#eef6f4"}}}],
+                }
+            },
+            "gauge": {
+                "*": {
+                    "axis": [{"min": 0, "max": 100, "target": 70}],
+                    "calloutValue": [{"show": True, "color": {"solid": {"color": BRAND_DARK}}, "bold": True}],
+                    "dataPoint": [
+                        {
+                            "fill": {"solid": {"color": BRAND}},
+                            "target": {"solid": {"color": STATUS_COLOR[ReadinessStatus.READY_WITH_CONDITIONS]}},
+                        }
+                    ],
+                    "labels": [{"show": True, "color": {"solid": {"color": BRAND_DARK}}, "fontSize": 10}],
+                    "target": [{"show": True, "color": {"solid": {"color": BRAND_DARK}}, "fontSize": 10}],
+                }
+            },
+            "donutChart": {
+                "*": {
+                    "legend": [{"show": True, "showTitle": False, "labelColor": {"solid": {"color": BRAND_DARK}}, "fontSize": 10}],
+                    "labels": [{"show": True, "labelStyle": "Category, data value, percent of total", "color": {"solid": {"color": BRAND_DARK}}, "fontSize": 10}],
+                    "slices": [{"innerRadiusRatio": 65}],
+                }
+            },
+            "barChart": {
+                "*": {
+                    "legend": [{"show": True, "showTitle": False, "labelColor": {"solid": {"color": BRAND_DARK}}, "fontSize": 10}],
+                    "labels": [{"show": True, "color": {"solid": {"color": BRAND_DARK}}, "fontSize": 10}],
+                    "categoryAxis": [{"show": True, "labelColor": {"solid": {"color": BRAND_DARK}}, "gridlineShow": False}],
+                    "valueAxis": [{"show": True, "gridlineShow": True, "gridlineColor": {"solid": {"color": "#e3e5e1"}}}],
                 }
             },
         },
@@ -1250,7 +1609,9 @@ then refresh.
 ## Pages
 
 * **Overview** -- KPI cards (objects assessed, average score, eligible %,
-  average confidence, blocking findings, backlog items).
+  average confidence, blocking findings, backlog items), a 0--100 average
+  score gauge, a readiness-status donut, and a status-split object-type bar
+  chart.
 * **Tenant & Workspaces** -- tenant-level and workspace-level readiness.
 * **Object Readiness** -- one row per assessed object with score, status,
   eligibility and confidence.
