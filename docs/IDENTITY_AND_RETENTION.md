@@ -130,9 +130,12 @@ The medallion writer emits newline-delimited JSON with the extension **`.jsonl`*
 `.gitignore` carries `*.jsonl` precisely because an `*.ndjson`-only rule would have left
 every Bronze evidence file trackable.
 
-In a Fabric-native run the same layers are written to a Lakehouse through the `fabric/`
-deployment instead of to local paths; the contents are identical, and retention then
-follows the workspace's policy rather than the operator's filesystem.
+The table describes the writer surfaces a CLI/operator chooses with output flags. The
+scheduled Fabric-native deployment is a separate evidence surface: it writes the same
+Bronze/Silver/Gold layers into the `FabricIQReadiness` Lakehouse through OneLake, and
+its retention contract is documented in §3.6. That contract is additive, not a
+replacement for the local `--out` / `--checkpoint` / external-store handling in
+§3.1-§3.5; both surfaces can exist depending on how the tool is run.
 
 **Ignore-rule coverage is executable, not a convention.** Every destination above,
 including the documented examples in this file, must resolve to a rule in a committed
@@ -205,11 +208,13 @@ metadata authored by the tenant's own staff, not third-party or customer data.
 > destroyed and the practice in §3.5 exists so the next one is never written into the
 > working tree at all.
 
-- **Bronze evidence is retained only as long as the run's artifact directory or Lakehouse
-  table is retained by the operator.** This tool sets no retention policy of its own and
-  runs no scheduled deletion — it is the responsibility of whoever owns the output
-  Lakehouse/workspace/artifact store, using their existing Fabric/Purview retention
-  tooling.
+- **For CLI and ad-hoc output, Bronze evidence is retained only as long as the run's
+  artifact directory or caller-selected Lakehouse path is retained by the operator.**
+  This tool sets no retention policy of its own for those paths and runs no scheduled
+  deletion — it is the responsibility of whoever owns the filesystem, workspace or
+  artifact store. The unattended `FabricIQReadiness` Lakehouse is a distinct production
+  surface with the contract in §3.6; that contract does not delete local `--out`,
+  `--checkpoint`, `--powerbi`, or external-store files for the operator.
 - **The `--checkpoint` file outlives the run that created it.** It exists to let a
   throttled scan resume, so nothing deletes it when the run completes — and it holds the
   tenant ID next to unredacted Bronze payloads. Delete it once the run it resumes has
@@ -307,6 +312,44 @@ have been discussed, the file is a browser-ready list of real workspace names wi
 remaining purpose. Delete rendered reports as soon as the conversation they supported is
 over, ahead of the raw evidence they were derived from, and re-render from retained
 evidence if the discussion reopens.
+
+### 3.6 Scheduled `FabricIQReadiness` Lakehouse retention contract
+
+Sections §3.1-§3.5 describe the local CLI and operator-selected evidence model: `--out`,
+`--checkpoint`, `--powerbi`, a caller-selected `--lakehouse` path, and the external
+evidence store. The scheduled Fabric-native deployment is an additional evidence
+surface, not a replacement for those rules. An unattended run writes Bronze, Silver and
+Gold evidence into the deployed `FabricIQReadiness` Lakehouse through OneLake, so both
+the Lakehouse and local/external artifacts can exist depending on how the tool is run.
+
+The Lakehouse contract is maximum retention, measured from durable run-lifecycle
+timestamps — specifically the completed timestamp of the run that materialized the
+partition, not a date inferred from `run_id`:
+
+| Lakehouse layer | Maximum retention | Why this is the maximum |
+|---|---:|---|
+| Bronze raw evidence | 90 days | Raw API payloads can contain tenant-authored metadata and, when artifact-user collection (`include_artifact_users` / Scanner `getArtifactUsers`) is enabled, artifact-owner UPNs. Keep only the shortest useful audit window. |
+| Silver normalized inventory | 180 days | Normalized inventory is easier to query than Bronze but remains identifying tenant inventory, so it gets a bounded comparison window rather than indefinite storage. |
+| Gold readiness marts | 730 days | Longer retention supports trend and remediation comparison across compatible runs, but Gold is still tenant data: object names, findings, and nested outcome fields are not anonymous. |
+
+Expiry means deletion from the active Lakehouse, not archival. No layer has an
+indefinite default. A future deployment-owned housekeeping job must delete every table
+partition for an expired `run_id` in the applicable layer and retain enough durable
+lifecycle metadata to determine expiry for completed, failed and partial runs. A
+partition with no trustworthy lifecycle timestamp must fail visibly for operator action
+rather than be kept indefinitely.
+
+This is a documented contract, not current enforcement. As of 2026-09-24,
+`LakehouseWriter` writes each `run_id` partition but has no listing, expiry, archival or
+deletion mechanism, and this repository does not yet provide a scheduled housekeeping
+job. Building that job — including durable lifecycle metadata and failure handling
+across OneLake/Delta tables and NDJSON partitions — is follow-on engineering work.
+
+Before an unattended production schedule goes live, **@security** must review the
+identity, scopes, retention windows, missing-timestamp failure path and housekeeping
+design for this Lakehouse surface. That review is separate from, and does not weaken,
+the local checkpoint deletion rule and external evidence-store expiry decision in §3.3
+and §3.5.
 
 ## 4. No write scope anywhere — audit trail
 
