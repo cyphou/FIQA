@@ -235,6 +235,24 @@ Dimension weights and the 85/70/50 thresholds are reasoned but have not been val
 against practitioner judgement on a real estate. Phase 5 Sprint 5.3 records blinded,
 independent practitioner labels and disagreements before any scoring change is proposed.
 
+**What now exists (2026-09-24): the mechanism, not the result.** `@scorer` built the
+calibration machinery in `fabric_iq/calibration.py` and wired it to
+`assess.py --calibration`: a blinded, pseudonymised, deterministically sampled and
+stratified worksheet; an agreement analysis using Krippendorff's alpha with an ordinal
+difference function that reports inter-rater agreement before tool agreement and
+enumerates every disagreement; and honest `undefined` answers for the degenerate cases.
+The contract is in `docs/SCORING.md` ("Calibration Contract") and is held by
+`tests/test_calibration.py`.
+
+**What remains open: the practitioner labels themselves.** No practitioner has filled in
+a worksheet, so **no agreement figure exists, no disagreement has been recorded, and not
+one weight or threshold has been validated**. Building the instrument is not the same as
+taking the measurement. This limitation is unchanged in substance: it is still true that
+the weights are reasoned and not calibrated, and it stays true until two independent
+practitioners label a real 20–30 object sample and the result is reviewed. The
+calibration routine proposes no number by design, so even a completed exercise would
+produce evidence for a human decision rather than a change.
+
 **Consequence.** Relative ranking between objects is more reliable than an absolute score
 at this stage. "This model is in worse shape than that one" is better supported than
 "this model scores 72".
@@ -266,8 +284,10 @@ to the page that actually states the fact, without changing the fact itself. Thi
 closes the product-fact-verification sub-criterion of the Phase 5 Sprint 5.3 release
 gate. It does **not** close Sprint 5.3 as a whole: the sprint's second, independent
 sub-criterion — a blinded practitioner-calibration exercise comparing current rule
-weights against independently labelled real objects, owned by `@scorer` — has not yet
-started. See `docs/ROADMAP.md` Sprint 5.3 for that open item.
+weights against independently labelled real objects, owned by `@scorer` — has its
+**mechanism built (2026-09-24, see §5) but no practitioner labels collected**, so no
+agreement or disagreement has been recorded yet. See `docs/ROADMAP.md` Sprint 5.3 for
+that open item.
 
 | Limit currently encoded/quoted | Used by | Verified public source | Verification status |
 |--------------------------------|---------|-------------------------|---------------------|

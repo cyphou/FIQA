@@ -114,7 +114,7 @@ Every upstream call produces one immutable `BronzeRecord`
 Bronze layer described in [`ARCHITECTURE.md`](./ARCHITECTURE.md); Silver (normalised
 inventory) and Gold (scored rollups, remediation backlog) are derived from them.
 
-A run writes to **four** destinations, and each one is opt-in except `--out`. Naming only
+A run writes to **five** destinations, and each one is opt-in except `--out`. Naming only
 the medallion output would understate the footprint, so every sink is listed here with
 what it actually contains, verified against the writers:
 
@@ -124,6 +124,7 @@ what it actually contains, verified against the writers:
 | `--lakehouse` | `<root>/{bronze,silver,gold}/<table>/<run_id>.jsonl` — newline-delimited JSON, one row per line | Bronze: full `BronzeRecord` dicts including `identity`, `content_hash` and the raw upstream `payload`. Silver: normalised inventory sections. Gold: the nine `GOLD_TABLES` marts. | `fabric_iq/lakehouse.py::LakehouseWriter._write_ndjson` |
 | `--powerbi` | `<folder>/data/Mart*.csv` (nine marts) plus `IsFabricReadyForIQ.Report/`, `.SemanticModel/`, `.pbip`, `FabricIQ_Theme.json`, a generated `README.md` | Tenant-derived CSV marts: `tenant_id` (in `MartRunSummary`), object and workspace **names**, scores, blocking findings, backlog remediation text. `model.bim` additionally embeds the absolute local path of `data/`. | `fabric_iq/powerbi.py::PowerBiReportWriter.write_run` |
 | `--checkpoint` | the single JSON file at the given path (plus a transient `.tmp` during an atomic replace) | `tenant_id`, the completed-call index, and the **raw Bronze records** — `identity` and unredacted API payloads, including workspace role assignments when `getArtifactUsers` is on. The most identity-dense file a run produces. | `fabric_iq/collectors/fabric_api.py::FabricApiCollector._save_checkpoint` |
+| `--calibration` (default `artifacts/calibration`) | `<root>/<run_id>_calibration_worksheet.csv`, `_calibration_instructions.md`, `_calibration_key.json`; then, from `--calibration-analyse`, `_calibration_agreement.json` and `_calibration_disagreements.csv` | Worksheet: pseudonymised objects and the measured metadata behind them, no verdict of any kind. **Key: real object and workspace names, object ids, and the tool's `score`, `raw_score`, `status`, `eligible`, `confidence` and `coverage` in one row per sampled object — plus a `pseudonyms` map covering every object in the run, not only the sample. Never handed to a labeler.** Agreement and disagreements: pseudonyms, labeler ids, practitioner labels and their free-text rationales. | `fabric_iq/calibration.py::write_worksheet` / `write_report` |
 
 The medallion writer emits newline-delimited JSON with the extension **`.jsonl`**, not
 `.ndjson`. The distinction matters here because the protection is a filename pattern:
@@ -178,7 +179,78 @@ Two consequences, both practice rather than preference:
   not moved there afterwards. A file that never entered the working tree cannot be
   swept up by anything that reads the working tree.
 
-### 3.2 What the payloads actually contain
+### 3.1.2 The calibration worksheet and its key have opposite handling rules
+
+`--calibration` is the only sink designed to leave the operator's hands. Everything else
+a run writes is either an aggregated mart or a report for an internal audience; the
+calibration worksheet exists to be given to an outside practitioner, so the folder it
+lands in contains one file that is meant to travel and one that must never travel with
+it.
+
+- **The worksheet, the instruction sheet and the key sit side by side, deliberately.**
+  `write_worksheet` puts all three in the same git-ignored folder so that "hand over
+  exactly one of these" is a decision somebody makes rather than a default. The failure
+  mode this creates is obvious and has to be named: a reader who does not know the
+  difference zips the folder and sends it. **Send the worksheet CSV and the instruction
+  sheet. Never the key.**
+- **The key is the re-identification map and the verdict in one file.** Per sampled
+  object it carries the real `object_name` and `object_id` beside the tool's `score`,
+  `raw_score`, `status`, `eligible`, `confidence` and `coverage`; its `pseudonyms` block
+  additionally maps **every** object in the run — not only the 20–30 sampled ones — back
+  to its real name and id, because a sampled child has to be able to name its parent
+  without either name appearing on the worksheet. That makes it the most identifying
+  artifact this tool produces after the `--checkpoint` file: names joined to verdicts,
+  for the whole estate.
+- **Handing over the key destroys the exercise as well as the privacy boundary.** The
+  point of a blinded sample is to find where a practitioner's judgement and the engine's
+  arithmetic diverge, and that answer is worthless once the labeler has seen the
+  arithmetic. `assert_blinded` enforces the blinding of the worksheet on every build; no
+  code can enforce which file an operator attaches to an email.
+
+**Pseudonymisation is default-on and has no opt-out — and it does not discharge the
+obligation.** `build_worksheet` replaces the name and id of every assessed object with a
+stable pseudonym (`SM-07`), inside the row labels *and* inside the measured-fact text,
+which is how [`ROADMAP.md`](./ROADMAP.md)'s risk row — *"Calibration sample contains
+customer data → De-identify, retain outside git, and obtain Security approval before
+use"* — is partly met. Only partly, for two reasons:
+
+- The substitution covers the names and ids of **assessed objects**, and skips any
+  identifier shorter than three characters, since replacing those would corrupt unrelated
+  text more often than it would hide anything. Tenant-authored strings that are not an
+  assessed object's name — table, column, measure and RLS role names, and any description
+  a rule quotes as a measured fact — remain in `observed_facts` as written. The worksheet
+  is blinded against the tool's verdict; it is only partially de-identified against the
+  tenant.
+- De-identification is one of three requirements in that row. **Retention outside git and
+  Security approval before use are the other two**, and neither is implemented by code. A
+  real calibration sample is tenant-derived customer data: it belongs in the external
+  evidence store of §3.5 with an expiry date agreed at authorisation (§3.3), and
+  **@security** approves the exercise before a practitioner sees anything.
+
+`--calibration` defaults to `artifacts/calibration`, **inside the working tree**, which
+is exactly the placement §3.1.1 reserves for synthetic output: the sample tenant, a local
+test run. A calibration drawn from a real tenant is pointed at the external store the way
+every other flag is — `--calibration` accepts any absolute path, and the analysis step
+writes beside the key file unless `--calibration` names a folder of its own.
+
+**The returned worksheets and the agreement outputs carry human commentary.** A filled
+worksheet contains a practitioner's free-text `rationale` for each object, and
+`analyse` copies those rationales verbatim into `_calibration_agreement.json` and
+`_calibration_disagreements.csv`, alongside a `labeler_id` that is taken from the
+returned file's stem and is in practice a person's name. So those two files identify
+**people** as well as pseudonymised objects: they are a record of what two named
+practitioners said about a customer's estate, and of where they disagreed. Treat them the
+way §3.2 treats any tenant-authored free text — retaining them is a decision taken at
+authorisation with a named expiry, not a default. Keeping a disagreement record long
+enough to review it is the whole purpose; keeping it indefinitely means keeping
+attributable professional judgements about a named customer with no remaining reason to.
+
+Note also that the returned worksheets arrive from outside — by attachment, share or
+upload — which creates copies of tenant-derived material that this repository never saw
+and no gate can reach. They are covered by the same expiry as the rest of the exercise,
+and that includes the labeler's own copy.
+
+
 
 `BronzeRecord.payload` is the raw upstream JSON body: tenant setting flags, workspace and
 capacity metadata, and — from the Scanner's semantic-model expansion — table, column, and
@@ -221,6 +293,15 @@ metadata authored by the tenant's own staff, not third-party or customer data.
   finished, and treat a surviving checkpoint as live evidence, not as scratch. A
   checkpoint that no unfinished scan needs has no remaining purpose and every remaining
   risk.
+- **A calibration exercise has a defined end, and its files should not outlive it.** The
+  worksheet, key, agreement and disagreement files (§3.1.2) are retained until the
+  exercise closes — the labels are back, the disagreements have been reviewed, and any
+  resulting scoring decision has been taken by a human with its own review and regression
+  test. After that the worksheet and the key have no remaining purpose and every
+  remaining risk; the agreement and disagreement records may be retained deliberately, on
+  a named expiry, because they are the evidence the review rested on. The instruction
+  sheet emitted beside them carries the run id and seed, so it is part of the same set,
+  not scratch. Nothing in the tool deletes any of these.
 - **A live run gets its expiry date at authorisation, not afterwards.** The date is
   agreed when the run is approved and written into the evidence store's `README.md`
   (§3.5) before the first call is made. Deciding retention after the evidence exists

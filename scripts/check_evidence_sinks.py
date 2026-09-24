@@ -42,18 +42,85 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ── what the writers emit ────────────────────────────────────────────────────
 
 #: Gold marts, read from the writer so a new mart cannot skip the gate.
+#:
+#: Every fallback below is defined unconditionally rather than inside the ``except``
+#: branch, so the test suite can assert it still matches the writer it stands in
+#: for. A fallback that is only reachable on an un-importable checkout is a
+#: fallback nobody has ever compared against the truth: it would quietly shrink the
+#: set of destinations checked while the gate still printed "clean".
+#:
+#: This list was two marts long while the writer had nine -- found by the parity
+#: test, not by a reviewer. Both fallbacks are now asserted against their writers.
+_GOLD_TABLES_FALLBACK = (
+    "MartRunSummary",
+    "MartTenantReadiness",
+    "MartWorkspaceReadiness",
+    "MartObjectReadiness",
+    "MartBlockingFindings",
+    "MartRemediationBacklog",
+    "MartRemediationBurnDown",
+    "MartCoverageAndFreshness",
+    "MartRunTrend",
+)
+
+#: Filename suffixes the calibration writer emits. Mirrors
+#: ``fabric_iq.calibration.CALIBRATION_ARTIFACTS``; parity is asserted by the tests.
+_CALIBRATION_SUFFIX_FALLBACK = (
+    "_calibration_worksheet.csv",
+    "_calibration_key.json",
+    "_calibration_instructions.md",
+    "_calibration_agreement.json",
+    "_calibration_disagreements.csv",
+)
+_CALIBRATION_ROOT_FALLBACK = "artifacts/calibration"
+
+
+def _calibration_sinks_fallback(run_id: str = "20260101T000000Z") -> list[tuple[str, str]]:
+    """Stand-in for :func:`fabric_iq.calibration.calibration_sinks`.
+
+    Used only when the package cannot be imported, and kept honest by
+    ``tests/test_evidence_sinks.py``, which asserts it enumerates exactly the same
+    destinations as the writer does.
+    """
+    root = _CALIBRATION_ROOT_FALLBACK
+    sinks = [(root + "/", "--calibration default folder")]
+    for suffix in _CALIBRATION_SUFFIX_FALLBACK:
+        sinks.append((f"{root}/{run_id}{suffix}", f"calibration output {suffix}"))
+        sinks.append((f"elsewhere/{run_id}{suffix}", f"calibration output {suffix} (relocated)"))
+    return sinks
+
+
 try:  # pragma: no cover - exercised implicitly by every real-tree run
     sys.path.insert(0, REPO_ROOT)
     from fabric_iq.lakehouse import GOLD_TABLES
 except ImportError:  # the check must still run outside an importable checkout
-    GOLD_TABLES = ("MartRunSummary", "MartObjectReadiness")
+    GOLD_TABLES = _GOLD_TABLES_FALLBACK
+
+#: Calibration destinations, read from the writer for the same reason as the marts:
+#: an enumeration owned by the module that writes cannot drift away from the gate
+#: that protects it. The calibration key is the most identifying file this tool
+#: produces -- real object and workspace names, ids, and the tool's verdicts -- so
+#: it is the one destination that must never be protected merely "incidentally" by
+#: whichever root it happens to sit under today.
+try:  # pragma: no cover - exercised implicitly by every real-tree run
+    from fabric_iq.calibration import calibration_sinks
+except ImportError:  # the check must still run outside an importable checkout
+    calibration_sinks = _calibration_sinks_fallback
 
 #: Silver tables are named after inventory sections.
 SILVER_SECTIONS = ("tenant", "workspaces", "semantic_models", "reports", "data_agents")
 
-#: Output flags whose documented values are scanned out of tracked text.
-OUTPUT_FLAGS = ("out", "lakehouse", "powerbi", "checkpoint")
-_FLAG_EXAMPLE = re.compile(r"--(" + "|".join(OUTPUT_FLAGS) + r")[= ]+([^\s`\"'|)]+)")
+#: Flags whose documented values are scanned out of tracked text because the value
+#: names a place evidence lands. ``--calibration-analyse`` is an *input* flag and is
+#: here deliberately: the agreement report and the disagreement CSV are written
+#: beside the key file it names (``assess.py::calibration_analysis``), so a
+#: documented key path is a documented output folder. ``--calibration-labels`` is
+#: not here: those CSVs are typed by a human rater, never written by this tool.
+#: Longest-first so ``--calibration-analyse`` cannot be truncated to ``--calibration``.
+OUTPUT_FLAGS = ("out", "lakehouse", "powerbi", "checkpoint", "calibration", "calibration-analyse")
+_FLAG_EXAMPLE = re.compile(
+    r"--(" + "|".join(sorted(OUTPUT_FLAGS, key=len, reverse=True)) + r")[= ]+([^\s`\"'|)]+)"
+)
 #: Only real documentation and code document a command; .gitignore describes rules.
 _DOC_SUFFIXES = (".md", ".py", ".yml", ".yaml")
 
@@ -63,6 +130,17 @@ _DOC_SUFFIXES = (".md", ".py", ".yml", ".yaml")
 SINK_ROOTS = frozenset({"artifacts", "lakehouse", "powerbi_report", "bronze", "silver", "gold"})
 
 #: Extensions the writers emit. A bare word carrying one of these is a file, not prose.
+#:
+#: ``.md`` is deliberately absent even though the calibration writer emits
+#: ``*_calibration_instructions.md``. This tuple answers one narrow question -- "is
+#: this scraped *bare* word a file or an English word?" -- and ``.md`` is the
+#: extension of every document in this repository, including the ones this scanner
+#: reads (see :data:`_DOC_SUFFIXES`). Admitting it would turn an ordinary
+#: cross-reference after a flag into a destination that must carry an ignore rule,
+#: and a rule broad enough to match it would then *shadow* the tracked document --
+#: failing :func:`check_tracked_not_shadowed`. The instruction sheet does not need
+#: the heuristic: :func:`calibration_sinks` enumerates it by name at the default and
+#: at a relocated root, and ``tests/test_evidence_sinks.py`` asserts that coverage.
 SINK_SUFFIXES = (".json", ".jsonl", ".csv", ".html", ".pbip", ".bim", ".tmp")
 
 
@@ -269,6 +347,8 @@ def writer_sinks() -> list[tuple[str, str]]:
         sinks.append((f"lakehouse/gold/{table}/{run}.jsonl", f"Gold: {table} NDJSON"))
         sinks.append((f"powerbi_report/data/{table}.csv", f"Gold: {table} CSV for Power BI"))
         sinks.append((f"elsewhere/data/{table}.csv", f"Gold: {table} CSV under a relocated root"))
+    # Calibration: enumerated by the writer itself, default root and relocated.
+    sinks.extend(calibration_sinks(run))
     return sinks
 
 

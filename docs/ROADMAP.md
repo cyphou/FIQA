@@ -149,13 +149,16 @@ gate does not accept, so the gate is unmoved.
 ## Phase 2 — Static Readiness Scoring 🟡
 
 The engine, rule catalogue, actionable backlog, and output formats are delivered.
-Product-limit sourcing closed 2026-09-24 (`docs/KNOWN_LIMITATIONS.md` §8); practitioner
-calibration remains open under Sprint 5.3.
+Product-limit sourcing closed 2026-09-24 (`docs/KNOWN_LIMITATIONS.md` §8); the
+calibration mechanism landed 2026-09-24 (`fabric_iq/calibration.py`), but practitioner
+calibration itself remains open under Sprint 5.3 — no labels have been collected.
 
 **Exit gate.** Partially open: every encoded limit now has a public source and exact
-verification date (closed 2026-09-24). Calibration disagreements recorded without
-tenant-specific tuning is not yet done; the gate does not close until that half lands
-too.
+verification date (closed 2026-09-24), and the blinded worksheet, agreement analysis and
+disagreement enumeration now exist and are tested (2026-09-24). Calibration
+disagreements recorded without tenant-specific tuning is not yet done — the instrument
+exists, the measurement has not been taken — and the gate does not close until that half
+lands too.
 
 ## Phase 3 — Agentic Readiness 🟡
 
@@ -634,21 +637,34 @@ tenant-derived evidence.
    `@readme` closed the product-fact-verification half 2026-09-24: all eight rows in
    `docs/KNOWN_LIMITATIONS.md` §8 now carry a public source and exact verification date,
    individually re-verified against the live Microsoft Learn / REST API reference pages
-   (three sources were also corrected to the page that actually states the fact). The
-   calibration half has not started: current weights have not been compared with
+   (three sources were also corrected to the page that actually states the fact).
+   `@scorer` built the calibration **mechanism** 2026-09-24 (`fabric_iq/calibration.py`,
+   `assess.py --calibration`, `tests/test_calibration.py`, contract in
+   `docs/SCORING.md`): blinded pseudonymised worksheet, reproducible stratified 20–30
+   object draw, Krippendorff-alpha agreement reported inter-rater first, and every
+   disagreement enumerated. The calibration **exercise** has not run: no practitioner
+   has labelled anything, so current weights still have not been compared with
    independently labelled real objects.
 3. **Smallest slice** — Done: `@readme` recorded a public source and exact `YYYY-MM-DD`
-   verification date for each encoded limit (2026-09-24). Still open: `@scorer` defines a
-   blinded calibration worksheet; two practitioners independently label a bounded 20–30
-   object sample without seeing tool scores.
+   verification date for each encoded limit (2026-09-24). Done: `@scorer` defined the
+   blinded calibration worksheet and its analysis (2026-09-24). Still open: two
+   practitioners independently label a bounded 20–30 object sample without seeing tool
+   scores, and the returned worksheets are analysed. That step needs humans and a real
+   estate; nothing in the repository can substitute for it.
 4. **Dependencies** — `@readme` owns limit documentation; domain rule owners confirm rule
    interpretation; `@scorer` owns calibration and any maths proposal; `@security`
    approves de-identification and retention. Sprint 5.2 supplies honest coverage.
 5. **Validation** — Focused check: a documentation test fails when an encoded limit lacks
-   a source/date; calibration records agreement and every disagreement. Release gate:
-   limits are current and traceable (**met 2026-09-24**); any weight/threshold change has
-   rationale, scorer sign-off, regression tests, and ruleset-version handling (**open** —
-   calibration has not started). No change is required merely to increase agreement.
+   a source/date; calibration records agreement and every disagreement (**mechanism met
+   2026-09-24** — `tests/test_calibration.py` proves blinding removes every verdict
+   field, sampling is deterministic and stratified, the agreement maths reproduces a
+   published reference example, the degenerate cases return "undefined" rather than a
+   flattering number, and every disagreement is enumerated rather than aggregated away;
+   **no real labels recorded**). Release gate: limits are current and traceable
+   (**met 2026-09-24**); any weight/threshold change has rationale, scorer sign-off,
+   regression tests, and ruleset-version handling (**open** — the exercise has not run
+   and no change is proposed). No change is required merely to increase agreement, and
+   the analysis proposes none by construction.
 6. **Risks and non-goals** — A small sample cannot establish universal validity and must
    not be tuned to improve one tenant. This sprint does not merge confidence into score,
    relabel `NOT_EVALUATED`, or alter blocking cap 39.

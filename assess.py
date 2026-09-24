@@ -6,6 +6,8 @@ Examples:
     python assess.py --inventory examples/sample_tenant --review --fail-on-blocking
     python assess.py --inventory examples/sample_tenant --lakehouse ./lakehouse
     python assess.py --inventory examples/sample_tenant --powerbi ./powerbi_report
+    python assess.py --inventory examples/sample_tenant --calibration artifacts/calibration
+    python assess.py --calibration-analyse artifacts/calibration/run_id_calibration_key.json --calibration-labels a=labels-a.csv b=labels-b.csv
     FABRIC_ACCESS_TOKEN=... python assess.py --live --tenant-id tenant-id --bearer-token-env FABRIC_ACCESS_TOKEN
     python assess.py --list-rules
 """
@@ -18,6 +20,17 @@ import sys
 from datetime import datetime, timezone
 
 from fabric_iq import RULESET_VERSION, __version__
+from fabric_iq.calibration import (
+    CALIBRATION_SINK_ROOT,
+    DEFAULT_SAMPLE_SIZE,
+    DEFAULT_SEED,
+    analyse,
+    build_worksheet,
+    read_labels,
+    summarise,
+    write_report,
+    write_worksheet,
+)
 from fabric_iq.collectors import FabricApiCollector, FabricApiConfig, FabricHttpTransport, OfflineCollector
 from fabric_iq.errors import AssessmentError
 from fabric_iq.lakehouse import LakehouseWriter, select_comparable_history_runs, select_latest_baseline_run
@@ -89,6 +102,51 @@ def build_parser() -> argparse.ArgumentParser:
             "committed. ./powerbi_report and Mart*.csv are git-ignored"
         ),
     )
+    parser.add_argument(
+        "--calibration",
+        nargs="?",
+        const=CALIBRATION_SINK_ROOT,
+        help=(
+            "Opt-in. Write a blinded practitioner-calibration worksheet for this run "
+            f"(default folder: {CALIBRATION_SINK_ROOT}). Emits the blinded CSV, an "
+            "instruction sheet, and a separate un-blinded key. "
+            "PRIVACY: all three files are tenant-derived evidence — the worksheet carries "
+            "measured object metadata and the key carries object names plus the tool's "
+            "verdicts. Keep them on a git-ignored path and never commit them. Hand the "
+            "worksheet to a labeler; never the key"
+        ),
+    )
+    parser.add_argument(
+        "--calibration-size",
+        type=int,
+        default=DEFAULT_SAMPLE_SIZE,
+        help=f"Objects to sample for calibration (default: {DEFAULT_SAMPLE_SIZE}; roadmap band 20-30)",
+    )
+    parser.add_argument(
+        "--calibration-seed",
+        type=int,
+        default=DEFAULT_SEED,
+        help=f"Seed for the reproducible calibration draw (default: {DEFAULT_SEED})",
+    )
+    parser.add_argument(
+        "--calibration-analyse",
+        metavar="KEY_JSON",
+        help=(
+            "Analyse returned calibration worksheets against this key file and exit. "
+            "Requires --calibration-labels. Reports inter-rater agreement first, then "
+            "agreement with the tool, and enumerates every disagreement"
+        ),
+    )
+    parser.add_argument(
+        "--calibration-labels",
+        nargs="+",
+        metavar="[ID=]CSV",
+        default=[],
+        help=(
+            "Filled worksheets returned by the labelers, as 'name=path.csv' or 'path.csv' "
+            "(the file stem becomes the labeler id). Used with --calibration-analyse"
+        ),
+    )
     parser.add_argument("--review", action="store_true", help="Run the preceptorship quality loop")
     parser.add_argument(
         "--max-cycles", type=int, default=3, help="Maximum preceptorship cycles (default: 3)"
@@ -126,6 +184,40 @@ def list_rules() -> int:
     return 0
 
 
+def calibration_analysis(args) -> int:
+    """Analyse returned worksheets against a key and write the agreement report.
+
+    Output lands beside the key unless --calibration names a folder, so the analysis
+    stays inside the same git-ignored evidence sink as the worksheet it came from.
+    """
+    if not args.calibration_labels:
+        print(
+            "error: --calibration-analyse requires --calibration-labels with at least "
+            "one returned worksheet",
+            file=sys.stderr,
+        )
+        return 1
+    label_sets = []
+    for entry in args.calibration_labels:
+        labeler_id, separator, path = entry.partition("=")
+        if not separator:
+            labeler_id, path = None, entry
+        label_sets.append(read_labels(path, labeler_id))
+    report = analyse(args.calibration_analyse, label_sets)
+    destination = args.calibration or os.path.dirname(os.path.abspath(args.calibration_analyse))
+    written = write_report(report, destination)
+    if not args.quiet:
+        print(summarise(report))
+    print(f"Calibration analysis written to {os.path.abspath(written['agreement'])}")
+    if len(label_sets) < 2:
+        print(
+            "note: only one worksheet was supplied, so inter-rater agreement is "
+            "undefined — agreement with the tool alone says nothing about the tool",
+            file=sys.stderr,
+        )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
@@ -134,6 +226,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.list_rules:
         return list_rules()
+    if args.calibration_analyse:
+        try:
+            return calibration_analysis(args)
+        except AssessmentError as exc:
+            print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+    if args.calibration_labels:
+        print(
+            "error: --calibration-labels is only meaningful with --calibration-analyse",
+            file=sys.stderr,
+        )
+        return 1
     if not args.inventory and not args.live:
         print("error: --inventory or --live is required (or use --list-rules / --version)", file=sys.stderr)
         return 1
@@ -192,6 +296,23 @@ def main(argv: list[str] | None = None) -> int:
             PowerBiReportWriter(root=args.powerbi).write_run(
                 run, backlog, baseline_run=baseline_run, history_runs=history_runs
             )
+
+        if args.calibration:
+            worksheet = build_worksheet(
+                run, size=args.calibration_size, seed=args.calibration_seed
+            )
+            written = write_worksheet(worksheet, args.calibration)
+            if not args.quiet:
+                print(
+                    f"Calibration worksheet: {len(worksheet.rows)} blinded object(s) at "
+                    f"{os.path.abspath(written['worksheet'])}"
+                )
+                print(
+                    "  hand the worksheet and the instructions to each labeler "
+                    "independently; keep the key"
+                )
+                for note in worksheet.notes:
+                    print(f"  ! {note}")
 
         if not args.quiet:
             print(to_console(run, backlog, review))

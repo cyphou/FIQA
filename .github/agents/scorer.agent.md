@@ -13,6 +13,10 @@ number a director will quote in a steering committee. Treat it accordingly.
 - `fabric_iq/scoring.py` — scoring engine, weights, caps, rollups
 - `fabric_iq/models.py` — enums, `RuleOutcome`, `Finding`, `Scorecard`, `AssessmentRun`
 - `fabric_iq/trends.py` — run-to-run score, confidence, and coverage comparison
+- `fabric_iq/calibration.py` — blinded practitioner-calibration worksheet, sampling,
+  agreement statistics and disagreement enumeration. It measures the weights against
+  human judgement and **proposes no number**: a calibration routine that also proposed
+  the correction it measured would have inverted the point of the exercise.
 - `fabric_iq/rules/base.py` — `Rule`, `RuleRegistry`, rule helpers
 - `fabric_iq/rules/__init__.py` — registry assembly
 
@@ -56,6 +60,8 @@ damaging output this tool can produce, because it ends the conversation.
 - Do NOT tune a weight to make a demo tenant look better
 - Do NOT merge score, eligibility, and confidence into one headline number
 - Do NOT widen the caught exception tuple in `Rule.evaluate()` to `Exception`
+- Do NOT let calibration propose, fit or auto-apply a weight — it records evidence for
+  a human decision; an optimiser here is the failure mode, not the feature
 - Every weight and threshold change requires a regression test in `tests/test_scoring.py`
 
 ## Key Functions

@@ -120,6 +120,117 @@ Confidence combines coverage with evidence quality: how much of the applicable r
 weight was evaluated, and whether the findings carry reproducible evidence references.
 It is reported alongside the score, never folded into it.
 
+## Calibration Contract
+
+The weights and thresholds above are **reasoned, not calibrated** — see
+`docs/KNOWN_LIMITATIONS.md` §5. `fabric_iq/calibration.py` is the mechanism that
+produces the evidence which could one day justify changing them. It is opt-in
+(`assess.py --calibration`) and it changes no maths.
+
+### What the mechanism guarantees
+
+| Guarantee | Enforced by |
+|---|---|
+| The worksheet carries no verdict field | `assert_blinded`, called on every build, over the whole of `BLINDED_FIELDS` |
+| Object names are pseudonymised, with no opt-out | `build_worksheet`; the mapping lives only in the key file |
+| A fact quoting the engine's verdict on *another* object is dropped | `_quotes_a_verdict` — `semantic_model_score` and `source_scores` are the verdict one hop away |
+| The draw is reproducible | `random.Random(seed)`; the seed is recorded in the key and the instruction sheet |
+| The sample is bounded and stratified | `(object_type, band)` round-robin, default 24, roadmap band 20–30 |
+| Row order does not encode the ranking | seeded shuffle, applied to rows *and* to pseudonym ordinals |
+
+Blinding is structural, not cosmetic. A worksheet row cannot carry `score`,
+`raw_score`, `status`, `eligible`, `confidence`, `coverage`, `dimension_scores`, or
+any per-rule id, title, severity or outcome status — a rule id is a lookup key into
+`docs/RULES.md`, where the severity is published, so handing over the id hands over
+the cap, and the cap *is* the verdict.
+
+One residual leak is accepted knowingly and documented rather than hidden: the
+worksheet declares which evidence could **not** be observed, so a determined labeler
+could count those lines and approximate coverage. Hiding them would make the
+judgement uninformed, which is the worse failure. The verdict itself stays
+unrecoverable.
+
+### Agreement statistic
+
+**Krippendorff's alpha with the ordinal difference function**, reported over the
+readiness ladder, with exact percent agreement published beside it as a descriptive
+companion and explicitly labelled chance-inflated.
+
+Plain percent agreement over-credits chance: where four objects in five are
+unhealthy, two labelers who both default to `not_ready` agree 80% of the time having
+demonstrated nothing. Cohen's kappa corrects for chance but takes exactly two raters
+and no blanks, and a returned worksheet realistically has two or three raters and a
+few blanks. Alpha takes any number of raters, tolerates missing values by
+construction, and — with the ordinal metric — counts `ready` vs
+`ready_with_conditions` as a smaller disagreement than `ready` vs `not_ready`.
+Unweighted statistics refuse to make that distinction, and on an ordinal ladder that
+refusal is simply wrong.
+
+**Inter-rater agreement is reported first**, before any comparison with the tool. If
+two practitioners do not agree with each other, their disagreement with the tool
+measures the labelling exercise, not the engine. The key order of the serialised
+report is part of this contract and is tested.
+
+Degenerate cases return `null` plus a reason, never a flattering number:
+
+| Case | Reported |
+|---|---|
+| Fewer than two labelers | undefined — "agreement needs at least two independent labelers" |
+| No unit carries two labels | undefined — "nothing is comparable" |
+| Every label in the sample is the same class | undefined — "unmeasurable rather than perfect" |
+| A labeler used one label throughout | alpha still computed, with a warning that it carries no discrimination |
+| Missing or partial labels | excluded from the pairing, counted and warned; never imputed |
+| A label outside the vocabulary | excluded and enumerated as a problem; never silently dropped |
+
+Alpha is published raw, including negative values, which mean systematic
+disagreement rather than "no agreement".
+
+### `NOT_EVALUATED` in calibration
+
+`insufficient_evidence` is the labeler's counterpart of `NOT_EVALUATED`, and it is
+handled the same way the engine handles it: **it is not a rung on the ladder.**
+
+- It has no entry in `ORDINAL_RANK`, so it can never be ranked below `not_ready`.
+- Units where a voice said `insufficient_evidence` are held out of the ordinal
+  comparison on both sides — labeler and tool alike.
+- They are not discarded. They are analysed twice more: as a separate nominal
+  "did the labelers agree about where the blind spots are" statistic over the whole
+  sample, and as enumerated disagreements of kind `coverage`.
+
+A divergence about whether an object *could be judged* is a different finding from a
+divergence about whether it is *ready*, and merging them would quietly reintroduce
+the "missing evidence is a bad score" error the engine exists to avoid.
+
+### Every disagreement, enumerated
+
+The roadmap requires "agreement and every disagreement". The report therefore
+carries one record per diverging rater pair per object — labeler vs labeler and
+labeler vs tool — with both labels, the ordinal distance, the kind, and the
+rationales. A single aggregate that hid which objects diverged would fail the
+requirement outright: the diverging row and its rationale are the only thing that
+could ever justify a change to the maths.
+
+### What calibration must never do
+
+**It proposes no number.** No optimiser, no fitted weight, no recommended threshold.
+`CalibrationReport.proposals` is empty by construction and tested to stay empty, and
+a full round trip is tested to leave `DIMENSION_WEIGHTS`, `STATUS_THRESHOLDS`,
+`SEVERITY_SCORE_CAP`, `MIN_COVERAGE_TO_PUBLISH` and both rollup maps byte-identical.
+A routine that measured a disagreement *and* proposed the correction for it would
+have stopped being evidence. Any weight or threshold change stays what it is today:
+a human decision, with rationale, `@scorer` sign-off, a regression test in
+`tests/test_scoring.py`, and ruleset-version handling.
+
+### Privacy
+
+A calibration sample drawn from a real tenant is customer data. The worksheet, the
+instruction sheet, the key, the agreement report and the disagreement CSV are
+evidence sinks exactly like `artifacts`, `lakehouse` and `powerbi_report`: written
+only to a git-ignored destination (default `artifacts/calibration`), never
+committed, and enumerated by `fabric_iq.calibration.calibration_sinks()` so
+`scripts/check_evidence_sinks.py` can hold every one of them to a committed ignore
+rule. **The key file is never handed to a labeler.**
+
 ## Ruleset Versioning
 
 Every scorecard records `ruleset_version`. Scores are comparable across runs **only when

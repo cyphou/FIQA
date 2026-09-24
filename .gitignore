@@ -53,6 +53,14 @@ Mart*.csv
 *_readiness.html
 *_review.json
 
+# Calibration evidence, wherever --calibration points it. The worksheet carries
+# measured tenant metadata; the key carries object names and the tool's verdicts.
+*_calibration_worksheet.csv
+*_calibration_key.json
+*_calibration_instructions.md
+*_calibration_agreement.json
+*_calibration_disagreements.csv
+
 # Medallion output: layer dirs are already ignored; cover the documented root
 # and the actual file extension the writer emits (lakehouse.py writes .jsonl).
 /lakehouse/

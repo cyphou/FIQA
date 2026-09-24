@@ -24,10 +24,17 @@ import unittest.mock
 from scripts.check_evidence_sinks import (
     ALLOWED_EMAIL_DOMAINS,
     GOLD_TABLES,
+    OUTPUT_FLAGS,
     SINK_ROOTS,
+    SINK_SUFFIXES,
+    _CALIBRATION_SUFFIX_FALLBACK,
+    _FLAG_EXAMPLE,
+    _GOLD_TABLES_FALLBACK,
+    _calibration_sinks_fallback,
     _is_placeholder_guid,
     _is_plausible_destination,
     audit,
+    calibration_sinks,
     check_ignore,
     check_sinks,
     check_tracked_not_shadowed,
@@ -36,6 +43,11 @@ from scripts.check_evidence_sinks import (
     scan_tracked_identifiers,
     tracked_files,
     writer_sinks,
+)
+from fabric_iq.calibration import (
+    CALIBRATION_ARTIFACTS,
+    CALIBRATION_SINK_ROOT,
+    calibration_sinks as writer_calibration_sinks,
 )
 from tests.helpers import REPO_ROOT
 
@@ -738,6 +750,147 @@ class AuditTests(TempRepoCase):
         problems = audit(self.root, [("powerbi_report/data/MartRunSummary.csv", "marts")])
 
         self.assertEqual({k: v for k, v in problems.items() if v}, {})
+
+
+class CalibrationSinkTests(TempRepoCase):
+    """The calibration key is the most identifying artifact this tool produces.
+
+    It carries real object and workspace names, their ids, and the tool's own
+    score, status, confidence and coverage for each. Its protection must be
+    *asserted* by the gate, not inherited from whichever root it happens to sit
+    under today: a changed default path or a sixth output file would otherwise
+    leave the privacy claim resting on a coincidence.
+    """
+
+    RUN = "20260101T000000Z"
+
+    def test_the_gate_enumerates_every_destination_the_writer_reports(self):
+        # The wiring itself. If writer_sinks stops extending with the writer's own
+        # enumeration, every other test in this class still passes while the gate
+        # checks nothing about calibration at all.
+        enumerated = {path for path, _ in writer_sinks()}
+        for path, why in writer_calibration_sinks(self.RUN):
+            with self.subTest(path=path):
+                self.assertIn(path, enumerated, why)
+
+    def test_every_calibration_output_is_checked_at_the_default_and_a_relocated_root(self):
+        # Truth comes from the writer's own table of artifacts, so adding a file
+        # there without covering it here fails rather than passing silently.
+        enumerated = {path for path, _ in writer_sinks()}
+        for suffix, why in CALIBRATION_ARTIFACTS:
+            with self.subTest(suffix=suffix):
+                self.assertIn(f"{CALIBRATION_SINK_ROOT}/{self.RUN}{suffix}", enumerated, why)
+                self.assertIn(f"elsewhere/{self.RUN}{suffix}", enumerated, why)
+
+    def test_the_instruction_sheet_is_covered_although_md_is_not_a_sink_suffix(self):
+        # Deliberate design note, made executable. `.md` stays out of SINK_SUFFIXES
+        # (that tuple only decides whether a bare scraped *word* is a file or
+        # prose, and `.md` is what every document here is written in). The
+        # instruction sheet is covered by name instead, at both roots.
+        self.assertNotIn(".md", SINK_SUFFIXES)
+        sheet = [
+            (path, why)
+            for path, why in writer_sinks()
+            if path.endswith("_calibration_instructions.md")
+        ]
+        self.assertEqual(len(sheet), 2, sheet)
+        self.assertEqual(check_sinks(REPO_ROOT, sheet), [])
+
+    def test_the_fallback_enumeration_still_matches_the_writer(self):
+        # The fallback is what runs when fabric_iq cannot be imported. Untested, it
+        # would quietly check fewer destinations while still reporting "clean".
+        self.assertEqual(
+            [path for path, _ in _calibration_sinks_fallback(self.RUN)],
+            [path for path, _ in writer_calibration_sinks(self.RUN)],
+        )
+        self.assertEqual(
+            [suffix for suffix, _ in CALIBRATION_ARTIFACTS], list(_CALIBRATION_SUFFIX_FALLBACK)
+        )
+        self.assertEqual(tuple(_GOLD_TABLES_FALLBACK), tuple(GOLD_TABLES))
+
+    def test_a_relocated_calibration_output_without_a_basename_rule_is_reported(self):
+        # Ignoring the default root only is not protection: the flag can point the
+        # writers anywhere, which is why .gitignore carries basename patterns. Drop
+        # them and every relocated destination must be reported.
+        self.ignore("artifacts/")
+
+        problems = check_sinks(self.root, writer_calibration_sinks(self.RUN))
+
+        reported = {problem.split(" - ")[0] for problem in problems}
+        for suffix, _ in CALIBRATION_ARTIFACTS:
+            with self.subTest(suffix=suffix):
+                self.assertIn(f"elsewhere/{self.RUN}{suffix}", reported)
+                self.assertNotIn(f"{CALIBRATION_SINK_ROOT}/{self.RUN}{suffix}", reported)
+
+    def test_a_changed_default_root_fails_the_gate(self):
+        # The scenario that motivated the wiring: a future edit moves the default
+        # calibration folder out from under the one ignore rule covering it today.
+        with unittest.mock.patch("fabric_iq.calibration.CALIBRATION_SINK_ROOT", "calibration_out"):
+            problems = check_sinks(REPO_ROOT, writer_sinks())
+
+        self.assertTrue(problems, "a root no ignore rule covers must be reported")
+        self.assertTrue(
+            any(problem.startswith("calibration_out/") for problem in problems), problems
+        )
+
+    def test_a_newly_added_calibration_output_with_no_rule_fails_the_gate(self):
+        # A sixth output file, added later, whose extension no rule covers.
+        orphan = f"elsewhere/{self.RUN}_calibration_rater_notes.txt"
+
+        def with_a_new_output(run_id=self.RUN):
+            return writer_calibration_sinks(run_id) + [(orphan, "free-text notes on named objects")]
+
+        with unittest.mock.patch(
+            "scripts.check_evidence_sinks.calibration_sinks", with_a_new_output
+        ):
+            problems = check_sinks(REPO_ROOT, writer_sinks())
+
+        self.assertTrue(any(problem.startswith(orphan) for problem in problems), problems)
+
+    def test_the_gate_exits_nonzero_when_a_calibration_destination_is_unprotected(self):
+        # End to end, through main(), because the exit code is what CI reads.
+        with unittest.mock.patch("fabric_iq.calibration.CALIBRATION_SINK_ROOT", "calibration_out"):
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = main([])
+
+        self.assertEqual(code, 1)
+        self.assertIn("calibration_out/", buffer.getvalue())
+
+
+class CalibrationFlagScrapeTests(unittest.TestCase):
+    """How the calibration flags are read out of tracked documentation."""
+
+    def test_the_documented_calibration_folder_is_scraped_and_ignored(self):
+        found = dict(documented_sinks(REPO_ROOT))
+        self.assertIn(f"{CALIBRATION_SINK_ROOT}/", found)
+        self.assertEqual(check_sinks(REPO_ROOT, sorted(found.items())), [])
+
+    def test_the_analyse_flag_is_read_whole_not_truncated(self):
+        # Alternation order matters: read as the shorter flag, the value would be
+        # the remainder of the option name and every documented key path would
+        # silently drop out of the scan.
+        value = "artifacts/calibration/run_calibration_key.json"
+        text = flag_example("calibration-analyse", value)
+
+        matches = _FLAG_EXAMPLE.findall(text)
+
+        self.assertEqual(matches, [("calibration-analyse", value)])
+
+    def test_the_analyse_example_reaches_the_ignore_check(self):
+        # The agreement report and disagreement CSV are written beside the key this
+        # flag names, so a documented key path is a documented output folder.
+        found = dict(documented_sinks(REPO_ROOT))
+        analysed = [path for path, why in found.items() if "calibration-analyse" in why]
+        self.assertTrue(analysed, sorted(found.items()))
+        self.assertEqual(check_sinks(REPO_ROOT, [(path, "analyse") for path in analysed]), [])
+
+    def test_a_labels_flag_is_not_treated_as_an_output(self):
+        # Rater-typed worksheets are inputs this tool never writes. Scanning them
+        # would demand an ignore rule for a file the practitioner owns.
+        self.assertNotIn("calibration-labels", OUTPUT_FLAGS)
+        example = flag_example("calibration-labels", "a=labels.csv")
+        self.assertEqual(_FLAG_EXAMPLE.findall(example), [])
 
 
 class RealTreeTests(unittest.TestCase):

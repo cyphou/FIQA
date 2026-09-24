@@ -55,6 +55,34 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   FIQA artifacts remain `READY`, eligible, ≥85 scored, ≥90% confident/covered and free of
   blocking findings. See [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md).
 
+**Blinded practitioner calibration** — the instrument, not the measurement
+- [`fabric_iq/calibration.py`](./fabric_iq/calibration.py), wired to
+  `python assess.py --calibration` (plus `--calibration-size`, `--calibration-seed`,
+  `--calibration-analyse`, `--calibration-labels`) — a reproducible, seeded, stratified
+  20–30 object sample rendered as a blinded worksheet, an instruction sheet, and a
+  **separate un-blinded key** the coordinator keeps. `assert_blinded` runs on every build,
+  not only in tests: no worksheet column may be named in `BLINDED_FIELDS`, and no cell may
+  reproduce an object name or id, a score, confidence or coverage, or a word the engine
+  publishes a verdict with. `--calibration-analyse` reads the returned worksheets back and
+  reports **inter-rater agreement first** (Krippendorff's alpha with an ordinal difference
+  function), agreement with the tool second, and enumerates every disagreement object by
+  object, separating "we ranked this differently" from "one of us could not judge it".
+  Degenerate cases answer `undefined` with a reason rather than a flattering number.
+- **It proposes no number, by design.** `CalibrationReport.proposals` is empty by
+  construction and asserted so. Any weight, threshold or cap change stays a human decision
+  reviewed by **@scorer** with its own regression test in
+  [`tests/test_scoring.py`](./tests/test_scoring.py).
+- **This does not calibrate anything yet.** No practitioner has filled in a worksheet, so
+  **no agreement figure exists, no disagreement has been recorded, and not one weight or
+  threshold has been validated.** [`docs/KNOWN_LIMITATIONS.md` §5](./docs/KNOWN_LIMITATIONS.md)
+  is unchanged in substance — the weights remain reasoned, not calibrated — and the
+  Phase 5 Sprint 5.3 release gate stays **open**. Building the instrument is not the same
+  as taking the measurement.
+- Every file the module writes is an evidence sink like any other: the destinations are
+  enumerated by `calibration_sinks` / `CALIBRATION_ARTIFACTS` in the module itself and
+  checked by [`scripts/check_evidence_sinks.py`](./scripts/check_evidence_sinks.py), so a
+  new calibration output file cannot skip the ignore-rule gate.
+
 **Evidence hygiene and documentation ownership** — two release gates made executable
 - [`scripts/check_evidence_sinks.py`](./scripts/check_evidence_sinks.py) with
   [`tests/test_evidence_sinks.py`](./tests/test_evidence_sinks.py) — asserts that every
@@ -90,10 +118,12 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
   check alongside the ownership and rule-documentation checks.
 
-**Tests** — grown from 138 to **379 tests**, all green. One test skips by design on
-Windows — it plants a control character in a tracked filename to prove the NUL-separated
-`git ls-files -z` parse, and Windows refuses such a name; it carries its weight on Linux
-CI.
+**Tests** — grown from 138 to **488 tests**, all green. Two tests skip by design on
+Windows — one plants a control character in a tracked filename to prove the NUL-separated
+`git ls-files -z` parse, and Windows refuses such a name; the other exercises the
+`dir_fd`-anchored retention delete that Windows does not provide (§3.6 of
+[`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) records the residual
+race this leaves on that platform). Both carry their weight on Linux CI.
 
 ### Fixed
 
@@ -135,7 +165,7 @@ directory, whose own checkout runs its own gate.
 universe from the modules under `fabric_iq/` plus `REQUIRED_DOCS`, so the two gate scripts
 `@tester` claims were parsed but never verified, and `scripts/build_rules_doc.py` and
 `scripts/__init__.py` were owned by nobody. The universe is now `fabric_iq/` **plus**
-`scripts/` plus the required documents — **26** audited modules and **7** documents and
+`scripts/` plus the required documents — **27** audited modules and **7** documents and
 skills — with the gate scripts and the package marker claimed by **@tester** and the
 generator behind [`docs/RULES.md`](./docs/RULES.md) claimed by **@readme**, which owns its
 output and runs `python scripts/build_rules_doc.py --check` as part of the documentation
@@ -198,6 +228,25 @@ thing it was written to catch walks past it, and no agent is accountable for not
   identity-dense artifact a run leaves behind; and the 30–90 day Bronze retention figure
   is restated as an operational recommendation made in that document, its attribution to
   a `KNOWN_LIMITATIONS.md` source removed because no such source existed.
+- [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md) — the calibration
+  sink recorded in the identity and retention contract: the destination table now names
+  **five** run destinations, the fifth being `--calibration` with the exact files it
+  emits and what each one carries. A new §3.1.2 states the thing that governs safe use —
+  **the worksheet and the key have opposite handling rules**. The worksheet is built to
+  be handed to an outside practitioner; the key is the re-identification map, joining
+  real object and workspace names and ids to the tool's score, status, eligibility,
+  confidence and coverage, with a pseudonym block covering every object in the run rather
+  than only the sample, and it is never handed to a labeler. It also records that
+  pseudonymisation is default-on with no opt-out but does **not** discharge
+  [`docs/ROADMAP.md`](./docs/ROADMAP.md)'s requirement to de-identify, retain outside git
+  and obtain Security approval before use — the substitution covers assessed objects'
+  names and ids, not every tenant-authored string a measured fact quotes; that the
+  agreement and disagreement outputs carry practitioner **free-text rationales** attached
+  to a labeler id that is usually a person's name, making their retention a decision with
+  a named expiry rather than a default; and that the `artifacts/calibration` default sits
+  inside the working tree, which §3.1.1 reserves for synthetic output. §3.3 gains the
+  matching retention rule: a calibration exercise has a defined end and nothing in the
+  tool deletes its files.
 - [`README.md`](./README.md) — documents `python scripts/check_evidence_sinks.py` and
   what each gate asserts, so the documented gate set matches the one CI runs.
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — Phase 1 marked done and field-validated;

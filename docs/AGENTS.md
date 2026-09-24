@@ -3,10 +3,10 @@
 Fourteen agents under [.github/agents/](../.github/agents), twelve of them owning a
 declared set of files. Ownership is enforced: `python scripts/check_agent_ownership.py`
 reports drift and `tests/test_agents.py` fails the build on it. The audit covers **three**
-populations — the **22** modules under `fabric_iq/`, the **4** gate and generator scripts
+populations — the **23** modules under `fabric_iq/`, the **4** gate and generator scripts
 under `scripts/`, and the **7** documents and skills that assert a privacy, identity,
 retention or collection-capability claim or that a model reads as instruction. The first
-two are reported together as **26** audited modules, which is the count the check prints.
+two are reported together as **27** audited modules, which is the count the check prints.
 
 `scripts/` is audited on the same terms as the package, `__init__.py` included. An unowned
 gate is worse than an unowned module: it keeps exiting 0 while the thing it was written to
