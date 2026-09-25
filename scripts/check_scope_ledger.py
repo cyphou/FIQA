@@ -413,7 +413,13 @@ def main(argv: list[str] | None = None) -> int:
     problems = audit(args.ledger, as_of)
 
     if not args.quiet:
-        relative = os.path.relpath(args.ledger, REPO_ROOT)
+        try:
+            relative = os.path.relpath(args.ledger, REPO_ROOT)
+        except ValueError:
+            # Windows raises when the paths sit on different drives, which is the
+            # normal shape of a mutation-proof copy in %TEMP% on a CI runner whose
+            # checkout is on another volume.
+            relative = os.path.abspath(args.ledger)
         if relative.startswith(".."):  # a mutation-proof copy outside the checkout
             relative = os.path.abspath(args.ledger)
         print("Scope-ledger reconciliation (Sprint 7.2)\n")
