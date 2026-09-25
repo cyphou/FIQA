@@ -41,7 +41,12 @@ import re
 import unittest
 
 from scripts.check_scope_ledger import ISO_DATE as _ISO_DATE
-from scripts.check_scope_ledger import LEDGER_PATH, parse_rows, read_ledger
+from scripts.check_scope_ledger import (
+    LEDGER_PATH,
+    parse_calendar_rows,
+    parse_rows,
+    read_ledger,
+)
 from tests.helpers import REPO_ROOT
 
 LEDGER = LEDGER_PATH
@@ -64,6 +69,17 @@ def _rows(text=None):
     empty set.
     """
     return parse_rows(text if text is not None else _read())
+
+
+def _calendar_rows(text=None):
+    """The review-calendar rows, which are deliberately *not* dispositions.
+
+    Kept apart from :func:`_rows` because the document keeps them apart: folding
+    them in would make the stated tally read 16 instead of 13 and would force the
+    vocabulary assertion to admit a fifth word, which would in turn let a real
+    ledger row be dispositioned ``watched`` and still pass.
+    """
+    return parse_calendar_rows(text if text is not None else _read())
 
 
 class TestScopeLedgerParses(unittest.TestCase):
@@ -123,7 +139,76 @@ class TestOneDispositionPerKey(unittest.TestCase):
         )
 
 
+class TestTheReviewCalendarIsInternallyHonest(unittest.TestCase):
+    """The calendar's own claims about itself (Sprint 7.3).
+
+    `watched` rows are *not* dispositions -- the document says so in its own
+    prose -- so they are parsed separately, kept out of the tally, and held to a
+    different contract: a reviewer, a date, public sources, and a finding written
+    down. Whether those dates are *enforced* is a gate question and lives in
+    `tests/test_scope_ledger_gate.py`; whether the table is honest about itself is
+    this file's question.
+
+    What is deliberately NOT asserted here: that a review found what it says it
+    found. "It guarantees that somebody looked on a stated date. It never
+    guarantees that they saw" -- and no test can close that gap, so none pretends
+    to.
+    """
+
+    def test_the_calendar_parses_and_states_its_own_row_count(self):
+        rows = _calendar_rows()
+        self.assertTrue(rows, "no calendar row parsed -- the table shape changed")
+        heading = f"## The review calendar — classes that exist only as prose, {len(rows)} rows"
+        self.assertIn(heading, _read(), "the heading states a count the table does not match")
+
+    def test_watched_is_deliberately_not_a_disposition_word(self):
+        # "`watched` is a review obligation, not a scope disposition. It is
+        # deliberately not one of the four words in the disposition vocabulary."
+        # If it ever became one, a real ledger row could be dispositioned
+        # `watched` -- disposed of by a calendar entry that reconciles nothing.
+        self.assertNotIn("| **watched** | ", _read().split("## The ledger")[0])
+        self.assertNotIn("watched", {disposition for _, _, disposition, *_ in _rows()})
+        for number, key, disposition, *_ in _calendar_rows():
+            with self.subTest(row=number, key=key):
+                self.assertEqual(disposition, "watched")
+
+    def test_every_watched_row_names_a_reviewer_a_date_and_public_sources(self):
+        for number, key, _disposition, basis, owner, review in _calendar_rows():
+            with self.subTest(row=number, key=key):
+                self.assertRegex(
+                    review, _ISO_DATE, f"calendar row {number} ({key}) carries no review-by date"
+                )
+                self.assertRegex(
+                    owner, _AGENT, f"calendar row {number} ({key}) names nobody to review it"
+                )
+                self.assertIn(
+                    "https://",
+                    basis,
+                    f"calendar row {number} ({key}) cites no public source to re-read -- "
+                    "a review obligation with no named source cannot be discharged",
+                )
+                self.assertIn(
+                    "Found:",
+                    basis,
+                    f"calendar row {number} ({key}) records no finding from its last review",
+                )
+
+    def test_every_watched_class_appears_in_the_review_log(self):
+        # "A nil result is the normal outcome of a quarterly read and it must be
+        # written down with its date and the sources consulted, otherwise the next
+        # reviewer cannot distinguish a checked surface from an unchecked one."
+        text = _read()
+        for number, key, *_ in _calendar_rows():
+            with self.subTest(row=number, key=key):
+                self.assertRegex(
+                    text,
+                    re.compile(rf"^\|\s*\d{{4}}-\d{{2}}-\d{{2}}\s*\|\s*`{re.escape(key)}`\s*\|", re.M),
+                    f"`{key}` is watched but no dated review-log row records a reading of it",
+                )
+
+
 class TestEveryRowCarriesWhatItsDispositionRequires(unittest.TestCase):
+
     """The "Must carry" column of the ledger's own disposition vocabulary.
 
     Each test is a conditional over the rows that carry one disposition, so it

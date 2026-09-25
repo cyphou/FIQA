@@ -15,6 +15,21 @@ The three negative tests Sprint 7.2's validation requires:
     is gone" has four shapes and all of them must fail rather than read as
     "nothing to check".
 
+And the two Sprint 7.3 added, both reproduced against the real script before the
+code moved:
+
+(d) :class:`TestTheReviewCalendarIsGated` -- a back-dated review-calendar row used
+    to exit 0 and print "Clean", because ``parse_sections()`` only collected rows
+    under a ``## The ledger -- `CONSTANT`, N rows`` heading. An obligation twenty
+    months overdue reported as fine. **A review obligation that silently never
+    comes due is worse than none, because it looks scheduled.**
+(e) :class:`TestASectionMustNameADeclaredSource` -- the parser accepted a section
+    naming a constant that does not exist, printed it as a parsed source and
+    exited 0. Nothing checked that a parsed section mapped to a *declared* source,
+    so "do not invent a constant to satisfy the parser" was enforced by an
+    author's integrity rather than by this gate. That is the vacuous-gate pattern
+    living inside the anti-drift gate.
+
 And the trap (c) exists to protect against, tested directly in
 :class:`TestTheParseCannotBeVacuous`: if the row regex silently matches nothing,
 every element looks disposed and the gate prints success over a document it never
@@ -29,6 +44,7 @@ through ``--ledger``; :meth:`TestTheRealLedgerIsNeverMutated` re-reads the real
 file's bytes afterwards and proves they are unchanged.
 """
 
+import ast
 import contextlib
 import datetime
 import hashlib
@@ -40,13 +56,17 @@ import tempfile
 import unittest
 
 from scripts.check_scope_ledger import (
+    CALENDAR_KIND,
     DECLARED_SOURCES,
+    LEDGER_KIND,
     LEDGER_PATH,
+    REQUIRED_CALENDAR_SECTIONS,
     Source,
     audit,
     count_problems,
     load_source,
     main,
+    parse_calendar_rows,
     parse_rows,
     parse_sections,
     read_ledger,
@@ -54,6 +74,29 @@ from scripts.check_scope_ledger import (
 from tests.helpers import REPO_ROOT
 
 SCRIPT = os.path.join(REPO_ROOT, "scripts", "check_scope_ledger.py")
+
+
+def imported_modules():
+    """Every module the gate actually imports, read from its parse tree.
+
+    Deliberately `ast` rather than a regex over the source. The regex this
+    replaced -- ``^\\s*(?:import|from)\\s+(\\w+)`` -- matched the *prose* of the
+    module docstring the moment a wrapped sentence began with the word "from",
+    and reported a dependency on a module named `an`. A dependency check that can
+    be tripped by an English sentence is a check nobody will believe the third
+    time it fires, and the fix is to read imports exactly rather than to loosen
+    what counts as one: both assertions below got stricter, not laxer.
+    """
+    with open(SCRIPT, encoding="utf-8") as handle:
+        tree = ast.parse(handle.read(), filename=SCRIPT)
+    modules = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            modules.append(node.module)
+    assert modules, "no import parsed -- the check would be vacuous"
+    return modules
 
 
 def run(argv):
@@ -110,6 +153,35 @@ def source_attribute(module, name, value, delete=False):
         setattr(module, name, original)
 
 
+CALENDAR_HEADING = "## The review calendar \u2014 classes that exist only as prose, 3 rows"
+
+
+def calendar_row_line(number):
+    """Return ``(row, line)`` for a calendar row, asserting the line is unique.
+
+    Every calendar row carries the same ``2026-12-24``, and so do five ledger
+    rows, so the blunt ``replace(date)`` the exclusion proofs use cannot target
+    one calendar row. Anchoring on the whole line keeps the mutation precise and
+    makes the proof fail loudly if @readme renumbers or renames a row rather than
+    silently mutating nothing.
+    """
+    text = read_ledger(LEDGER_PATH)
+    row = next(r for r in parse_calendar_rows(text) if r.number == number)
+    prefix = f"| {number} | `{row.key}` |"
+    lines = [line for line in text.splitlines() if line.startswith(prefix)]
+    assert len(lines) == 1, f"expected exactly one line starting {prefix!r}, got {len(lines)}"
+    return row, lines[0]
+
+
+def redated_calendar_row(number, new_date):
+    """A ``(old, new)`` replacement moving one calendar row's review-by date."""
+    row, line = calendar_row_line(number)
+    old_tail = f"| {row.review} |"
+    assert line.rstrip().endswith(old_tail), line[-40:]
+    head, tail = line.rsplit(old_tail, 1)
+    return line, f"{head}| {new_date} |{tail}"
+
+
 class TestTheGateIsSilentOnTheRealTree(unittest.TestCase):
     def test_the_real_tree_reconciles_and_exits_zero(self):
         problems = audit()
@@ -127,6 +199,10 @@ class TestTheGateIsSilentOnTheRealTree(unittest.TestCase):
         self.assertIn("WORKSPACE_ITEM_KEYS", output)
         self.assertIn("13 elements", output)
         self.assertIn("Rows parsed:       13", output)
+        # ...including the section kind that reconciles against no constant, so a
+        # calendar silently dropping out of the parse is visible in the report.
+        self.assertIn("Calendar rows:     3", output)
+        self.assertIn("dates only, no constant", output)
 
 
 class TestTheParseCannotBeVacuous(unittest.TestCase):
@@ -134,16 +210,25 @@ class TestTheParseCannotBeVacuous(unittest.TestCase):
 
     def test_the_parse_finds_the_number_of_rows_the_document_states(self):
         sections = parse_sections(read_ledger(LEDGER_PATH))
-        self.assertEqual(len(sections), 1, "expected exactly one ledger section")
-        section = sections[0]
-        self.assertEqual(section.source, "WORKSPACE_ITEM_KEYS")
-        self.assertEqual(
-            len(section.rows),
-            section.stated_count,
-            "rows parsed must equal the count the heading states, or the gate is "
-            "reporting over a table it only partially read",
-        )
-        self.assertEqual(len(section.rows), 13)
+        ledgers = [s for s in sections if s.kind == LEDGER_KIND]
+        calendars = [s for s in sections if s.kind == CALENDAR_KIND]
+        # Coupled to Sprint 7.3: before the calendar was gated this asserted
+        # exactly one section. Two kinds now parse, and each is still held to the
+        # count its own heading states.
+        self.assertEqual(len(ledgers), 1, "expected exactly one ledger section")
+        self.assertEqual(len(calendars), REQUIRED_CALENDAR_SECTIONS)
+        for section in sections:
+            with self.subTest(section=section.source):
+                self.assertEqual(
+                    len(section.rows),
+                    section.stated_count,
+                    "rows parsed must equal the count the heading states, or the gate is "
+                    "reporting over a table it only partially read",
+                )
+                self.assertTrue(section.rows, "a section parsing zero rows is a vacuous one")
+        self.assertEqual(ledgers[0].source, "WORKSPACE_ITEM_KEYS")
+        self.assertEqual(len(ledgers[0].rows), 13)
+        self.assertEqual(len(calendars[0].rows), 3)
 
     def test_the_parsed_rows_are_a_bijection_with_the_live_constant(self):
         # The assertion tests/test_scope_ledger.py deliberately left to this
@@ -389,6 +474,271 @@ class TestDeclaredSourceDisappears(unittest.TestCase):
         )
 
 
+class TestTheReviewCalendarIsGated(unittest.TestCase):
+    """(d) Sprint 7.3: the review calendar's dates must actually come due.
+
+    Before this slice, `parse_sections()` collected rows only under
+    ``## The ledger -- `CONSTANT`, N rows``, so the calendar section was never
+    parsed and `check_reviews()` never saw its rows. Reproduced on 2026-09-25 by
+    back-dating calendar row 1 to `2025-01-01` and running the real script
+    against the copy: exit 0, "Clean" -- an obligation twenty months overdue
+    reported as fine. **A review obligation that silently never comes due is
+    worse than none, because it looks scheduled.**
+    """
+
+    def test_the_calendar_parses_as_its_own_kind_and_is_not_vacuous(self):
+        rows = parse_calendar_rows(read_ledger(LEDGER_PATH))
+        self.assertTrue(rows, "no calendar row parsed -- the dates are unenforced again")
+        for row in rows:
+            with self.subTest(row=row.number, key=row.key):
+                self.assertEqual(row.disposition, "watched")
+                self.assertRegex(row.review, r"\d{4}-\d{2}-\d{2}")
+                self.assertRegex(row.owner, r"@[a-z]")
+
+    def test_calendar_rows_stay_out_of_the_disposition_tally(self):
+        # `watched` "is a review obligation, not a scope disposition ...
+        # deliberately not one of the four words in the disposition vocabulary".
+        # If calendar rows leaked into parse_rows the document's own tally would
+        # read 16, and tests/test_scope_ledger.py would have to admit a fifth
+        # word -- which would then let a real ledger row be dispositioned
+        # `watched` and pass.
+        ledger_rows = parse_rows(read_ledger(LEDGER_PATH))
+        self.assertEqual(len(ledger_rows), 13)
+        self.assertNotIn("watched", {row.disposition for row in ledger_rows})
+        calendar_keys = {row.key for row in parse_calendar_rows(read_ledger(LEDGER_PATH))}
+        self.assertEqual(calendar_keys & {row.key for row in ledger_rows}, set())
+
+    def test_a_back_dated_calendar_row_fails_and_names_the_row_and_its_reviewer(self):
+        # The negative test whose absence made the dates a promise rather than a
+        # guard. Twenty months overdue used to exit 0.
+        with mutated_ledger(redated_calendar_row(1, "2025-01-01")) as path:
+            problems = audit(path)
+            code, output = run(["--ledger", path])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(len(problems["expired"]), 1, problems["expired"])
+        message = problems["expired"][0]
+        self.assertIn("2025-01-01", message)
+        self.assertIn("m365-consumption-surfaces", message)
+        self.assertIn("review calendar row 1", message)
+        self.assertIn("@readme", message)
+        self.assertIn("m365-consumption-surfaces", output)
+        self.assertNotIn("Clean:", output)
+        # Nothing else moved: the calendar is only ever held to its dates.
+        self.assertEqual(problems["undisposed"], [])
+        self.assertEqual(problems["stale"], [])
+        self.assertEqual(problems["undeclared"], [])
+        self.assertEqual(problems["parse"], [])
+
+    def test_the_calendar_remedy_is_not_the_exclusion_remedy(self):
+        # The two failures are discharged differently and must not read alike: an
+        # exclusion is re-justified, a calendar row is re-read against its public
+        # sources and re-dated with a finding recorded, including a nil finding.
+        with mutated_ledger(redated_calendar_row(2, "2025-01-01")) as path:
+            calendar = audit(path)["expired"][0]
+        with mutated_ledger(("| 2026-12-24 |", "| 2025-01-01 |")) as path:
+            exclusion = audit(path)["expired"][0]
+
+        self.assertIn("dataflows", exclusion)
+        self.assertIn("re-verify the reason", exclusion)
+        self.assertNotIn("review log", exclusion)
+
+        self.assertIn("in-fabric-agent-surfaces", calendar)
+        self.assertIn("re-read the public sources", calendar)
+        self.assertIn("review log", calendar)
+        self.assertIn("nil finding is still a finding", calendar)
+        self.assertNotIn("re-verify the reason", calendar)
+        # Both keep the no-bulk-re-dating sentence: the cost is the point.
+        for message in (calendar, exclusion):
+            self.assertIn("no bulk re-dating command", message)
+
+    def test_the_named_reviewer_is_a_handle_not_the_whole_routing_cell(self):
+        # The reviewer cell carries the reviewer *and* the routing for a finding.
+        # Splicing the whole cell mid-sentence produced "... and to `@semantic`
+        # must re-read ...", which reads as gibberish at the moment somebody is
+        # being asked to do work.
+        with mutated_ledger(redated_calendar_row(3, "2025-01-01")) as path:
+            message = audit(path)["expired"][0]
+        self.assertIn("-- @readme must re-read the public sources", message)
+        # ...and the routing survives, at the end, where a finding needs it.
+        self.assertIn("@roadmap-planner", message)
+
+    def test_a_calendar_row_that_loses_its_date_fails(self):
+        # On the calendar *every* row must be dated -- the date is the whole
+        # mechanism -- where in the ledger only `deliberately excluded` is
+        # contractually dated because `open` rows are tracked by a sprint.
+        with mutated_ledger(redated_calendar_row(1, "n/a")) as path:
+            problems = audit(path)
+            code, _output = run(["--ledger", path])
+        self.assertEqual(code, 1)
+        self.assertEqual(len(problems["expired"]), 1, problems["expired"])
+        self.assertIn("watched by nobody", problems["expired"][0])
+        self.assertIn("@readme", problems["expired"][0])
+
+    def test_a_calendar_date_still_in_the_future_is_silent(self):
+        # Expiry must fire on the date, not on the presence of a date, or the
+        # calendar is permanently red and gets switched off.
+        future = (datetime.date.today() + datetime.timedelta(days=365)).isoformat()
+        with mutated_ledger(redated_calendar_row(1, future)) as path:
+            self.assertEqual(count_problems(audit(path)), 0)
+
+    def test_the_calendar_heading_count_is_held_to_the_same_assertion(self):
+        with mutated_ledger((CALENDAR_HEADING, CALENDAR_HEADING.replace("3 rows", "2 rows"))) as path:
+            problems = audit(path)
+            code, output = run(["--ledger", path])
+        self.assertEqual(code, 1)
+        self.assertTrue(problems["parse"])
+        self.assertIn("states 2 rows but 3 parsed", output)
+        self.assertIn("review calendar section", output)
+
+    def test_deleting_the_calendar_section_fails_rather_than_unscheduling_it(self):
+        # Wiring the dates up and then losing the heading to a rename or a typo
+        # would put the obligations back where Sprint 7.3 found them:
+        # scheduled-looking and never due. That must cost a deliberate edit to
+        # REQUIRED_CALENDAR_SECTIONS, by @tester, not a silent green build.
+        with mutated_ledger((CALENDAR_HEADING, "## The review calendar")) as path:
+            problems = audit(path)
+            code, output = run(["--ledger", path])
+        self.assertEqual(code, 1)
+        self.assertEqual(len(problems["parse"]), 1, problems["parse"])
+        self.assertIn("0 review-calendar section(s) parsed", problems["parse"][0])
+        self.assertIn("silently stop coming due", problems["parse"][0])
+        self.assertIn("@tester", output)
+        self.assertEqual(problems["expired"], [], "the rows are gone, not expired")
+
+    def test_calendar_rows_are_never_reconciled_against_a_constant(self):
+        # "They dispose no constant, so undisposed/stale are meaningless for them
+        # and would fail on arrival." Proven while the reconciliation is actually
+        # firing on something else, so the assertion is not vacuous.
+        from fabric_iq.collectors import fabric_api
+
+        shrunk = tuple(k for k in fabric_api.WORKSPACE_ITEM_KEYS if k != "Notebook")
+        with source_attribute(fabric_api, "WORKSPACE_ITEM_KEYS", shrunk):
+            problems = audit()
+        self.assertEqual(len(problems["stale"]), 1, problems["stale"])
+        reported = " ".join(problems["stale"] + problems["undisposed"] + problems["sources"])
+        for row in parse_calendar_rows(read_ledger(LEDGER_PATH)):
+            self.assertNotIn(row.key, reported)
+
+    def test_the_forward_cost_is_every_dated_row_in_both_kinds(self):
+        # "Once wired, 2026-12-25 goes red with eight per-row edits instead of
+        # five." Asserted as the invariant rather than as the number 8: every row
+        # carrying a date comes due, and the calendar rows are among them.
+        text = read_ledger(LEDGER_PATH)
+        dated = [
+            row
+            for row in parse_rows(text) + parse_calendar_rows(text)
+            if re.search(r"\d{4}-\d{2}-\d{2}", row.review)
+        ]
+        self.assertGreaterEqual(len(dated), 8)
+        expired = audit(LEDGER_PATH, as_of=datetime.date(2027, 1, 1))["expired"]
+        self.assertEqual(len(expired), len(dated))
+        for row in parse_calendar_rows(text):
+            self.assertTrue(
+                any(row.key in message for message in expired),
+                f"calendar row {row.number} ({row.key}) never comes due",
+            )
+
+
+class TestASectionMustNameADeclaredSource(unittest.TestCase):
+    """The hole inside the anti-drift gate, found by @readme and not exploited.
+
+    Renaming a heading to ``## The ledger -- `TOTALLY_FAKE_CONSTANT`, 3 rows``
+    parsed cleanly, printed ``Rows parsed: 3 under `TOTALLY_FAKE_CONSTANT``` and
+    exited 0. Nothing checked that a parsed section mapped to a *declared*
+    source, so "do not invent a constant to satisfy the parser" was enforced by
+    an author's integrity rather than by this gate -- the vacuous-gate pattern
+    living inside the anti-drift gate, and the same family as the Sprint 5.0.1
+    defect where the ownership parser could not read a dotted path and reported
+    clean over a file it had never opened.
+    """
+
+    FAKE_SECTION = (
+        "\n## The ledger \u2014 `TOTALLY_FAKE_CONSTANT`, 1 rows\n\n"
+        "| # | Item key | Disposition | Basis | Owner | Review by |\n"
+        "|---|---|---|---|---|---|\n"
+        "| 1 | `Invented` | **open** | Sprint 9 | `@tester` | n/a |\n"
+    )
+
+    def test_every_parsed_section_on_the_real_tree_names_a_declared_source(self):
+        declared = {source.attribute for source in DECLARED_SOURCES}
+        ledgers = [s for s in parse_sections(read_ledger(LEDGER_PATH)) if s.kind == LEDGER_KIND]
+        self.assertTrue(ledgers, "non-vacuity: at least one ledger section must parse")
+        for section in ledgers:
+            self.assertIn(section.source, declared)
+
+    def test_a_section_naming_a_constant_that_does_not_exist_fails_and_is_named(self):
+        # Exactly the mutation reproduced on 2026-09-25, which used to exit 0.
+        with mutated_ledger(
+            (CALENDAR_HEADING, "## The ledger \u2014 `TOTALLY_FAKE_CONSTANT`, 3 rows")
+        ) as path:
+            problems = audit(path)
+            code, output = run(["--ledger", path])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(len(problems["undeclared"]), 1, problems["undeclared"])
+        message = problems["undeclared"][0]
+        self.assertIn("TOTALLY_FAKE_CONSTANT", message)
+        self.assertIn("not declared in DECLARED_SOURCES", message)
+        self.assertIn("@tester", message)
+        self.assertIn("TOTALLY_FAKE_CONSTANT", output)
+        self.assertNotIn("Clean:", output)
+        # The same mutation also destroyed the calendar, and that is reported
+        # too: two distinct things went wrong and the gate says both.
+        self.assertTrue(problems["parse"])
+
+    def test_a_fake_section_added_beside_the_real_ones_fails_on_its_own(self):
+        # Isolates the new check: the real ledger and the real calendar are both
+        # intact, so `undeclared` is the only thing that can fire.
+        text = read_ledger(LEDGER_PATH) + self.FAKE_SECTION
+        with ledger_copy(text) as path:
+            problems = audit(path)
+            code, output = run(["--ledger", path])
+        self.assertEqual(code, 1)
+        self.assertEqual(count_problems(problems), 1, problems)
+        self.assertIn("TOTALLY_FAKE_CONSTANT", problems["undeclared"][0])
+        self.assertIn("Ledger sections naming a source this gate does not declare", output)
+
+    def test_a_real_but_undeclared_constant_fails_too(self):
+        # The quieter shape: a section for a constant that genuinely exists but
+        # was never added to DECLARED_SOURCES. Its rows parse, count, expire and
+        # print while nothing reconciles them against code -- a section that
+        # looks gated and is not.
+        text = read_ledger(LEDGER_PATH) + self.FAKE_SECTION.replace(
+            "TOTALLY_FAKE_CONSTANT", "TENANT_SETTING_MAP"
+        )
+        with ledger_copy(text) as path:
+            problems = audit(path)
+        self.assertEqual(len(problems["undeclared"]), 1, problems)
+        self.assertIn("TENANT_SETTING_MAP", problems["undeclared"][0])
+
+    def test_the_mapping_is_a_bijection_in_both_directions(self):
+        # Renaming the one real section fires both halves at once: the declared
+        # source has no section (check 2, which already existed) and the section
+        # names nothing declared (check 6, added here).
+        with mutated_ledger(
+            (
+                "## The ledger \u2014 `WORKSPACE_ITEM_KEYS`, 13 rows",
+                "## The ledger \u2014 `RENAMED_KEYS`, 13 rows",
+            )
+        ) as path:
+            problems = audit(path)
+        self.assertTrue(problems["sources"], "declared source with no section must fail")
+        self.assertIn("has no '## The ledger", problems["sources"][0])
+        self.assertTrue(problems["undeclared"], "section naming nothing declared must fail")
+        self.assertIn("RENAMED_KEYS", problems["undeclared"][0])
+
+    def test_the_calendar_is_exempt_by_construction_not_by_exception(self):
+        # The calendar heading names a class, never an identifier, so it cannot
+        # reach the declared-source check at all -- which is why writing these
+        # rows needed no fake constant in the first place.
+        calendars = [s for s in parse_sections(read_ledger(LEDGER_PATH)) if s.kind == CALENDAR_KIND]
+        self.assertTrue(calendars)
+        for section in calendars:
+            self.assertNotRegex(section.source, r"^[A-Z_][A-Z0-9_]*$")
+        self.assertEqual(audit()["undeclared"], [])
+
+
 class TestTheGateHasNoEscapeHatch(unittest.TestCase):
     """Design rules that are only real if something enforces them."""
 
@@ -408,25 +758,18 @@ class TestTheGateHasNoEscapeHatch(unittest.TestCase):
         # standard-library-only contract, and fails in the place people trust
         # most." Whether a documented product fact still holds is what the
         # review-by date is for -- a human obligation, not a fetch.
-        with open(SCRIPT, encoding="utf-8") as handle:
-            script = handle.read()
-        imports = re.findall(r"^\s*(?:import|from)\s+([A-Za-z_][\w.]*)", script, re.MULTILINE)
-        for module in imports:
+        for module in imported_modules():
             root = module.split(".")[0]
             self.assertNotIn(
                 root,
                 {"urllib", "http", "socket", "ssl", "ftplib", "requests", "webbrowser", "smtplib"},
                 f"the gate imports {module}; it must never read the network",
             )
-        self.assertNotIn("urlopen", script)
+        with open(SCRIPT, encoding="utf-8") as handle:
+            self.assertNotIn("urlopen", handle.read())
 
     def test_the_gate_depends_on_nothing_outside_the_standard_library(self):
-        with open(SCRIPT, encoding="utf-8") as handle:
-            script = handle.read()
-        imports = {
-            module.split(".")[0]
-            for module in re.findall(r"^\s*(?:import|from)\s+([A-Za-z_][\w.]*)", script, re.MULTILINE)
-        }
+        imports = {module.split(".")[0] for module in imported_modules()}
         allowed = {
             "argparse", "datetime", "importlib", "os", "re", "sys", "typing",
             "__future__", "fabric_iq",

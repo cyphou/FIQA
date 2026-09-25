@@ -187,6 +187,52 @@ thing it was written to catch walks past it, and no agent is accountable for not
 
 ### Documentation
 
+- [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) — **the review calendar** (Sprint 7.3,
+  smallest slice): three classes of Fabric's shape that exist **only as prose** now carry a
+  public source, an exact verification date and a 90-day review date —
+  `m365-consumption-surfaces` (Cowork and Copilot Chat), `in-fabric-agent-surfaces` and
+  `fabric-iq-workload-preview`. They exist because an offline reconciliation structurally
+  cannot find them: of the two 2026-09-24 gaps, `Ontology` sat in a constant this
+  repository maintains and the Microsoft 365 consumption surface sat in no constant, no
+  endpoint and no item key. All six product facts behind the rows were **re-read live on
+  2026-09-25** before being written down, and all six read as previously recorded — the
+  three reviews are logged as **nil results**, with their date and the sources consulted,
+  because a review that found nothing is the evidence that distinguishes a checked surface
+  from an unchecked one. Two facts not previously recorded anywhere here were captured in
+  passing: the Fabric data agent is stated GA, and agent-related Purview risk discovery and
+  auditing is stated preview. Neither moves a disposition.
+  **Those three rows are now gated.** `@tester` wired the calendar into
+  [`scripts/check_scope_ledger.py`](./scripts/check_scope_ledger.py): `parse_sections()`
+  learned a second section kind (`## The review calendar — …, N rows`), its rows are held
+  to the same stated-count assertion and the same expiry arithmetic, and a review-by date
+  that passes with no recorded review now fails the build naming the row and its reviewer.
+  The enforcement prose in the document has been corrected to match — the check table now
+  reads **six checks**, the banner above the dates states that they are enforced, and the
+  forward cost reads **eight** per-row edits on 2026-12-25 (five exclusions plus three
+  calendar rows). Each of those three was reproduced before being written: the back-dated
+  calendar row exits 1, `CHECKS` holds six names, and the audit run as of 2026-12-25 and
+  2026-12-24 returns **eight expiries and zero**.
+  The calendar remains a **calendar, not a detector**: what changed is that the *absence*
+  of a review fails the build — it still guarantees that somebody looked on a stated date,
+  never that they saw — it adds no rule, moves no score, and passes no Phase 7 criterion.
+  The thirteen ledger rows and the three calendar rows are counted separately, never as 16:
+  `parse_rows()` returns ledger rows only, `parse_calendar_rows()` is separate, and
+  `watched` was deliberately **not** admitted into the four-word disposition vocabulary —
+  a fifth word would have let a real ledger row be dispositioned `watched` and pass,
+  disposed of by a calendar entry that reconciles nothing.
+  **A hole in the anti-drift gate itself was found and closed on the way.** While proving
+  the dates were *not* enforced, `@readme` found that the parser accepted
+  `` ## The ledger — `TOTALLY_FAKE_CONSTANT`, 3 rows ``, printed it as a parsed source and
+  exited 0: inventing a constant was the cheapest way to make the calendar's dates fire,
+  and it was reported rather than used. It is now a check of its own — every parsed ledger
+  section must name a source declared in `DECLARED_SOURCES`, which also catches the
+  quieter case of a *real* constant added to the document and never declared — and
+  `REQUIRED_CALENDAR_SECTIONS = 1` makes deleting or mistyping the calendar heading a
+  build failure rather than a silent un-scheduling of all three obligations. The section
+  recording that experiment is kept in the document rather than deleted, rewritten in the
+  past tense as a **recorded finding**, because it is why three parts of the current gate
+  look the way they do.
+
 - [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) — a signed disposition for every
   element of Fabric's shape this repository already names in its own code. One source,
   `WORKSPACE_ITEM_KEYS`, and its thirteen item containers: **3 assessed** (reports,
@@ -209,12 +255,13 @@ thing it was written to catch walks past it, and no agent is accountable for not
   [`scripts/check_scope_ledger.py`](./scripts/check_scope_ledger.py) then made it
   executable: CI fails when the collector names an item type the ledger does not dispose,
   when a row disposes a key the code has dropped, or when a dated exclusion outlives its
-  review. **Consequence, stated rather than discovered:** the five exclusions come due on
-  2026-12-25, so CI goes red that day with nobody having changed a line, and there is
-  deliberately no bulk re-dating command — clearing it costs five per-row edits with
-  recorded reasons, four owed by `@readme` and row 12 owed by `@dataagent`. Reproduced
-  2026-09-25 by running the audit at both dates: five expiries as of 2026-12-25 (rows 6–9
-  and 12), none as of 2026-12-24. The ledger is a baseline, not a detector: no row in it
+  review. **Consequence, stated rather than discovered:** every dated row in the document
+  comes due on 2026-12-24, so CI goes red on 2026-12-25 with nobody having changed a line,
+  and there is deliberately no bulk re-dating command — the invariant is one deliberate
+  per-row edit per dated row, with a recorded reason or a recorded reading. Reproduced
+  2026-09-25 by running the audit at both dates: **eight** expiries as of 2026-12-25 (the
+  five exclusions, rows 6–9 and 12, plus the three review-calendar rows once those were
+  gated) and none as of 2026-12-24. The ledger is a baseline, not a detector: no row in it
   passes a Phase 7 release-gate criterion, and the document routes the reader to
   [`docs/ROADMAP.md`](./docs/ROADMAP.md) for which criteria are met rather than restating
   a status it does not own.
