@@ -283,6 +283,8 @@
     "rls_roles": [],
     "hours_since_refresh": 0,
     "freshness_sla_hours": 24,
-    "schema_retrieval_error": null
+    "schema_retrieval_error": null,
+    "endorsement": "Promoted",
+    "endorsement_certified_by": null
   }
 ]

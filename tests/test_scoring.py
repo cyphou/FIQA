@@ -2,10 +2,17 @@
 
 These tests pin the three-outcome contract: eligibility, readiness score and
 confidence are computed independently and must never be silently merged.
+
+They also pin ruleset *identity*: the version token a run stamps must identify
+exactly one set of scoring inputs, or every trend view built on it is reporting
+a change nobody made.
 """
 
+import dataclasses
+import re
 import unittest
 
+from fabric_iq import RULESET_VERSION
 from fabric_iq.models import (
     Dimension,
     Evidence,
@@ -15,8 +22,20 @@ from fabric_iq.models import (
     RuleStatus,
     Severity,
 )
+from fabric_iq.rules import registry as live_registry
 from fabric_iq.rules.base import Rule, RuleRegistry
-from fabric_iq.scoring import DIMENSION_WEIGHTS, ScoringEngine, assess
+from fabric_iq.scoring import (
+    AMBIGUOUS_FINGERPRINT,
+    DIMENSION_WEIGHTS,
+    RULESET_HISTORY,
+    ScoringEngine,
+    assess,
+    current_release,
+    fingerprint_of,
+    release_for,
+    ruleset_fingerprint,
+    ruleset_inputs,
+)
 from tests.helpers import minimal_inventory, ready_model, ready_tenant
 
 
@@ -255,6 +274,232 @@ class TestAssessRun(unittest.TestCase):
             [c for c in run.scorecards if c.object_type is ObjectType.TENANT],
             "the tenant must still be scored when nothing else was observed",
         )
+
+
+class TestRulesetIdentity(unittest.TestCase):
+    """The version token must identify exactly one set of scoring inputs.
+
+    Before this guard, `RULESET_VERSION` never moved while the catalogue grew
+    from 61 to 67 rules. Two runs could stamp the same token, disagree about an
+    unchanged estate, and `compare_runs` would call the difference an
+    improvement because the comparability key said they were comparable.
+    """
+
+    def test_the_declared_version_is_published_in_the_ledger(self):
+        release = current_release()
+
+        self.assertEqual(release.version, RULESET_VERSION)
+
+    def test_catalogue_fingerprint_matches_the_declared_version(self):
+        """The load-bearing guard: the catalogue cannot move under a fixed token."""
+        release = current_release()
+        actual = ruleset_fingerprint()
+
+        self.assertEqual(
+            actual,
+            release.fingerprint,
+            "\nThe scoring inputs no longer match ruleset version "
+            f"{RULESET_VERSION}.\n"
+            f"  declared: {release.fingerprint} ({release.rule_count} rules)\n"
+            f"  actual:   {actual} ({len(live_registry)} rules)\n"
+            "A rule was added, removed, re-weighted, re-scoped or re-graded, or a "
+            "dimension weight, cap, threshold or rollup moved. Any of those makes "
+            "new runs incomparable with runs already stored under this version.\n"
+            "Do NOT edit the existing RULESET_HISTORY entry -- that re-labels "
+            "evidence somebody already has. Bump RULESET_VERSION in "
+            "fabric_iq/__init__.py and APPEND a RulesetRelease with the actual "
+            "fingerprint above. See docs/SCORING.md 'Ruleset Versioning'.",
+        )
+
+    def test_declared_rule_count_matches_the_registry(self):
+        """A human-readable cross-check on the opaque hash."""
+        self.assertEqual(current_release().rule_count, len(live_registry))
+
+    def test_the_declared_version_is_the_newest_entry(self):
+        self.assertEqual(RULESET_HISTORY[-1].version, RULESET_VERSION)
+
+    def test_versions_are_unique_and_strictly_increasing(self):
+        keys = []
+        for release in RULESET_HISTORY:
+            match = re.fullmatch(r"(\d{4})\.(\d{2})\.(\d+)", release.version)
+            self.assertIsNotNone(
+                match, f"ruleset version {release.version!r} is not YYYY.MM.N"
+            )
+            keys.append(tuple(int(part) for part in match.groups()))
+
+        self.assertEqual(
+            keys,
+            sorted(set(keys)),
+            "RULESET_HISTORY must be append-only, ordered oldest first, and never "
+            "reuse a version: a reused token is the defect this ledger exists to stop",
+        )
+
+    def test_no_two_versions_claim_the_same_catalogue(self):
+        fingerprints = [
+            r.fingerprint for r in RULESET_HISTORY if not r.is_ambiguous
+        ]
+
+        self.assertEqual(
+            len(fingerprints),
+            len(set(fingerprints)),
+            "two versions with one fingerprint means a version was incremented "
+            "without the scoring inputs changing; that costs a run of trend signal "
+            "for nothing",
+        )
+
+    def test_the_pre_policy_version_is_recorded_as_ambiguous(self):
+        """2026.09.1 was stamped on several catalogues, so it identifies none."""
+        legacy = release_for("2026.09.1")
+
+        self.assertIsNotNone(legacy, "the pre-policy version must stay in the ledger")
+        self.assertEqual(legacy.fingerprint, AMBIGUOUS_FINGERPRINT)
+        self.assertIn("not comparable", legacy.note)
+
+    def test_every_rule_and_engine_constant_appears_in_the_fingerprint_input(self):
+        """A hash over the wrong inputs is a guard over nothing."""
+        lines = ruleset_inputs()
+
+        for rule in live_registry.all():
+            with self.subTest(rule=rule.id):
+                self.assertTrue(
+                    any(line.startswith(f"rule\t{rule.id}\t") for line in lines),
+                    f"{rule.id} is not covered by the ruleset fingerprint",
+                )
+        for object_type, weights in DIMENSION_WEIGHTS.items():
+            for dimension in weights:
+                with self.subTest(object_type=object_type.value, dimension=dimension.value):
+                    self.assertTrue(
+                        any(
+                            line.startswith(
+                                f"dimension-weight\t{object_type.value}\t{dimension.value}\t"
+                            )
+                            for line in lines
+                        )
+                    )
+        for prefix in ("severity-cap\t", "status-threshold\t", "coverage-floor\t", "rollup\t"):
+            with self.subTest(prefix=prefix.strip()):
+                self.assertTrue(any(line.startswith(prefix) for line in lines))
+
+
+class TestTheRulesetGuardActuallyFails(unittest.TestCase):
+    """A guard that passes against the broken state proves nothing.
+
+    Each test mutates the catalogue or an engine constant the way a future
+    contributor would and asserts the fingerprint moves -- so the guard above
+    would fail and force a version bump.
+    """
+
+    def clone(self, *, extra=(), skip=(), mutate=None):
+        clone = RuleRegistry()
+        for rule in live_registry.all():
+            if rule.id in skip:
+                continue
+            clone.register(mutate(rule) if mutate else rule)
+        for rule in extra:
+            clone.register(rule)
+        return clone
+
+    def assert_moved(self, mutated_registry):
+        self.assertNotEqual(
+            ruleset_fingerprint(mutated_registry),
+            current_release().fingerprint,
+            "this change alters scores or confidence but left the ruleset "
+            "fingerprint untouched; the guard cannot see it",
+        )
+
+    def test_the_unmutated_catalogue_still_matches(self):
+        """The control: cloning alone must not move the fingerprint."""
+        self.assertEqual(
+            ruleset_fingerprint(self.clone()), current_release().fingerprint
+        )
+
+    def test_adding_a_rule_moves_the_fingerprint(self):
+        """The exact defect: SEM-018 and REP-011 landed under a frozen token."""
+        new_rule = make_rule("SEM-999", Dimension.AI_READINESS, Severity.MINOR,
+                             RuleOutcome.passed("ok"))
+
+        self.assert_moved(self.clone(extra=[new_rule]))
+
+    def test_removing_a_rule_moves_the_fingerprint(self):
+        doomed = sorted(r.id for r in live_registry.all())[0]
+
+        self.assert_moved(self.clone(skip={doomed}))
+
+    def test_re_grading_a_rule_to_blocking_moves_the_fingerprint(self):
+        target = sorted(live_registry.all(), key=lambda r: r.id)[0]
+        promoted = Severity.MAJOR if target.severity is Severity.BLOCKING else Severity.BLOCKING
+
+        self.assert_moved(
+            self.clone(
+                mutate=lambda r: dataclasses.replace(r, severity=promoted)
+                if r.id == target.id
+                else r
+            )
+        )
+
+    def test_re_weighting_a_rule_moves_the_fingerprint(self):
+        target = sorted(live_registry.all(), key=lambda r: r.id)[0]
+
+        self.assert_moved(
+            self.clone(
+                mutate=lambda r: dataclasses.replace(r, weight=r.weight + 0.5)
+                if r.id == target.id
+                else r
+            )
+        )
+
+    def test_moving_a_rule_to_another_dimension_moves_the_fingerprint(self):
+        target = sorted(live_registry.all(), key=lambda r: r.id)[0]
+        elsewhere = next(d for d in Dimension if d is not target.dimension)
+
+        self.assert_moved(
+            self.clone(
+                mutate=lambda r: dataclasses.replace(r, dimension=elsewhere)
+                if r.id == target.id
+                else r
+            )
+        )
+
+    def test_moving_an_engine_constant_moves_the_fingerprint(self):
+        """Dimension weights, caps, thresholds and rollups are inputs too."""
+        for prefix in ("dimension-weight\t", "severity-cap\t", "status-threshold\t",
+                       "coverage-floor\t", "rollup\t"):
+            with self.subTest(constant=prefix.strip()):
+                mutated = []
+                bumped = False
+                for line in ruleset_inputs():
+                    if line.startswith(prefix) and not bumped:
+                        fields = line.split("\t")
+                        for index in range(len(fields) - 1, 0, -1):
+                            try:
+                                value = float(fields[index])
+                            except ValueError:
+                                continue
+                            fields[index] = f"{value + 0.01:.6f}"
+                            bumped = True
+                            break
+                        line = "\t".join(fields)
+                    mutated.append(line)
+
+                self.assertTrue(bumped, f"no numeric {prefix.strip()} line to mutate")
+                self.assertNotEqual(fingerprint_of(mutated), ruleset_fingerprint())
+
+    def test_prose_only_edits_do_not_move_the_fingerprint(self):
+        """Fixing a typo must stay free, or contributors learn to ignore the guard."""
+        reworded = self.clone(
+            mutate=lambda r: dataclasses.replace(
+                r, title=r.title + " (clarified)", remediation=r.remediation + " Please."
+            )
+        )
+
+        self.assertEqual(ruleset_fingerprint(reworded), current_release().fingerprint)
+
+    def test_registration_order_does_not_move_the_fingerprint(self):
+        shuffled = RuleRegistry()
+        for rule in sorted(live_registry.all(), key=lambda r: r.id, reverse=True):
+            shuffled.register(rule)
+
+        self.assertEqual(ruleset_fingerprint(shuffled), current_release().fingerprint)
 
 
 if __name__ == "__main__":

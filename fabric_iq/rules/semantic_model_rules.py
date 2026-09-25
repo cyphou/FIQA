@@ -29,6 +29,19 @@ DESCRIPTION_MIN = 15
 #: AI instructions are capped by the product.
 AI_INSTRUCTIONS_MAX = 10_000
 
+#: Endorsement values this ruleset can *name*. It is a recognition list used to word
+#: a finding, never a validation list: a value absent from it still passes. The three
+#: entries are the portal levels documented on
+#: https://learn.microsoft.com/fabric/governance/endorsement-overview (Promoted,
+#: Certified, Master data; page cited by the Sprint 6.1 review of 2026-09-24, restated
+#: 2026-09-25). The Scanner's own reference enumerates nothing, so this mapping must
+#: never be treated as the value set.
+_RECOGNISED_ENDORSEMENTS = {
+    "promoted": "Promoted",
+    "certified": "Certified",
+    "masterdata": "Master data",
+}
+
 #: Technical naming styles that Copilot cannot interpret literally.
 _TECHNICAL_NAME = re.compile(
     r"""(
@@ -39,6 +52,9 @@ _TECHNICAL_NAME = re.compile(
     )""",
     re.VERBOSE,
 )
+
+
+DOCS_ENDORSEMENT = "https://learn.microsoft.com/fabric/governance/endorsement-overview"
 
 
 def _visible(objects: list[dict]) -> list[dict]:
@@ -79,6 +95,107 @@ def _normalize_dax(expression: str) -> str:
             normalized.append(char)
         index += 1
     return "".join(normalized)
+
+
+def _endorsement_key(value: str) -> str:
+    """Fold a returned endorsement onto a comparison key (``Master data`` → ``masterdata``).
+
+    Only case and separators are folded. The value itself is never rewritten: what
+    the service returned is what the finding reports.
+    """
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def endorsement_outcome(subject: dict, *, item: str, reference: str) -> RuleOutcome:
+    """Judge one item's ``endorsement`` field. Shared by ``SEM-018`` and ``REP-011``.
+
+    **Why this is assessed at all.** The Fabric IQ plugin in Microsoft 365 Copilot
+    Cowork is GA and installed by default, and its artifact discovery "uses a tuned
+    semantic index and signals like endorsements, cross-item relationships, and
+    most-recently-used activity to find the right report"
+    (https://learn.microsoft.com/fabric/iq/connectors/cowork-overview, read
+    2026-09-24 by the Sprint 6.1 availability review, restated 2026-09-25). An
+    endorsement is therefore a *ranking* input on a shipping consumption surface, not
+    only governance hygiene — which is why an unendorsed item is scored as harder to
+    find, never as wrong.
+
+    **Four outcomes, and the reasoning behind each.**
+
+    * ``None`` → ``NOT_EVALUATED``. The Scanner reference introduces the property
+      list with "The API returns a *subset* of the following list of ... properties.
+      The subset depends on the API called, caller permissions, and the availability
+      of data in the Power BI database", and never states how a non-endorsed item is
+      represented
+      (https://learn.microsoft.com/rest/api/power-bi/admin/workspace-info-get-scan-result,
+      checked 2026-09-25). Absence is a documented permissions/availability artefact,
+      so reading it as "not endorsed" would manufacture a finding out of a blind spot.
+    * ``""`` → ``FAILED``. Only a value the service actually returned empty reaches
+      the rule as ``""`` (the collector maps every absent, null and undocumented
+      shape to ``None``). That empty string is the service's own assertion that the
+      item carries no endorsement, and is the single honest negative here.
+    * A **recognised** non-empty value → ``PASSED``, naming the level.
+    * An **unrecognised** non-empty value → ``PASSED``, saying so. The API reference
+      types ``endorsement`` as a bare string, "The endorsement status", with **no
+      enumerated values**, showing only ``"Certified"`` in a sample; the product
+      concept page separately documents three portal levels and names no API field.
+      No closed vocabulary is therefore established, and a future or region-specific
+      value must never be penalised as though it were absent — that is how a tool
+      starts telling customers their certified content is uncertified.
+
+    **The two fields are independent.** ``endorsement_certified_by`` is never used to
+    infer a status and never used to downgrade one: the Scanner can state a certifier
+    without stating a status. It is reported only as *whether* a certifier was stated.
+    The certifier is an identity (the reference samples a user principal), and a
+    readiness finding has no reason to carry one into a report artefact.
+    """
+    gap = require(subject, "endorsement")
+    if gap:
+        return gap
+    value = subject["endorsement"]
+    ev = evidence(
+        "scanner_api",
+        reference,
+        "endorsementDetails.endorsement, carried verbatim; absence is unknown, not unendorsed",
+    )
+    if not isinstance(value, str):
+        # The collector only ever emits a string or None; an inventory hand-edited to
+        # something else is unread evidence, not an assertion about the item.
+        return RuleOutcome.not_evaluated(
+            f"endorsement was recorded as {type(value).__name__}, which is not a readable status",
+            observed={"endorsement_type": type(value).__name__},
+            evidence=ev,
+        )
+
+    certifier = subject.get("endorsement_certified_by")
+    certifier_stated = bool(certifier.strip()) if isinstance(certifier, str) else False
+    stated = value.strip()
+    observed = {
+        "endorsement": stated,
+        "recognised": _endorsement_key(stated) in _RECOGNISED_ENDORSEMENTS,
+        # Deliberately a boolean: the certifier is an identity, never echoed.
+        "certifier_stated": certifier_stated,
+    }
+
+    if not stated:
+        return RuleOutcome.failed(
+            f"the scan states this {item} carries no endorsement, so Microsoft 365 "
+            "discovery has one signal fewer to rank it on",
+            observed=observed,
+            evidence=ev,
+        )
+
+    level = _RECOGNISED_ENDORSEMENTS.get(_endorsement_key(stated))
+    if level:
+        detail = f"{item} is endorsed as {level}"
+        if level == "Certified":
+            detail += f", certifier {'stated' if certifier_stated else 'not stated by the scan'}"
+    else:
+        detail = (
+            f"{item} carries the endorsement {stated!r}, which this ruleset does not "
+            "recognise; the value set is not enumerated by the API, so an unrecognised "
+            "endorsement is still an endorsement and is not penalised"
+        )
+    return RuleOutcome.passed(detail, observed=observed, evidence=ev)
 
 
 @registry.add(
@@ -648,4 +765,31 @@ def schema_retrieval(subject: dict) -> RuleOutcome:
         f"schema retrieval error: {error}; downstream rules are unreliable",
         observed={"error": error},
         evidence=evidence("scanner_api", "model.schemaRetrievalError"),
+    )
+
+
+@registry.add(
+    "SEM-018",
+    "Model is endorsed, so Microsoft 365 discovery can rank it",
+    M,
+    # GOVERNANCE carries no weight for a semantic model (see scoring.DIMENSION_WEIGHTS),
+    # and this is not governance hygiene anyway: it decides whether a GA consumption
+    # surface finds the model behind a report at all, which is an AI-readiness property.
+    Dimension.AI_READINESS,
+    # Not BLOCKING and not MAJOR, both of which cap the published score: an unendorsed
+    # model is harder for Cowork to surface, not structurally unusable. It answers
+    # correctly once found. MINOR is the same register as SEM-012 (verified answers).
+    Severity.MINOR,
+    "Promote the model, or have an authorised certifier certify it, so Cowork's artifact "
+    "discovery has an endorsement signal to rank it on. Endorsement is self-attestation: "
+    "it improves discoverability and never substitutes for any other check in this catalogue.",
+    weight=0.5,
+    effort=Effort.XS,
+    owner_role="Model Owner",
+    docs=DOCS_ENDORSEMENT,
+)
+def model_endorsement(subject: dict) -> RuleOutcome:
+    """See :func:`endorsement_outcome` for the sources and the four-outcome reasoning."""
+    return endorsement_outcome(
+        subject, item="model", reference="dataset.endorsementDetails.endorsement"
     )

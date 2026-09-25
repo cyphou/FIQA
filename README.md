@@ -11,11 +11,11 @@ live results remain bounded by the fields the APIs actually return.
 
 | | |
 |---|---|
-| 🏷️ **Ruleset** | `2026.09.1` · package `0.1.0` |
-| ✅ **Tests** | 488 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity, calibration (two skip on Windows by design: one needs a filename Windows refuses, one needs `dir_fd` deletion Windows does not provide) |
+| 🏷️ **Ruleset** | `2026.09.2` · package `0.1.0` |
+| ✅ **Tests** | 503 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity, calibration (two skip on Windows by design: one needs a filename Windows refuses, one needs `dir_fd` deletion Windows does not provide) |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
-| 🎯 **Coverage** | 65 rules · 5 object types · 9 Gold marts · 14-agent environment |
+| 🎯 **Coverage** | 67 rules · 5 object types · 9 Gold marts · 14-agent environment |
 
 For every object the tool produces:
 
@@ -235,14 +235,14 @@ parity with the run) but the visual rendering itself is unverified.
 
 ## 📚 Rule Catalogue
 
-65 rules, ruleset version `2026.09.1`.
+67 rules, ruleset version `2026.09.2`.
 
 | Object | Rules | Blocking | Prefix |
 |--------|-------|----------|--------|
 | Tenant | 12 | 4 | `TEN-` |
 | Workspace | 11 | 4 | `WKS-` |
-| Semantic model | 17 | 5 | `SEM-` |
-| Report | 10 | 1 | `REP-` |
+| Semantic model | 18 | 5 | `SEM-` |
+| Report | 11 | 1 | `REP-` |
 | Data Agent | 15 | 10 | `AGT-` |
 
 See [docs/RULES.md](./docs/RULES.md) for the full catalogue.

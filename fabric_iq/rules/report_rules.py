@@ -11,6 +11,11 @@ from __future__ import annotations
 from fabric_iq.models import Dimension, Effort, ObjectType, RuleOutcome, Severity
 from fabric_iq.rules.base import evidence, graded, ratio, registry, require
 
+# One endorsement evaluator serves both object types: the Scanner documents the same
+# ``endorsementDetails`` shape on its Report and Dataset objects, and two copies of a
+# guard whose whole point is "absence is not a negative" would be two things to break.
+from fabric_iq.rules.semantic_model_rules import DOCS_ENDORSEMENT, endorsement_outcome
+
 R = ObjectType.REPORT
 
 #: Below this ratio a report is effectively unused and should not drive priorities.
@@ -286,4 +291,36 @@ def verified_answer_candidates(subject: dict) -> RuleOutcome:
         f"{len(candidates)} verified-answer candidate(s) identified",
         observed={"candidates": candidates[:10]},
         evidence=evidence("assessment", "report.candidates"),
+    )
+
+
+@registry.add(
+    "REP-011",
+    "Report is endorsed, so Microsoft 365 discovery can rank it",
+    R,
+    Dimension.GOVERNANCE,
+    # Deliberately the same register as REP-009 ("Report is actually consumed"): both
+    # say the content may never be reached, neither says the content is wrong. A
+    # BLOCKING or MAJOR severity would cap the score of a report that answers
+    # perfectly once opened.
+    Severity.MINOR,
+    "Promote the report, or have an authorised certifier certify it, so Cowork's artifact "
+    "discovery has an endorsement signal to rank it on. Endorsement is self-attestation by "
+    "the content author: it aids discovery and is never read here as proof of quality.",
+    weight=0.5,
+    effort=Effort.XS,
+    owner_role="Report Owner",
+    docs=DOCS_ENDORSEMENT,
+)
+def report_endorsement(subject: dict) -> RuleOutcome:
+    """Discoverability only.
+
+    This rule reads the endorsement as a *ranking signal for a consumption surface*,
+    which is the single thing Microsoft documents it doing there. It never reads it as
+    an endorsement of the report's quality, and no other REP rule is relaxed because
+    this one passes. See :func:`fabric_iq.rules.semantic_model_rules.endorsement_outcome`
+    for the sources and the four-outcome reasoning.
+    """
+    return endorsement_outcome(
+        subject, item="report", reference="report.endorsementDetails.endorsement"
     )

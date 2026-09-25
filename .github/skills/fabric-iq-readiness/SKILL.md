@@ -68,7 +68,7 @@ tenant-level score.
 
 ## What To Check, By Level
 
-> Every number below is the value **encoded by ruleset `2026.09.1`**, not an
+> Every number below is the value **encoded by ruleset `2026.09.2`**, not an
 > independently re-verified product fact in its own right — it is a value this Skill
 > restates, and [`docs/RULES.md`](../../../docs/RULES.md) is the generated source of
 > truth for the rules, their severities and their thresholds; when it disagrees with
@@ -77,7 +77,11 @@ tenant-level score.
 > [Known limitations §8 — Product Limits Age](../../../docs/KNOWN_LIMITATIONS.md#8-product-limits-age):
 > on **2026-09-24** each limit below was individually re-verified against the live
 > Microsoft Learn / REST API reference page, closing the product-fact-verification
-> sub-criterion of the Phase 5 Sprint 5.3 release gate. That gate's second
+> sub-criterion of the Phase 5 Sprint 5.3 release gate. The endorsement facts behind
+> `SEM-018` / `REP-011` were added and verified the same way on **2026-09-25**
+> ([§8.1](../../../docs/KNOWN_LIMITATIONS.md#81-endorsement-absence-and-value-set-are-both-undocumented));
+> endorsement itself remains **unobserved** on every surface this project has exercised.
+> That gate's second
 > sub-criterion — blinded practitioner calibration of the weights and thresholds these
 > facts feed — has not started; a confirmed product fact is not the same claim as a
 > calibrated weight. Do not quote a limit from this Skill as freestanding Microsoft
@@ -96,11 +100,13 @@ metadata, lifecycle separation, named owners.
 **200 characters** carry the meaning (`DESCRIPTION_BUDGET`), synonyms, an AI data schema
 that is scoped rather than exhaustive and has no missing dependency, AI instructions
 within **10,000 characters** (`AI_INSTRUCTIONS_MAX`), verified answers that are not
-broken, tested RLS, fresh data, retrievable schema.
+broken, tested RLS, fresh data, retrievable schema, and an endorsement that helps
+Microsoft 365 discovery rank it (`SEM-018`, `minor` — discoverability, not quality).
 
 **Report** — business purpose stated, useful measures exposed, connected to a scored
-model, maintained. A report is not individually approved for Copilot; the approval rides
-on the model.
+model, maintained, endorsed for Microsoft 365 discovery (`REP-011`, `minor` — same
+caveat as `SEM-018`). A report is not individually approved for Copilot; the approval
+rides on the model.
 
 **Data Agent** — at most **5 data sources** (`MAX_DATA_SOURCES`), all reachable and
 described, instructions present, use case compatible with a read-only **25×25** result
@@ -109,12 +115,13 @@ surface (`MAX_RESULT_ROWS` × `MAX_RESULT_COLUMNS`), and measured behaviour:
 (`MIN_CRITICAL_ACCURACY`), zero leakage, at least two personas tested, correct refusal
 of out-of-scope questions. The accuracy thresholds are this project's own bar, not a
 product limit. The tool does **not** execute a corpus: the evaluation block is supplied
-as input, and without it `AGT-006` … `AGT-012` return `NOT_EVALUATED`
+as input, and without it `AGT-006` … `AGT-012` **and `AGT-014`** return `NOT_EVALUATED`
 ([Known limitations §3](../../../docs/KNOWN_LIMITATIONS.md#3-agent-quality-is-declared-not-measured)).
 
 ## Rules That Surprise People
 
-Short forms of the six results that generate the most pushback. Each is explained, with
+Short forms of the six results that generate the most pushback, plus one standing caution
+about Power BI Q&A that the guide does not carry. Each of the six is explained, with
 its rule IDs and the evidence behind it, in
 [`docs/INTERPRETING_RESULTS.md` § Rules that surprise people](../../../docs/INTERPRETING_RESULTS.md#5-rules-that-surprise-people)
 — route the user there rather than expanding from memory.
@@ -123,8 +130,15 @@ its rule IDs and the evidence behind it, in
 - **A blocking failure caps the score at 39** and revokes eligibility; a major failure
   caps at 59. A cap only ever lowers a score, so a capped object may score below 39.
   Weighted averages hide walls.
-- **"Approved for Copilot" is self-attestation**, not proof of quality: no rule in the
-  catalogue reads an endorsement flag.
+- **"Approved for Copilot" is self-attestation**, not proof of quality: no rule reads any
+  badge as evidence that content is correct. Two `minor` rules — `SEM-018` and `REP-011` —
+  do read the Scanner endorsement field, but they score **discoverability, not quality**:
+  Microsoft 365 Copilot Cowork uses endorsement as one signal when choosing which report
+  to ground on, so an unendorsed item is scored as harder to find, never as wrong. An
+  absent field is `NOT_EVALUATED`, never "not endorsed", and because the Scanner is
+  nowhere documented to return an *empty* endorsement, these two rules may in practice
+  never fail on a live tenant — never quote them as evidence that an estate is endorsed
+  ([Known limitations §8.1](../../../docs/KNOWN_LIMITATIONS.md#81-endorsement-absence-and-value-set-are-both-undocumented)).
 - **An over-broad AI data schema is a problem**, not generosity: it widens the search
   space and lowers precision (`SEM-008` degrades past 80% exposure of visible objects).
 - **Agent-level instructions do not influence DAX generation for a Power BI source** —
@@ -154,7 +168,7 @@ commands to find what went unread — is
 ## Commands
 
 ```bash
-python assess.py --list-rules                      # catalogue: 65 rules, ruleset 2026.09.1
+python assess.py --list-rules                      # catalogue: 67 rules; prints the live ruleset version
 python assess.py --inventory <dir> --review        # assess with quality review
 python -m unittest discover -s tests -t .          # test suite
 python scripts/check_agent_ownership.py            # module and documentation ownership
@@ -196,4 +210,8 @@ by those rules, and that no tracked file carries a real tenant identifier.
 - [Known limitations](../../../docs/KNOWN_LIMITATIONS.md) — what this tool cannot see, and which limits are dated
 - [Roadmap](../../../docs/ROADMAP.md)
 
-Last reconciled against the engine on **2026-09-23**, ruleset `2026.09.1`, 65 rules.
+Last reconciled against the engine on **2026-09-25**, by running
+`python assess.py --list-rules`, which reported `Ruleset 2026.09.2 — 67 rules`. That is
+what the engine held at that moment, not a version this file pins: reconcile again
+whenever the catalogue size or `RULESET_VERSION` moves, and quote the version from the
+command rather than from this line.

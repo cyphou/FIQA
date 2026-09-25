@@ -11,7 +11,17 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 
 ### Added
 
-**Rule catalogue** — grown from 61 to **65 rules**, ruleset `2026.09.1`
+**Rule catalogue** — grown from 61 to **67 rules**, ruleset `2026.09.1` → `2026.09.2`
+- `SEM-018` (semantic model) and `REP-011` (report) — the endorsement family, both
+  `Severity.MINOR`. They read the Scanner's `endorsementDetails.endorsement` and score
+  **discoverability, not quality**: Microsoft 365 Copilot Cowork names endorsement among
+  the signals it uses to choose which report to ground on. Absence of the field is
+  resolved to `NOT_EVALUATED`, never to "not endorsed", and an unrecognised value passes
+  rather than being clamped to an enum the API does not publish — because the Scanner
+  reference neither states how a non-endorsed item is represented nor enumerates the
+  value set. Both consequences, including the fact that these rules may in practice never
+  fail on a live tenant, are catalogued in
+  [`docs/KNOWN_LIMITATIONS.md` §8.1](./docs/KNOWN_LIMITATIONS.md#81-endorsement-absence-and-value-set-are-both-undocumented).
 - `TEN-011` (tenant) and `WKS-011` (workspace) — advisory, `Severity.INFO` recommendations
   to designate a capacity as a **Fabric Copilot capacity** for billing-attribution
   purposes only. Added, then removed after a live F2-capacity tenant test proved Data
@@ -118,7 +128,7 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
   check alongside the ownership and rule-documentation checks.
 
-**Tests** — grown from 138 to **488 tests**, all green. Two tests skip by design on
+**Tests** — grown from 138 to **503 tests**, all green. Two tests skip by design on
 Windows — one plants a control character in a tracked filename to prove the NUL-separated
 `git ls-files -z` parse, and Windows refuses such a name; the other exercises the
 `dir_fd`-anchored retention delete that Windows does not provide (§3.6 of
@@ -174,6 +184,58 @@ thing it was written to catch walks past it, and no agent is accountable for not
 
 ### Documentation
 
+- [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
+  **re-reconciled against the engine on 2026-09-25 and re-dated**, not merely
+  renumbered. This is the file a model treats as authoritative at prompt time, so a
+  stale claim here is injected as instruction into an agent that cannot check it.
+  `test_skill_drift.py` gates the engine *constants* but not the catalogue size, so
+  nothing caught the drift. Corrected: the catalogue count (65 → 67, with the ruleset
+  version dropped from that comment so the command stays the source of truth); the
+  claim that **"no rule in the catalogue reads an endorsement flag"**, false as of
+  `SEM-018`/`REP-011` and the exact analogue of the error found in
+  `docs/INTERPRETING_RESULTS.md` §5; the semantic-model and report checklists, which
+  omitted the two new rules; `AGT-006` … `AGT-012`, which **understated the set** — the
+  engine also returns `NOT_EVALUATED` for `AGT-014` without an evaluation block,
+  reproduced by running an agent with the block removed; and a "six results" preamble
+  standing over seven bullets. The §8 preamble now also points at §8.1 and states that
+  endorsement is unobserved.
+- [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §8.1 (new)
+  "Endorsement Absence And Value Set Are Both Undocumented" — the limitation entry owed
+  since the endorsement plumbing landed and now load-bearing for `SEM-018`/`REP-011`.
+  Five facts recorded in the §8 "limit / used by / verified public source / verification
+  status" style, each checked by fetching the live page on **2026-09-25**: the Scanner
+  returns only a *subset* of the documented properties and **never states how a
+  non-endorsed item is represented**; `endorsement` is a bare unenumerated `string`
+  ("The endorsement status") with only `"Certified"` shown in a sample; the product
+  concept page documents **three** portal badges and names no API field; Master data
+  applies only to items that contain data while everything except Power BI dashboards
+  can be promoted or certified; and Cowork discovery names endorsements among its
+  ranking signals. Stated plainly with them: because absence is resolved to
+  `NOT_EVALUATED` rather than to "not endorsed", and the Scanner is nowhere documented
+  to return an *empty* endorsement, **`SEM-018`/`REP-011` may in practice never fail on
+  a live tenant** — they are not evidence that an estate is endorsed. Endorsement
+  remains **unobserved** on every surface this project has exercised; only a Sprint 5.1
+  live scan containing one endorsed and one known-unendorsed item would settle it.
+  §7 "Endorsement Is Not Evidence" reconciled in the same pass: two rules now read the
+  field, and they score discoverability, not quality.
+- [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §8.1 — the remaining Sprint
+  6.1 Cowork and Copilot Chat product limits are **deliberately deferred, not omitted**,
+  and the deferral is recorded with the facts themselves so it reads as a decision.
+  §8 documents limits the ruleset encodes or quotes; only the one Cowork statement that
+  justifies a shipped rule is recorded now. Nothing in Sprint 6.1 is delivered.
+- [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md) — **the walkthrough
+  was re-run against the current engine and re-dated to 2026-09-25 / 67 rules**, rather
+  than having its rule count edited inside a claim about a past reproduction. Every
+  number in it moved or was re-confirmed: the run header, the semantic-model coverage and
+  confidence columns (93%/91% → 91%/86%, 94%/93% → 92%/89%, shifted by the two new
+  `NOT_EVALUATED` rules), the preceptorship `evidence_completeness` (4.35 → 4.21) and the
+  tenant rollup note (59.3/100 at 82% → 59.1/100 at 81%). The §4 thin-model illustration,
+  whose 16%/0.2% figures no fixture in the repository reproduced, is replaced by a
+  six-field model quoted inline so a reader can reproduce **score 100.0, `not_evaluated`,
+  coverage 6%, confidence 0.0%** in one command. The §5 "endorsement" paragraph, which
+  claimed "no rule in this catalogue reads an endorsement, certification or promotion
+  flag", was **false as of `SEM-018`/`REP-011`** and is corrected.
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — rule-registry count 65 → 67.
 - [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §8 "Product Limits Age" —
   all eight encoded product limits individually re-verified 2026-09-24 against live
   Microsoft Learn / REST API reference pages (fetched, not just link-resolved as on

@@ -9,7 +9,7 @@ on any disagreement. [`docs/RULES.md`](./RULES.md) is the generated catalogue �
 what each rule checks, its severity and its remediation. This document only explains how
 to act on what the tool printed.
 
-Everything below was reproduced on **2026-09-23** against ruleset `2026.09.1` (65 rules)
+Everything below was reproduced on **2026-09-25** against ruleset `2026.09.2` (67 rules)
 with:
 
 ```bash
@@ -60,9 +60,9 @@ In full:
 ### The run header
 
 ```
-Run       : run_20260923T150012Z
+Run       : run_20260925T062121Z
 Tenant    : contoso-tenant
-Ruleset   : 2026.09.1
+Ruleset   : 2026.09.2
 Collector : offline
 ```
 
@@ -78,8 +78,8 @@ SEMANTIC_MODEL (3)
 ------------------------------------------------------------------------------
  SCORE  STATUS                 COV  CONF  NAME
     NE  NOT EVALUATED          6%    0%  Churn Sandbox
-  11.1  NOT READY             93%   91%  FIN_PNL_CONSO
-  97.9  READY                 94%   93%  Sales Star Model
+  11.1  NOT READY             91%   86%  FIN_PNL_CONSO
+  97.9  READY                 92%   89%  Sales Star Model
 ```
 
 | Column | Read it as |
@@ -144,7 +144,7 @@ PRECEPTORSHIP REVIEW
 ============================================================
 Verdict: APPROVED
 Cycles:  1
-  evidence_completeness        ****  4.35
+  evidence_completeness        ****  4.21
 ```
 
 This scores **the assessment, not the tenant**. A low `evidence_completeness` or
@@ -183,10 +183,18 @@ What the engine actually does:
 - An object under the coverage floor is published with status `NOT_EVALUATED` and
   `eligible = false`. Being unreadable is not an endorsement.
 - Its score is kept in the artifacts rather than blanked, so you can still see which
-  rules did run — which is exactly why it must never be quoted alone. Reproduced on a
-  deliberately thin model: **score 100.0, status `not_evaluated`, coverage 16%,
-  confidence 0.2%**. A `100` beside `NE` means "the handful of rules we could read
-  passed", not "excellent".
+  rules did run — which is exactly why it must never be quoted alone. Reproduce it for
+  yourself: replace `examples/sample_tenant/semantic_models.json` with one model whose
+  only readable fields are a freshness pair and an endorsement, then re-run.
+
+      [{ "id": "sm-thin", "name": "Sales Star Model", "parent_id": "ws-sales",
+         "hours_since_refresh": 2, "freshness_sla_hours": 24, "endorsement": "Certified" }]
+
+  That model publishes as **score 100.0, status `not_evaluated`, coverage 6%,
+  confidence 0.0%** — two rules read (`SEM-016`, `SEM-018`), both passed, sixteen
+  unreadable. A `100` beside `NE` means "the handful of rules we could read passed",
+  not "excellent"; the `0.0%` confidence beside it is the engine saying the number is
+  unsupported, not modest.
 - A **blocking finding is conclusive even under the floor**: an observed wall is still
   published as `NOT_READY`, with a note saying so. Thin evidence means we cannot judge
   quality; it never means the wall stopped existing.
@@ -206,6 +214,12 @@ block returns `NOT_EVALUATED` for `AGT-006` … `AGT-012` and `AGT-014`, each na
 `evaluation` among the inputs it wanted. The tool does not execute a question bank; the
 corpus is an input you supply
 ([Known limitations §3](./KNOWN_LIMITATIONS.md#3-agent-quality-is-declared-not-measured)).
+
+A second one you will meet on every model and report: `SEM-018` and `REP-011` report
+`missing evidence: endorsement` unless the inventory carries an endorsement value. That
+is deliberate — the Scanner is not documented to say how an unendorsed item is
+represented, so absence is treated as unknown rather than as "not endorsed"
+([Known limitations §8.1](./KNOWN_LIMITATIONS.md#81-endorsement-absence-and-value-set-are-both-undocumented)).
 
 ---
 
@@ -235,12 +249,17 @@ partial result when the schema exposes more than 80% of visible objects ("scopin
 broad"). Selecting fewer, better objects scores higher than selecting all of them.
 
 **"Approved for Copilot" is self-attestation, not proof of quality.** It is set by the
-content author and expresses intent. No rule in this catalogue reads an endorsement,
-certification or promotion flag — a badge cannot move a score here, by design
-([Known limitations §7](./KNOWN_LIMITATIONS.md#7-endorsement-is-not-evidence)).
-Related and equally unpopular: a report is not individually approved for Copilot; the
-approval rides on the semantic model, so report rules score context and validation
-surface.
+content author and expresses intent. No rule treats a badge as evidence that the content
+is correct. Since ruleset `2026.09.2` two rules *do* read the endorsement field —
+`SEM-018` and `REP-011`, both `minor` — but they score **discoverability, not quality**:
+Microsoft 365 Copilot Cowork uses endorsement as one signal when it picks which report to
+ground on, so an unendorsed item is scored as harder to find, never as wrong. Both rules
+also return `NOT_EVALUATED` whenever the field is absent, which on the shipped fixture is
+every object — see [Known limitations §7](./KNOWN_LIMITATIONS.md#7-endorsement-is-not-evidence)
+and [§8.1](./KNOWN_LIMITATIONS.md#81-endorsement-absence-and-value-set-are-both-undocumented)
+for why absence is not read as "not endorsed". Related and equally unpopular: a report is
+not individually approved for Copilot; the approval rides on the semantic model, so report
+rules score context and validation surface.
 
 **Missing evidence is never a pass.** An unreadable rule returns `NOT_EVALUATED`: it
 lowers coverage and confidence and contributes neither a pass nor a zero to the score,
@@ -273,7 +292,7 @@ the sample run:
 Sales Ops Detail        2 major finding(s) cap the score at 59: REP-004, REP-006
 Finance Copilot Agent   6 blocking finding(s) cap the score at 39: AGT-002, AGT-008, ...
 Churn Sandbox           coverage 6% below the 50% publication floor
-Contoso                 rolled up from 3 workspaces (mean 59.3/100, coverage 82%)
+Contoso                 rolled up from 3 workspaces (mean 59.1/100, coverage 81%)
 ```
 
 If a parent score looks better than the children under it, read its notes: a child with a
@@ -303,4 +322,4 @@ documented in the [README](../README.md), under "Exit Codes".
 
 ---
 
-Last reproduced against the engine on **2026-09-23**, ruleset `2026.09.1`, 65 rules.
+Last reproduced against the engine on **2026-09-25**, ruleset `2026.09.2`, 67 rules.

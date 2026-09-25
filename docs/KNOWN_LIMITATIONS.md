@@ -3,7 +3,7 @@
 The most important document in this repository. A readiness assessor that does not state
 what it cannot see invites over-trust, and over-trust is how a tool like this causes harm.
 
-Last reviewed: **2026-09-24**, ruleset `2026.09.1`.
+Last reviewed: **2026-09-25**, ruleset `2026.09.2`.
 
 ## 1. Live Collection Is A Foundation With Partial Field Validation
 
@@ -270,6 +270,15 @@ No rule treats it as proof of quality. Relatedly, a **report is not individually
 for Copilot** — the approval rides on the semantic model — so `REP-*` rules score a report
 as a context and validation surface rather than as an endorsed asset.
 
+Ruleset `2026.09.2` added two rules that *read* the endorsement field — `SEM-018` and
+`REP-011`, both `Severity.MINOR`. They do not weaken the paragraph above: they score
+**discoverability, not quality**. Microsoft 365 Copilot Cowork names endorsement among the
+signals it uses to pick which report to ground on, so an unendorsed item is scored as
+harder to find, never as wrong, and a certified item earns no quality credit anywhere in
+the catalogue. What the API does and does not say about that field is catalogued in
+[§8.1](#81-endorsement-absence-and-value-set-are-both-undocumented) — including the reason
+these two rules will rarely, in practice, fail.
+
 ## 8. Product Limits Age
 
 The values below are encoded or quoted by the current ruleset. On **2026-09-23** the
@@ -301,7 +310,7 @@ that open item.
 | Activity Events: 1 UTC day/request, 28-day retention, 200/hour | collector constants; no collector yet | [Get Activity Events](https://learn.microsoft.com/rest/api/power-bi/admin/get-activity-events) | Fact confirmed 2026-09-24 against live Microsoft Learn page |
 
 The following capacity paragraphs describe the behaviour encoded by ruleset
-`2026.09.1`, not newly re-verified product facts. The capacity floor carries a nuance
+`2026.09.2`, not newly re-verified product facts. The capacity floor carries a nuance
 worth stating, because a live run will surface it:
 a **Trial** SKU is not an eligible host, so `WKS-001` fails on a trial-backed workspace
 — that is a true positive, not noise. Separately, a **Fabric Copilot capacity** (F2+/P1+)
@@ -359,6 +368,64 @@ permanent.
 `RULESET_VERSION` pins what was believed true when a score was produced. **Scores are
 only comparable across runs with the same ruleset version**; the trend view must refuse
 to plot across incompatible versions rather than silently mixing them.
+
+### 8.1 Endorsement Absence And Value Set Are Both Undocumented
+
+`SEM-018` and `REP-011` (ruleset `2026.09.2`) read the Scanner's
+`endorsementDetails.endorsement`. Two things about that field are **not** established by
+any public source, and both are load-bearing for how the rules behave. Every row below
+was checked by fetching the live page on **2026-09-25**.
+
+| Limit currently encoded/quoted | Used by | Verified public source | Verification status |
+|--------------------------------|---------|-------------------------|---------------------|
+| The Scanner returns **a subset** of the documented properties, and the reference never states how a *non-endorsed* item is represented | `SEM-018`, `REP-011`, collector | [Admin - WorkspaceInfo GetScanResult](https://learn.microsoft.com/rest/api/power-bi/admin/workspace-info-get-scan-result) | Wording confirmed 2026-09-25 — the semantics of absence are **unresolved by the source**, not merely unverified by us |
+| `endorsement` is typed as a bare `string`, "The endorsement status", with **no enumerated values**; the only value shown anywhere on the page is `"Certified"` | `SEM-018`, `REP-011` | [Admin - WorkspaceInfo GetScanResult § Endorsement Details](https://learn.microsoft.com/rest/api/power-bi/admin/workspace-info-get-scan-result) | Fact confirmed 2026-09-25 against live Microsoft Learn page |
+| The product documents **three** portal endorsement badges — Promoted, Certified, Master data — and names **no API field** anywhere on the page | `SEM-018`, `REP-011` recognition list | [Endorsement overview](https://learn.microsoft.com/fabric/governance/endorsement-overview) | Fact confirmed 2026-09-25 against live Microsoft Learn page |
+| Master data can be applied **only to items that contain data**; all Fabric and Power BI items **except Power BI dashboards** can be promoted or certified | `REP-011` wording | [Endorsement overview § Types of items that can be endorsed](https://learn.microsoft.com/fabric/governance/endorsement-overview) | Fact confirmed 2026-09-25 against live Microsoft Learn page |
+| Cowork artifact discovery "uses a tuned semantic index and signals like endorsements, cross-item relationships, and most-recently-used activity to find the right report" | `SEM-018`, `REP-011` rationale | [Fabric IQ in Microsoft 365 Copilot Cowork](https://learn.microsoft.com/fabric/iq/connectors/cowork-overview) | Fact confirmed 2026-09-25 against live Microsoft Learn page |
+
+**Absence is unresolved, so it is not read as a negative.** The reference introduces the
+property list on both the Report and the Dataset object with the same sentence — for the
+report: *"The API returns a subset of the following list of report properties. The subset
+depends on the API called, caller permissions, and the availability of data in the Power
+BI database"* (the dataset entry reads "the availability of **the** data", an immaterial
+wording variant) — and then never says what a non-endorsed item looks like on the wire.
+A missing `endorsementDetails` is therefore indistinguishable from a permissions or
+data-availability artefact. The collector resolves it to `None` and the rules to
+`NOT_EVALUATED`, per the `None` = unobserved convention in [§1.1](#11-what-the-first-live-validation-established).
+Only a live Scanner observation containing **one endorsed and one known-unendorsed item
+in the same scan** would settle it, and that observation sits behind Sprint 5.1. It has
+not been made: endorsement remains **unobserved on every surface this project has
+exercised**.
+
+**The value set is not established, so an unrecognised value is not penalised.** The rules
+carry a three-entry recognition list taken from the portal concept page purely to *word* a
+finding. It is not a validation enum: a value the list does not know still passes, and is
+reported verbatim. Clamping to an enum the API does not publish is how a tool starts
+telling a customer that their certified content is uncertified.
+
+**The honest consequence: these two rules may effectively never fail on a live tenant.**
+A `FAILED` outcome requires the service to return an *explicitly empty* endorsement
+string, and the Scanner is nowhere documented to do that. In practice a live run will
+produce `PASSED` (a value came back) or `NOT_EVALUATED` (nothing came back). That is the
+price of refusing to read absence as non-endorsement, and it is stated here rather than
+left for a reader to discover: **do not present `SEM-018`/`REP-011` as evidence that an
+estate is endorsed.** Until the Sprint 5.1 observation lands, treat a `PASSED` here as
+"the scan named an endorsement" and a `NOT_EVALUATED` as "we could not see", and quote
+neither as an endorsement rate.
+
+**Deferred, deliberately: the remaining Cowork and Copilot Chat product limits.** Sprint
+6.1 names this document as their home, and several are already verified. Only the one
+Cowork statement above is recorded now, because it is the published justification for a
+rule that has shipped; §8 documents limits the ruleset **encodes or quotes**, and no rule
+in `2026.09.2` encodes the others. The facts verified on 2026-09-24 and re-checked
+2026-09-25 but **not yet recorded as §8 rows** are: Cowork grounds only on Power BI
+reports and the semantic models behind them and cannot reach ontologies or data agents;
+DLP is not currently supported in Cowork while DLP policies do apply in Copilot Chat;
+Cowork returns no citations back to the source report; and Copilot Chat's exclusion of
+data agents and ontologies is conditional on an explicitly published Microsoft 365 agent.
+They land here when a rule encodes them. Nothing in Sprint 6.1 is delivered, and
+[`docs/ROADMAP.md`](./ROADMAP.md) must not be cited as if it had recorded them.
 
 ## 9. Coverage Below 50% Publishes Nothing
 

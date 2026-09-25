@@ -10,8 +10,8 @@ language model, and whether its reports give that model usable context.
 
 ## Your Files (You Own These)
 
-- `fabric_iq/rules/semantic_model_rules.py` — SEM-001 … SEM-017
-- `fabric_iq/rules/report_rules.py` — REP-001 … REP-010
+- `fabric_iq/rules/semantic_model_rules.py` — SEM-001 … SEM-018
+- `fabric_iq/rules/report_rules.py` — REP-001 … REP-011
 
 ## The Core Insight
 

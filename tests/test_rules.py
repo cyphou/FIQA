@@ -318,6 +318,146 @@ class TestSemanticModelRules(unittest.TestCase):
         self.assertIs(self._run("SEM-017", subject).status, RuleStatus.FAILED)
 
 
+class TestEndorsementRules(unittest.TestCase):
+    """SEM-018 / REP-011 — endorsement as a Microsoft 365 discoverability signal.
+
+    The two guards these tests exist to hold down, both verified by mutation rather
+    than by assertion:
+
+    1. **``None`` is unknown, never "not endorsed".** The Scanner returns a documented
+       *subset* of properties depending on the API called, caller permissions and data
+       availability, and never states how a non-endorsed item is represented. Letting
+       absence fall through to a failure would manufacture a finding out of a
+       permission gap. Breaking this guard must break a test here.
+    2. **An unrecognised value is still an endorsement.** The API reference enumerates
+       no values for ``endorsement``. Clamping the field to a closed vocabulary would
+       make the tool tell a customer their certified content is uncertified the first
+       time a new or region-specific level ships. Breaking this guard must break a
+       test here too.
+    """
+
+    RULES = {"SEM-018": "model", "REP-011": "report"}
+
+    def _run(self, rule_id, **fields):
+        return registry.get(rule_id).evaluate({"id": "o", "name": "O", **fields})
+
+    # ── guard 1: absence is unknown ────────────────────────────────────
+
+    def test_absent_field_is_not_evaluated(self):
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                outcome = self._run(rule_id)
+                self.assertIs(outcome.status, RuleStatus.NOT_EVALUATED)
+
+    def test_unknown_endorsement_is_not_evaluated_and_never_a_failure(self):
+        # None covers an absent key, a null container, an empty container, a null
+        # value and any undocumented shape: the collector maps all of them here.
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                outcome = self._run(rule_id, endorsement=None, endorsement_certified_by=None)
+                self.assertIs(outcome.status, RuleStatus.NOT_EVALUATED)
+
+    def test_unknown_status_stays_unknown_even_when_a_certifier_is_stated(self):
+        # The two fields are independent: a stated certifier must never be used to
+        # infer a status the service did not return.
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                outcome = self._run(
+                    rule_id, endorsement=None, endorsement_certified_by="governance-board"
+                )
+                self.assertIs(outcome.status, RuleStatus.NOT_EVALUATED)
+
+    def test_unreadable_type_is_not_evaluated_not_a_negative(self):
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                self.assertIs(self._run(rule_id, endorsement=7).status, RuleStatus.NOT_EVALUATED)
+
+    # ── guard 2: an unrecognised value still passes ────────────────────
+
+    def test_unrecognised_value_passes_and_says_it_is_unrecognised(self):
+        # A future or region-specific level must not be scored as unendorsed.
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                outcome = self._run(rule_id, endorsement="Sovereign Gold")
+                self.assertIs(outcome.status, RuleStatus.PASSED)
+                self.assertIn("Sovereign Gold", outcome.detail)
+                self.assertIn("does not recognise", outcome.detail)
+                self.assertFalse(outcome.observed["recognised"])
+
+    def test_unrecognised_value_is_never_reported_as_absent(self):
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                observed = self._run(rule_id, endorsement="Tier-1 Trusted").observed
+                self.assertEqual(observed["endorsement"], "Tier-1 Trusted")
+
+    # ── the honest negative, and the recognised values ─────────────────
+
+    def test_service_asserted_empty_string_is_the_only_negative(self):
+        for rule_id, item in self.RULES.items():
+            with self.subTest(rule=rule_id):
+                outcome = self._run(rule_id, endorsement="")
+                self.assertIs(outcome.status, RuleStatus.FAILED)
+                self.assertIn(item, outcome.detail)
+
+    def test_recognised_levels_pass_and_are_named(self):
+        for rule_id in self.RULES:
+            for value, named in (
+                ("Promoted", "Promoted"),
+                ("Certified", "Certified"),
+                ("Master data", "Master data"),
+                ("MasterData", "Master data"),
+                ("  certified  ", "Certified"),
+            ):
+                with self.subTest(rule=rule_id, value=value):
+                    outcome = self._run(rule_id, endorsement=value)
+                    self.assertIs(outcome.status, RuleStatus.PASSED)
+                    self.assertIn(named, outcome.detail)
+                    self.assertTrue(outcome.observed["recognised"])
+
+    def test_promoted_is_a_pass_not_a_partial(self):
+        # Microsoft documents endorsements as a discovery signal without ranking the
+        # levels against each other, so treating Promoted as a half-endorsement would
+        # encode a hierarchy no source states.
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                self.assertIs(self._run(rule_id, endorsement="Promoted").status, RuleStatus.PASSED)
+
+    # ── privacy and severity ───────────────────────────────────────────
+
+    def test_the_certifier_identity_is_never_echoed_into_a_finding(self):
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                outcome = self._run(
+                    rule_id, endorsement="Certified", endorsement_certified_by="certifier-principal"
+                )
+                self.assertIs(outcome.status, RuleStatus.PASSED)
+                self.assertNotIn("certifier-principal", outcome.detail)
+                self.assertNotIn("certifier-principal", str(outcome.observed))
+                self.assertTrue(outcome.observed["certifier_stated"])
+
+    def test_a_certified_item_without_a_stated_certifier_still_passes(self):
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                outcome = self._run(rule_id, endorsement="Certified")
+                self.assertIs(outcome.status, RuleStatus.PASSED)
+                self.assertFalse(outcome.observed["certifier_stated"])
+
+    def test_endorsement_severity_never_caps_the_published_score(self):
+        # BLOCKING caps at 39 and revokes eligibility, MAJOR caps at 59. An unendorsed
+        # item is harder to find, not wrong once found, so neither cap may apply.
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                severity = registry.get(rule_id).severity
+                self.assertIs(severity, Severity.MINOR)
+                self.assertNotIn(severity, (Severity.BLOCKING, Severity.MAJOR))
+
+    def test_endorsement_is_scored_in_a_dimension_its_object_type_weights(self):
+        for rule_id in self.RULES:
+            with self.subTest(rule=rule_id):
+                rule = registry.get(rule_id)
+                self.assertIn(rule.dimension, DIMENSION_WEIGHTS[rule.object_type])
+
+
 class TestDataAgentRules(unittest.TestCase):
     def _run(self, rule_id, subject):
         return registry.get(rule_id).evaluate(subject)

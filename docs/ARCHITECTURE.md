@@ -14,7 +14,7 @@
                                       │
                                       ▼
                               ┌──────────────┐
-                              │ Rule Registry│  65 rules, 5 object types
+                              │ Rule Registry│  67 rules, 5 object types
                               └──────────────┘
                                       │
                                       ▼

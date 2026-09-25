@@ -13,6 +13,10 @@ rather than an invented zero.
 
 from __future__ import annotations
 
+import hashlib
+from dataclasses import dataclass
+from typing import Iterable
+
 from fabric_iq import RULESET_VERSION
 from fabric_iq.errors import ScoringError
 from fabric_iq.models import (
@@ -102,6 +106,154 @@ def status_for(score: float) -> ReadinessStatus:
         if score >= threshold:
             return status
     return ReadinessStatus.NOT_READY
+
+
+# ── Ruleset identity ──────────────────────────────────────────────
+#
+# `ruleset_version` is the only comparability key a stored run carries, so a run
+# that stamps it is asserting "another run with this token was produced by the
+# same scoring inputs". That assertion has to be mechanically true, not merely
+# intended. `ruleset_fingerprint()` hashes every input the engine reads when it
+# turns rule outcomes into a number, and `RULESET_HISTORY` binds one fingerprint
+# to one version. `tests/test_scoring.py` refuses to let the two drift apart, so
+# the catalogue can no longer change underneath a frozen token.
+#
+# See docs/SCORING.md "Ruleset Versioning" for the normative policy.
+
+#: Schema tag for the canonical fingerprint input. Bump only if the *encoding*
+#: below changes; that invalidates every stored fingerprint, so it is a ruleset
+#: increment in its own right.
+FINGERPRINT_SCHEMA = "fiqa-ruleset-inputs/1"
+
+#: Fingerprint placeholder for a version that shipped before this policy existed
+#: and was stamped on more than one catalogue. Such a version has no fingerprint
+#: because it never identified a single ruleset; runs bearing it are not
+#: comparable even with each other.
+AMBIGUOUS_FINGERPRINT = "ambiguous"
+
+
+@dataclass(frozen=True)
+class RulesetRelease:
+    """One published ruleset version and the catalogue it identifies."""
+
+    version: str
+    fingerprint: str
+    rule_count: int
+    note: str = ""
+
+    @property
+    def is_ambiguous(self) -> bool:
+        return self.fingerprint == AMBIGUOUS_FINGERPRINT
+
+
+#: Every published ruleset version, oldest first. **Append only.** A shipped
+#: entry is a historical fact about runs that already exist in someone's
+#: Lakehouse; editing one to match a changed catalogue re-labels their evidence
+#: instead of versioning yours. To change the catalogue, add an entry.
+RULESET_HISTORY: tuple[RulesetRelease, ...] = (
+    RulesetRelease(
+        version="2026.09.1",
+        fingerprint=AMBIGUOUS_FINGERPRINT,
+        rule_count=0,
+        note=(
+            "Pre-policy. This token was stamped on at least four different catalogues "
+            "(61 rules at first release, then 63, 65 and 67 as TEN-011, TEN-012, "
+            "WKS-011, SEM-018 and REP-011 were added) because nothing tied the token "
+            "to the catalogue. It therefore identifies no single ruleset: two runs "
+            "stamped 2026.09.1 are not comparable with each other, and none of them "
+            "is comparable with a later version. Recorded so the ambiguity is "
+            "visible rather than inferred."
+        ),
+    ),
+    RulesetRelease(
+        version="2026.09.2",
+        fingerprint="sha256:0d88857c2b2629427e79fba460bc64299b49aa47f26d2072874e3290ee61c6af",
+        rule_count=67,
+        note=(
+            "First version bound to a catalogue fingerprint. Catalogue unchanged from "
+            "the last 2026.09.1 build (67 rules, including SEM-018 and REP-011); no "
+            "weight, cap, threshold, rollup or dimension moved. The increment exists "
+            "because the previous token can no longer be trusted to mean one ruleset."
+        ),
+    ),
+)
+
+
+def ruleset_inputs(rules: RuleRegistry | None = None) -> list[str]:
+    """Canonical, human-readable list of every input that can move a number.
+
+    Returned as sorted text lines rather than hashed bytes so a fingerprint
+    mismatch can be *diffed*: a contributor sees which rule or constant moved,
+    not merely that something did. Rule titles, descriptions, remediation prose,
+    effort and owner are deliberately absent — they cannot change a score, and a
+    fingerprint that moved on a typo fix would teach contributors to regenerate
+    it reflexively, which is how a guard becomes decoration.
+    """
+
+    catalogue = rules or default_registry
+    lines = [f"schema\t{FINGERPRINT_SCHEMA}"]
+
+    for rule in sorted(catalogue.all(), key=lambda r: r.id):
+        lines.append(
+            "rule\t{id}\t{object_type}\t{dimension}\t{severity}\t{weight:.6f}".format(
+                id=rule.id,
+                object_type=rule.object_type.value,
+                dimension=rule.dimension.value,
+                severity=rule.severity.value,
+                weight=rule.weight,
+            )
+        )
+
+    for object_type in sorted(DIMENSION_WEIGHTS, key=lambda o: o.value):
+        weights = DIMENSION_WEIGHTS[object_type]
+        for dimension in sorted(weights, key=lambda d: d.value):
+            lines.append(
+                f"dimension-weight\t{object_type.value}\t{dimension.value}\t{weights[dimension]:.6f}"
+            )
+
+    for severity in sorted(SEVERITY_SCORE_CAP, key=lambda s: s.value):
+        lines.append(f"severity-cap\t{severity.value}\t{SEVERITY_SCORE_CAP[severity]:.6f}")
+
+    for threshold, status in STATUS_THRESHOLDS:
+        lines.append(f"status-threshold\t{threshold:.6f}\t{status.value}")
+
+    lines.append(f"coverage-floor\t{MIN_COVERAGE_TO_PUBLISH:.6f}")
+
+    for name, rollup in (("workspace", WORKSPACE_ROLLUP), ("tenant", TENANT_ROLLUP)):
+        for key in sorted(rollup):
+            lines.append(f"rollup\t{name}\t{key}\t{rollup[key]:.6f}")
+
+    return lines
+
+
+def fingerprint_of(inputs: Iterable[str]) -> str:
+    """Hash canonical ruleset input lines into a stable fingerprint."""
+    digest = hashlib.sha256("\n".join(inputs).encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
+
+
+def ruleset_fingerprint(rules: RuleRegistry | None = None) -> str:
+    """Fingerprint of the scoring inputs currently compiled into the engine."""
+    return fingerprint_of(ruleset_inputs(rules))
+
+
+def release_for(version: str) -> RulesetRelease | None:
+    """Return the ledger entry for ``version``, or None if it was never published."""
+    for release in RULESET_HISTORY:
+        if release.version == version:
+            return release
+    return None
+
+
+def current_release() -> RulesetRelease:
+    """The ledger entry for the version this build stamps on every run."""
+    release = release_for(RULESET_VERSION)
+    if release is None:
+        raise ScoringError(
+            f"RULESET_VERSION {RULESET_VERSION!r} has no entry in RULESET_HISTORY; "
+            "a version that stamps runs must be published in the ledger"
+        )
+    return release
 
 
 class ScoringEngine:

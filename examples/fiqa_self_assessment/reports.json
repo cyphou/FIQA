@@ -17,6 +17,8 @@
       "Readiness overview",
       "Blocking findings",
       "Remediation burn-down"
-    ]
+    ],
+    "endorsement": "Promoted",
+    "endorsement_certified_by": null
   }
 ]
