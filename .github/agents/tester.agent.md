@@ -15,6 +15,10 @@ You are the **Tester** agent. You own the evidence that this tool does what it c
 - `scripts/check_evidence_sinks.py` — evidence-sink hygiene: writer destinations
   resolve to a committed ignore rule, tracked files stay trackable, tracked content
   carries no real identifier
+- `scripts/check_scope_ledger.py` — scope-drift gate: every element of every declared
+  source constant carries exactly one disposition in the scope ledger
+  (`docs/SCOPE_LEDGER.md`, owned by **@readme** — this is a pointer, not a claim),
+  every row names a live element, and no dated disposition has outlived its review
 - `scripts/__init__.py` — package marker that makes the gate scripts importable
   from the suite
 
@@ -27,6 +31,7 @@ changing them, because rule tests depend on their shape.
 python -m unittest discover -s tests -t .
 python scripts/check_agent_ownership.py
 python scripts/check_evidence_sinks.py
+python scripts/check_scope_ledger.py
 ```
 
 ## What Must Always Be Covered
@@ -48,6 +53,12 @@ python scripts/check_evidence_sinks.py
 10. **No evidence sink is trackable** — every writer default and documented output
     example resolves to a committed `.gitignore` rule, no tracked file is shadowed
     by those rules, and no tracked file carries a real GUID, UPN, or email address.
+11. **Scope has not drifted** — every element of a declared source constant carries
+    exactly one disposition in `docs/SCOPE_LEDGER.md`, no row disposes an element the
+    code no longer names, and no dated disposition has outlived its review. The
+    highest-value assertion here is the anti-vacuity one: the parse must find the
+    number of rows the document states, or the gate reports clean over a table it
+    never read.
 
 ## Fixture Rules
 
@@ -78,3 +89,11 @@ python scripts/check_evidence_sinks.py
 - A tracked file matched by an ignore rule is not protected, it is *shadowed*: it
   stays in the index while later edits vanish from `git add`. Broad sink patterns
   (`*.jsonl`, `Mart*.csv`) must always be re-checked against every tracked file.
+- A gate quantified over a parse is only as good as the parse. Assert the *positive*
+  fact — rows found equals rows the document states — never merely "no violations
+  found". `check_agent_ownership.py` reported clean over a file it had never read
+  because its path token could not begin with a dot (Sprint 5.0.1).
+- A gate must never transcribe the constant it guards. `check_evidence_sinks.py`
+  keeps fallback lists so it can run outside an importable checkout;
+  `check_scope_ledger.py` deliberately keeps none, because a stale copy there would
+  hide exactly the new key the gate exists to catch.

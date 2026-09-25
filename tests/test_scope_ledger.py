@@ -19,13 +19,15 @@ a judgement that belongs to another agent.
    when a bucket empties: triaging the four rows must never turn this file red.
 
 2. *Reconciliation against the live `WORKSPACE_ITEM_KEYS` constant* -- that a
-   fourteenth key added tomorrow appears here as a row. That is the drift detector
-   Sprint 7.2 delivers, and the ledger says so in its own words ("it is not a
-   detector ... `WORKSPACE_ITEM_KEYS` can gain a fourteenth key tomorrow and this
-   document will not notice"). Asserting it here would design 7.2 by accident and
-   falsify a sentence in a document this agent does not own. It was verified by
-   hand at this revision -- the 13 rows are a bijection with the 13 keys -- and the
-   standing check belongs to 7.2.
+   fourteenth key added tomorrow appears here as a row. **Delivered in Sprint
+   7.2**, by `scripts/check_scope_ledger.py` and `tests/test_scope_ledger_gate.py`,
+   which is where the bijection assertion now lives along with the negative tests
+   that prove the gate can fail. It stays out of *this* file because the two ask
+   different questions: this file asks whether the document is internally honest,
+   that one asks whether the document still matches the code. Both read the table
+   through the same parser -- `parse_rows` in the gate script -- because two
+   parsers for one table is its own drift hazard, and the second one to go stale
+   would be the one nobody ran.
 
 What is left is the rot this document can suffer *on its own*: a row that gains a
 second disposition, an exclusion whose review-by date is dropped, an untriaged row
@@ -38,36 +40,30 @@ import os
 import re
 import unittest
 
+from scripts.check_scope_ledger import ISO_DATE as _ISO_DATE
+from scripts.check_scope_ledger import LEDGER_PATH, parse_rows, read_ledger
 from tests.helpers import REPO_ROOT
 
-LEDGER = os.path.join(REPO_ROOT, "docs", "SCOPE_LEDGER.md")
+LEDGER = LEDGER_PATH
 
-#: `| 6 | `dataflows` | **deliberately excluded** | reason | `@readme` | 2026-12-24 |`
-_ROW = re.compile(
-    r"^\|\s*(\d+)\s*\|\s*`([^`]+)`\s*\|\s*\*\*([a-z ]+)\*\*\s*\|"
-    r"(.*?)\|(.*?)\|(.*?)\|\s*$"
-)
 _RULE_ID = re.compile(r"\b([A-Z]{3}-\d{3})\b")
-_ISO_DATE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
 _AGENT = re.compile(r"@([a-z][a-z-]*)")
 
 
 def _read():
-    with open(LEDGER, encoding="utf-8") as handle:
-        return handle.read()
+    return read_ledger(LEDGER)
 
 
 def _rows(text=None):
-    """Parse the ledger table into ``[(n, key, disposition, basis, owner, review)]``."""
-    parsed = []
-    for line in (text if text is not None else _read()).splitlines():
-        match = _ROW.match(line)
-        if match:
-            number, key, disposition, basis, owner, review = match.groups()
-            parsed.append(
-                (int(number), key, disposition.strip(), basis.strip(), owner.strip(), review.strip())
-            )
-    return parsed
+    """Parse the ledger table into ``[(n, key, disposition, basis, owner, review)]``.
+
+    Delegates to the gate script's parser rather than keeping a second copy. When
+    Sprint 7.2 made the ledger executable the table gained a *second* reader, and
+    two regexes over one table drift apart silently -- in the direction where the
+    less-exercised one starts matching nothing and its assertions pass over an
+    empty set.
+    """
+    return parse_rows(text if text is not None else _read())
 
 
 class TestScopeLedgerParses(unittest.TestCase):

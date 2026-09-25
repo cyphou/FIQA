@@ -69,6 +69,9 @@ jobs:
       - name: Check evidence sinks stay untracked and identifier-free
         run: python scripts/check_evidence_sinks.py
 
+      - name: Check the scope ledger disposes every element in code
+        run: python scripts/check_scope_ledger.py
+
       - name: Check rule documentation is current
         run: python scripts/build_rules_doc.py --check
 
