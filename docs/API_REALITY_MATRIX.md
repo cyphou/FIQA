@@ -219,7 +219,7 @@ gate, cross-geo AI processing, is already above as `cross_geo_required` /
 | `rls_required`, `rls_roles` | SEM-015 | B | `200`, no such field | `absent` | Blocking security rule unevaluable |
 | `hours_since_refresh`, `freshness_sla_hours` | SEM-016 | B | `200`, no such field | `absent` | No refresh history on this surface |
 | `schema_retrieval_error` | SEM-017 | B | not produced | `absent` | The collector sets this sentinel on the Scanner path only; on this surface there is no schema call to succeed or fail |
-| item endorsement (no rule) | — | B | `200`, no such field | `absent` | §3 records the six fields surface B returns; endorsement is not among them. **No enumeration surface exercised in this proof returns endorsement.** A documented carrier is named in §11.3 — documentation, not a reading |
+| item endorsement (`endorsement`, `endorsement_certified_by`) (no rule) | — | B | `200`, no such field | `absent` | §3 records the six fields surface B returns; endorsement is not among them. **No enumeration surface exercised in this proof returns endorsement.** Unchanged by the collector work of 2026-09-25: `fabric_api.py` now *carries* `endorsementDetails` on the **Scanner** path (§11.3), a surface this proof never called, so this row stays `absent` and "Last observed" does not move. What changed is the consequence of ever reaching that surface, not what was read here |
 
 **All 17 `SEM-*` rules returned `NOT_EVALUATED`.** Catalog search enumerates semantic
 models; it describes none of them.
@@ -239,7 +239,7 @@ models; it describes none of them.
 | `audience`, `owner` | REP-008 | B | `200`, no such field | `absent` | — |
 | `monthly_views` | REP-009 | none | — | `absent` | Activity Events API, not exercised |
 | `verified_answer_candidates` | REP-010 | B | — | `absent` | — |
-| item endorsement (no rule) | — | B | `200`, no such field | `absent` | Same finding as §5.3: surface B carries no endorsement for a report either (§3). Unread, not negative — a documented carrier is named in §11.3 |
+| item endorsement (`endorsement`, `endorsement_certified_by`) (no rule) | — | B | `200`, no such field | `absent` | Same finding as §5.3: surface B carries no endorsement for a report either (§3). Unread, not negative. The Scanner normalisation now carries it (§11.3) but the Scanner was not called here, so the class is unchanged |
 
 ### 5.5 Data Agent
 
@@ -484,6 +484,64 @@ Related documents, owned elsewhere and updated by routing, never by editing:
 - The Scanner was **not called** in this proof (§1, §7.1). Nothing above is an
   availability claim for this tenant, this identity, or this collector.
 
+#### 11.3.1 What absence means — the question the collector boundary had to settle
+
+The `@collector` boundary §11.5 deferred was taken on **2026-09-25** (documentation
+check, still **no live call**). It turns on one question: when `endorsementDetails` is
+missing from an item in a successful scan, is that *"not endorsed"* or *"not read"*?
+
+- **The reference settles it toward "not read".** Both the **Report** and the **Dataset**
+  objects introduce their property list with: *"The API returns a **subset** of the
+  following list of … properties. The subset depends on the API called, caller
+  permissions, and the availability of data in the Power BI database."*
+  ([reference](https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result),
+  checked 2026-09-25). An omitted property is therefore documented as a possible
+  permission or availability artefact. **The page nowhere states how a non-endorsed item
+  is represented** — neither "the object is omitted" nor "`endorsement` comes back empty".
+- **So the distinction remains unresolved from public reference, and the collector
+  defaults to the safe side.** Absent key, `null` container, empty container, `null`
+  value, and any undocumented shape all normalise to `None` → `NOT_EVALUATED`. This is
+  §2 applied, not restated: a present key holding `null` is a blind spot. Only an
+  `endorsement` the service actually returned as `""` is carried as `""`, because an
+  empty string is the service's own assertion.
+- **What would settle it.** A single live Scanner `getInfo` + `scanResult` over a
+  workspace containing one endorsed and one known-unendorsed item, under an identity with
+  `Tenant.Read.All`. If the unendorsed item comes back **with** `endorsementDetails` and
+  an empty or absent `endorsement`, absence-of-the-container remains a permission signal
+  and the current mapping is right. If it comes back **without** the container at all,
+  absence becomes ambiguous between the two causes and the rule must still degrade. That
+  observation is blocked behind Sprint 5.1 and is **not** scheduled by this change.
+- **No `getInfo` parameter was added.** The `getInfo` reference documents exactly five
+  query parameters — `datasetExpressions`, `datasetSchema`, `datasourceDetails`,
+  `getArtifactUsers`, `lineage` — and the word "endorsement" **does not appear on the
+  page at all** (checked 2026-09-25). Nothing is known to gate endorsement the way
+  `datasetSchema` gates schema, so `SCANNER_OPTIONS` is unchanged; a test pins that set
+  so a future option cannot be invented silently.
+- **No enum was introduced.** `Promoted` appears **zero** times on the scan-result
+  reference; only the sample `"Certified"` appears, against a field typed `string —
+  "The endorsement status"`. The product concept page meanwhile documents *three* portal
+  levels — Promoted, Certified and Master data
+  ([reference](https://learn.microsoft.com/en-us/fabric/governance/endorsement-overview),
+  checked 2026-09-25) — and names no API field, which is precisely why the sample value
+  must not be mistaken for the value set. The collector passes the string through as
+  returned, stripping surrounding whitespace and nothing else.
+
+#### 11.3.2 What the collector now carries — which is not the same as observed
+
+`fabric_api.py` maps `endorsementDetails` onto two fields, `endorsement` and
+`endorsement_certified_by`, on the Scanner's **dataset** (semantic model) and **report**
+objects. The two fields are independent: a certifier can be stated without a status, and
+carrying one never manufactures the other. `normalize_data_agent` lists both as
+explicitly unavailable, because the reference documents `endorsementDetails` on reports,
+datasets, dataflows and datamarts only — never on a Fabric item type. **Named as unknown
+beats silently dropped**: the old `normalize_report` neither read the field nor listed
+it, which is why this gap survived until a documentation review found it.
+
+**This does not make endorsement observed.** §5.3 and §5.4 stay `absent`, "Last observed"
+stays **2026-09-24**, and no `BronzeRecord` for a Scanner call exists. The only change is
+that *if* the Scanner surface is ever reached, endorsement will arrive instead of
+vanishing. **No rule consumes these fields** — that remains `@semantic`'s boundary.
+
 ### 11.4 Every source, with the date it was checked
 
 | # | Claim it supports | Source | Checked |
@@ -496,6 +554,8 @@ Related documents, owned elsewhere and updated by routing, never by editing:
 | 6 | `getInfo` parameters and quotas; only schema/expressions require metadata scanning | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-post-workspace-info` | 2026-09-25 |
 | 7 | Fabric admin item enumeration carries no endorsement field | `https://learn.microsoft.com/en-us/rest/api/fabric/admin/items/list-items` | 2026-09-25 |
 | 8 | Power BI admin dataset enumeration reference does not document endorsement | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/datasets-get-datasets-as-admin` | 2026-09-25 |
+| 9 | Report and Dataset scan-result properties are a *subset* depending on "the API called, caller permissions, and the availability of data in the Power BI database" — so an omitted `endorsementDetails` is documented as possibly unread, and the page never states how a non-endorsed item is represented (§11.3.1) | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result` | 2026-09-25 |
+| 10 | The product documents three endorsement levels (Promoted, Certified, Master data) and names **no** API field — portal vocabulary, not the API value set (§11.3.1) | `https://learn.microsoft.com/en-us/fabric/governance/endorsement-overview` | 2026-09-25 |
 
 Reference pages move. Any of these claims is re-checkable by opening the URL and
 restating the date; a claim whose date is older than the behaviour it justifies should be
@@ -507,6 +567,9 @@ re-read before it is encoded.
   alone. Wiring a `settingName` into `TENANT_SETTING_MAP`, or carrying
   `endorsementDetails` through Scanner normalisation, is a separate `@collector` boundary
   — and §11.1 says the key that boundary would need is not established.
+  *(Still true of Sprint 6.1 itself. The endorsement half of that boundary was
+  subsequently taken as its own change — see §11.3.1 and §11.3.2. The
+  `TENANT_SETTING_MAP` half remains unwritable for the reason §11.1 gives.)*
 - **No rule, no `ObjectType`, no scoring change.** The tenant-setting, endorsement and
   type-reachability rules belong to `@tenant` and `@semantic`, each with its own
   synthetic fixtures, after this record exists.

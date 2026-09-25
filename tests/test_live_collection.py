@@ -8,6 +8,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from fabric_iq.collectors import fabric_api
 from fabric_iq.collectors.fabric_api import (
     MAX_WORKSPACES_PER_SCAN,
     FabricApiCollector,
@@ -282,6 +283,119 @@ class TestFabricApiCollector(unittest.TestCase):
         self.assertIsNone(workspace["role_assignments"])
         observed = FabricApiCollector.normalize_workspace({"id": "w2", "name": "Empty", "users": []})
         self.assertEqual(observed["role_assignments"], [])
+
+    # ── endorsement: carried through, never judged ────────────────
+    #
+    # Every payload below is synthetic. The Scanner documents `endorsementDetails`
+    # on its Report and Dataset objects, inside a property list the reference calls
+    # a *subset* that "depends on the API called, caller permissions, and the
+    # availability of data in the Power BI database", and it never states how a
+    # non-endorsed item is represented
+    # (rest/api/power-bi/admin/workspace-info-get-scan-result, checked 2026-09-25).
+    # So absence is a blind spot and must stay None.
+
+    ENDORSEMENT_NORMALIZERS = (
+        ("semantic_model", FabricApiCollector.normalize_semantic_model),
+        ("report", FabricApiCollector.normalize_report),
+    )
+
+    #: Payloads whose endorsement the Scanner actually stated.
+    ENDORSEMENT_OBSERVED = (
+        (
+            "present with a certifier",
+            {"endorsementDetails": {"endorsement": "Certified", "certifiedBy": "steward@example.invalid"}},
+            "Certified",
+            "steward@example.invalid",
+        ),
+        (
+            "present without a certifier",
+            {"endorsementDetails": {"endorsement": "Promoted"}},
+            "Promoted",
+            None,
+        ),
+        (
+            "an unrecognised future value is carried, not clamped to an enum",
+            {"endorsementDetails": {"endorsement": "MasterData", "certifiedBy": ""}},
+            "MasterData",
+            "",
+        ),
+        (
+            "surrounding whitespace is the only normalisation applied",
+            {"endorsementDetails": {"endorsement": "  Certified  ", "certifiedBy": " a@example.invalid "}},
+            "Certified",
+            "a@example.invalid",
+        ),
+        (
+            "an empty string is an assertion the service made, and survives as one",
+            {"endorsementDetails": {"endorsement": "", "certifiedBy": ""}},
+            "",
+            "",
+        ),
+    )
+
+    #: Payloads that state nothing *about the endorsement status*. Every one of these
+    #: must leave `endorsement` unknown. `certifiedBy` is pinned separately because the
+    #: two fields are independent: the Scanner can state a certifier without stating a
+    #: status, and carrying one must never manufacture the other.
+    ENDORSEMENT_UNREAD = (
+        ("the key is entirely absent", {"id": "x1", "name": "Synthetic"}, None),
+        ("endorsementDetails is null", {"endorsementDetails": None}, None),
+        ("endorsementDetails is an empty object", {"endorsementDetails": {}}, None),
+        ("endorsement is null inside a present object", {"endorsementDetails": {"endorsement": None}}, None),
+        (
+            "only certifiedBy came back",
+            {"endorsementDetails": {"certifiedBy": "steward@example.invalid"}},
+            "steward@example.invalid",
+        ),
+        ("endorsementDetails is a bare string", {"endorsementDetails": "Certified"}, None),
+        ("endorsementDetails is a list", {"endorsementDetails": [{"endorsement": "Certified"}]}, None),
+        ("endorsement is a number", {"endorsementDetails": {"endorsement": 1}}, None),
+        (
+            "endorsement is a nested object",
+            {"endorsementDetails": {"endorsement": {"status": "Certified"}}},
+            None,
+        ),
+    )
+
+    def test_stated_endorsement_is_carried_through_unmapped(self):
+        for label, raw, endorsement, certified_by in self.ENDORSEMENT_OBSERVED:
+            for object_type, normalize in self.ENDORSEMENT_NORMALIZERS:
+                with self.subTest(case=label, object_type=object_type):
+                    item = normalize(dict(raw), "w1")
+                    self.assertEqual(item["endorsement"], endorsement)
+                    self.assertEqual(item["endorsement_certified_by"], certified_by)
+
+    def test_unread_endorsement_never_becomes_a_confident_not_endorsed(self):
+        # This is the load-bearing guard. An unread endorsement must stay None so the
+        # scoring engine records NOT_EVALUATED. Falling back to "" (or any concrete
+        # "not endorsed" token) would convert a blind spot into an assertion and one
+        # day tell a customer their estate is unendorsed when it was simply never read.
+        for label, raw, certified_by in self.ENDORSEMENT_UNREAD:
+            for object_type, normalize in self.ENDORSEMENT_NORMALIZERS:
+                with self.subTest(case=label, object_type=object_type):
+                    item = normalize(dict(raw), "w1")
+                    self.assertIsNone(
+                        item["endorsement"],
+                        f"{object_type}: {label} must stay unknown, not become an assertion",
+                    )
+                    self.assertEqual(item["endorsement_certified_by"], certified_by)
+
+    def test_endorsement_is_named_unavailable_on_item_types_that_do_not_document_it(self):
+        # Named, not silently dropped: the reference documents endorsementDetails on
+        # reports/datasets/dataflows/datamarts only, so a Data Agent carries the key
+        # as an explicit unknown rather than not carrying it at all.
+        agent = FabricApiCollector.normalize_data_agent({"id": "a1", "name": "Synthetic"}, "w1")
+        self.assertIn("endorsement", agent)
+        self.assertIsNone(agent["endorsement"])
+        self.assertIsNone(agent["endorsement_certified_by"])
+
+    def test_endorsement_needs_no_undocumented_scanner_option(self):
+        # No documented getInfo parameter gates endorsement the way datasetSchema
+        # gates schema, so the collector must not invent one.
+        self.assertEqual(
+            set(fabric_api.SCANNER_OPTIONS),
+            {"lineage", "datasourceDetails", "datasetSchema", "datasetExpressions", "getArtifactUsers"},
+        )
 
     def test_scan_failure_is_recorded_without_inventing_workspaces(self):
         def transport(method, url, body):

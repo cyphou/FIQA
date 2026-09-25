@@ -41,6 +41,15 @@ SCANNER_OPTIONS = {
 }
 READ_ONLY_SCANNER_POSTS = frozenset({"workspaces/getInfo"})
 
+# Endorsement deliberately adds nothing to SCANNER_OPTIONS. The `getInfo` reference
+# documents exactly five query parameters -- lineage, datasourceDetails, datasetSchema,
+# datasetExpressions, getArtifactUsers -- and does not mention endorsement anywhere on
+# the page, so no parameter is known to gate it the way datasetSchema gates schema
+# (https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-post-workspace-info,
+# checked 2026-09-25). Inventing an option to "turn endorsement on" would be inventing a
+# product fact. Whether an unset tenant setting suppresses it anyway is NOT established.
+ENDORSEMENT_DETAILS_KEY = "endorsementDetails"
+
 # Scanner access-right values, mapped onto the role vocabulary the rules expect.
 WORKSPACE_ROLE_KEYS = ("groupUserAccessRight", "workspaceUserAccessRight", "role", "accessRight")
 
@@ -524,6 +533,43 @@ class FabricApiCollector(Collector):
         return flattened
 
     @staticmethod
+    def _endorsement(raw: dict[str, Any]) -> tuple[Any, Any]:
+        """Carry the Scanner's ``endorsementDetails`` through without judging it.
+
+        Returns ``(endorsement, certified_by)``.
+
+        **Absence is unknown, never "not endorsed".** The scan-result reference
+        introduces both the Report and the Dataset property list with "The API returns
+        a *subset* of the following list of ... properties. The subset depends on the
+        API called, caller permissions, and the availability of data in the Power BI
+        database", and nowhere states how a non-endorsed item is represented
+        (https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result,
+        checked 2026-09-25). A missing ``endorsementDetails`` is therefore a
+        documented subset omission -- a blind spot -- and converting it into a
+        confident "unendorsed" would manufacture a finding out of a permission gap.
+
+        Only what the service actually returned empty is carried as an assertion:
+        ``"endorsement": ""`` stays ``""``, while ``null``, an absent key, an absent
+        container or a value of an unexpected type all stay ``None``.
+
+        ``endorsement`` is typed only as "string -- The endorsement status" with **no
+        enumerated values** on that page (``Promoted`` appears zero times; only the
+        sample value ``"Certified"`` appears), so the string is passed through as
+        returned with surrounding whitespace stripped, and is never mapped onto a
+        closed vocabulary that would silently discard an unrecognised future value.
+        """
+        details = raw.get(ENDORSEMENT_DETAILS_KEY)
+        if not isinstance(details, dict):
+            # Absent, null, or a shape the reference does not document: unread.
+            return None, None
+        endorsement = details.get("endorsement")
+        certified_by = details.get("certifiedBy")
+        return (
+            endorsement.strip() if isinstance(endorsement, str) else None,
+            certified_by.strip() if isinstance(certified_by, str) else None,
+        )
+
+    @staticmethod
     def normalize_semantic_model(raw: dict[str, Any], parent_id: str) -> dict[str, Any]:
         """Map a Scanner dataset onto the canonical model shape.
 
@@ -600,6 +646,10 @@ class FabricApiCollector(Collector):
         )
         normalized["target_storage_mode"] = raw.get("targetStorageMode")
         normalized["owner"] = raw.get("configuredBy")
+        # Documented on the Scanner's Dataset object; unknown when not returned.
+        normalized["endorsement"], normalized["endorsement_certified_by"] = (
+            FabricApiCollector._endorsement(raw)
+        )
 
         # Out of scope for the Scanner: model relationships, Prep-for-AI metadata
         # and refresh history all require XMLA or the refresh APIs.
@@ -623,6 +673,10 @@ class FabricApiCollector(Collector):
         normalized["report_type"] = raw.get("reportType")
         normalized["owner"] = raw.get("createdBy") or raw.get("modifiedBy")
         normalized["modified_at"] = raw.get("modifiedDateTime")
+        # Documented on the Scanner's Report object; unknown when not returned.
+        normalized["endorsement"], normalized["endorsement_certified_by"] = (
+            FabricApiCollector._endorsement(raw)
+        )
         for unavailable in (
             "semantic_model_reachable",
             "semantic_model_score",
@@ -650,7 +704,13 @@ class FabricApiCollector(Collector):
         normalized["owner"] = raw.get("createdBy") or raw.get("modifiedBy")
         normalized["state"] = raw.get("state")
         normalized["modified_at"] = raw.get("lastUpdatedDate")
+        # Named, not omitted: the scan-result reference documents `endorsementDetails`
+        # on reports, datasets, dataflows and datamarts only -- never on a Fabric item
+        # type such as a Data Agent (checked 2026-09-25). Unknown from this carrier, so
+        # it is listed below with everything else this surface cannot observe.
         for unavailable in (
+            "endorsement",
+            "endorsement_certified_by",
             "data_sources",
             "source_scores",
             "instructions",
