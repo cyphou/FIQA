@@ -108,9 +108,10 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
 - [`scripts/check_agent_ownership.py`](./scripts/check_agent_ownership.py) extended
   beyond `fabric_iq/` modules to documentation that asserts a privacy, identity,
   retention or collection-capability claim, and to the files a model reads as
-  instruction. Seven such documents and skills now name exactly one accountable owner —
+  instruction. Eight such documents and skills now name exactly one accountable owner —
   [`docs/IDENTITY_AND_RETENTION.md`](./docs/IDENTITY_AND_RETENTION.md),
-  [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md) and
+  [`docs/INTERPRETING_RESULTS.md`](./docs/INTERPRETING_RESULTS.md),
+  [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) and
   [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md)
   (**@readme**), [`docs/API_REALITY_MATRIX.md`](./docs/API_REALITY_MATRIX.md)
   (**@collector**), [`docs/INSTALL.md`](./docs/INSTALL.md) and
@@ -118,7 +119,7 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   [`docs/SELF_ASSESSMENT.md`](./docs/SELF_ASSESSMENT.md) (**@preceptor**). The check also
   fails when a required document is missing from the repository entirely, so the
   guarantee cannot be satisfied by deleting the document that carries it.
-  **@security** reviews all seven and owns no file by design: a reviewer
+  **@security** reviews all eight and owns no file by design: a reviewer
   that can edit what it reviews eventually reviews its own edits.
 - Both checks fail with exit code `1` and name the offending path, and both carry
   negative tests over synthetic fixtures — a temporary git repository for the sink check,
@@ -126,9 +127,11 @@ Live-tenant validation, a growing rule catalogue, and a Fabric-native delivery s
   rejects a missing ignore rule, a shadowed tracked file, a planted identifier, and a
   document that is unclaimed, doubly claimed, claimed by the wrong agent, or absent.
 - CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs the evidence-sink
-  check alongside the ownership and rule-documentation checks.
+  check alongside the ownership, scope-ledger and rule-documentation checks.
 
-**Tests** — grown from 138 to **503 tests**, all green. Two tests skip by design on
+**Tests** — grown from 138 to **573 passing** tests (`Ran 575 ... OK (skipped=2)`; the
+bolded figure is always the number that passed, never the number that ran). Two tests
+skip by design on
 Windows — one plants a control character in a tracked filename to prove the NUL-separated
 `git ls-files -z` parse, and Windows refuses such a name; the other exercises the
 `dir_fd`-anchored retention delete that Windows does not provide (§3.6 of
@@ -183,6 +186,28 @@ gate. An unowned gate is worse than an unowned module: it keeps exiting `0` whil
 thing it was written to catch walks past it, and no agent is accountable for noticing.
 
 ### Documentation
+
+- [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) — a signed disposition for every
+  element of Fabric's shape this repository already names in its own code. One source,
+  `WORKSPACE_ITEM_KEYS`, and its thirteen item containers: **3 assessed** (reports,
+  datasets, Data Agents), **2 open** (dashboards, Ontology — each naming the sprint),
+  **4 deliberately excluded** (dataflows, datamarts, notebooks, SQL analytics endpoints —
+  each with a reason, an owning agent and a `2026-12-24` review-by date) and **4
+  untriaged** (Lakehouse, KQLDatabase, Eventhouse, GraphModel — each naming the agent who
+  owes the answer, all four routed to `@dataagent`). Before it, the repository's scope
+  read identically whether an omission had been considered and rejected or never noticed.
+  Every product fact it leans on carries its source URL and the date it was verified. The
+  ledger adds no rule, moves no score and is mapped to no rule outcome.
+  [`scripts/check_scope_ledger.py`](./scripts/check_scope_ledger.py) then made it
+  executable: CI fails when the collector names an item type the ledger does not dispose,
+  when a row disposes a key the code has dropped, or when a dated exclusion outlives its
+  review. **Consequence, stated rather than discovered:** the four exclusions come due on
+  2026-12-25, so CI goes red that day with nobody having changed a line, and there is
+  deliberately no bulk re-dating command — clearing it costs four per-row edits with
+  recorded reasons. The ledger is a baseline, not a detector: no row in it passes a
+  Phase 7 release-gate criterion, and the document routes the reader to
+  [`docs/ROADMAP.md`](./docs/ROADMAP.md) for which criteria are met rather than restating
+  a status it does not own.
 
 - [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §3 "Agent Quality Is
   Declared, Not Measured" — **the authority the Skill defers to carried the very error
@@ -441,8 +466,11 @@ thing it was written to catch walks past it, and no agent is accountable for not
   to cover a **collection-capability** claim alongside privacy, identity, retention and
   instruction. A statement about what the collectors cannot read is a claim about the
   engine's own blind spots, and a stale row in it reads as evidence that was never
-  collectable. The audited documentation set is **7** documents and skills, reproduced
-  from `python scripts/check_agent_ownership.py`; the module count is unchanged at **26**.
+  collectable. The audited documentation set was **7** documents and skills at that
+  change, reproduced from `python scripts/check_agent_ownership.py`, and the module count
+  was unchanged at **26**. Both figures have since moved — **8** documents and **28**
+  modules at the scope-ledger entry above — and are properties of a revision, not
+  standing totals; re-measure before quoting either.
 - [`README.md`](./README.md) — reconciled against the above: the gate paragraph now says
   seven documents and skills and names the collection-capability claim; a new callout
   states that git-ignored is not share-safe and that `artifacts/` is synthetic-only; the

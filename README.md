@@ -12,7 +12,7 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.2` · package `0.1.0` |
-| ✅ **Tests** | 503 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity, calibration (two skip on Windows by design: one needs a filename Windows refuses, one needs `dir_fd` deletion Windows does not provide) |
+| ✅ **Tests** | 573 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity, calibration, scope-drift reconciliation (two skip on Windows by design: one needs a filename Windows refuses, one needs `dir_fd` deletion Windows does not provide) |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 67 rules · 5 object types · 9 Gold marts · 14-agent environment |
@@ -68,7 +68,7 @@ No dependencies. Python 3.12+ standard library only.
 `scripts/` is claimed by exactly one agent, and that each document carrying a privacy,
 identity, retention or collection-capability claim — or that a model reads as
 instruction, which is the same promise made at prompt time — names exactly one
-accountable owner. Twenty-six modules and seven documents and skills are in that audited
+accountable owner. Twenty-eight modules and eight documents and skills are in that audited
 set today; the check also fails if one of the documents is deleted outright, so the
 guarantee cannot be met by removing the document that carries it. The gate scripts are
 inside the audited set on purpose: a check nobody owns keeps exiting `0` and nobody is

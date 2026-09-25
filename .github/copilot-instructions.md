@@ -26,6 +26,7 @@ python assess.py --inventory examples/sample_tenant --review --out artifacts
 python assess.py --list-rules
 python -m unittest discover -s tests -t .
 python scripts/check_agent_ownership.py
+python scripts/check_scope_ledger.py
 ```
 
 ## Agents

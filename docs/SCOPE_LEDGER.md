@@ -14,10 +14,25 @@ which collector happened to be written first.
 
 **What this document is not.**
 
-- **It is not a detector.** A ledger is the baseline a detector needs. Closing Sprint 7.1
-  closes nothing in Sprint 7.2, and **no criterion of the Phase 7 release gate is met at
-  this revision.** Nothing here is checked by any script yet; `WORKSPACE_ITEM_KEYS` can
-  gain a fourteenth key tomorrow and this document will not notice.
+- **It is not a detector — but it is now checked.** A ledger is the baseline a detector
+  needs, and since Sprint 7.2 (`e185aab`, with the cross-volume CI fix `f3162ca`) that
+  detector exists and reads this file: `scripts/check_scope_ledger.py` runs offline in CI
+  and fails the build when this document and `WORKSPACE_ITEM_KEYS` disagree. A fourteenth
+  key planted in the constant (`MirroredDatabase`) exits 1, names the key and names
+  `@readme` as owing the row — reproduced 2026-09-25, not assumed. Read
+  [*What the gate checks, and what it does not*](#what-the-gate-checks-and-what-it-does-not)
+  before quoting that as scope-drift detection: it watches **one** declared source and
+  five mechanical conditions, and it makes no judgement. **The ledger still makes no gate
+  pass.** Closing Sprint 7.1 closes nothing in Sprint 7.2, and no row in this document
+  moves a Phase 7 release-gate criterion. Criterion 2 — the reconciliation check runs
+  offline in CI as its own named step, appears in the per-change quality gate, and is
+  negative-tested three ways — is recorded **met at this revision (2026-09-25)** in
+  [`ROADMAP.md`](ROADMAP.md), and it was met by `@tester`'s script and `@orchestrator`'s
+  gate-list entry, not by anything written here. The other six criteria are open;
+  criterion 1 in particular requires the untriaged set to be empty, and four rows below
+  carry it. **Read the roadmap's *Release Gate for Phase 7* for the current status of
+  each** — crediting or withholding a criterion is the roadmap owner's act, and this
+  bullet goes stale the moment one moves.
 - **It is not a scoring input.** No row adds a rule, an `ObjectType`, a weight or a
   threshold. No row moves a score, a coverage figure or a confidence figure, and **no row
   is mapped to `NOT_EVALUATED`** — that outcome reports missing *evidence*, never an
@@ -32,7 +47,9 @@ which collector happened to be written first.
 
 **Covered sources, and the ones still unwritten.** `TENANT_SETTING_MAP` (6 settings) and
 `ObjectType` (6 members, 5 with rules — `CAPACITY` carries none) are **not** covered here.
-They are named so nobody reads this document as a complete scope statement.
+They are named so nobody reads this document as a complete scope statement. The Sprint 7.2
+gate declares the same single source, so an undisposed tenant setting is not a build
+failure — it is simply unwatched.
 
 ---
 
@@ -89,6 +106,57 @@ exactly one disposition; none carries two.
 
 ---
 
+## What the gate checks, and what it does not
+
+Sprint 7.2 made this document executable. Be precise about the size of that claim. The
+gate is [`scripts/check_scope_ledger.py`](../scripts/check_scope_ledger.py), owned by
+`@tester`, standard library only, and it reads no network. CI runs it as its own named
+step, *Check the scope ledger disposes every element in code*. It imports
+`WORKSPACE_ITEM_KEYS` rather than keeping a copy, so it cannot drift from the constant it
+watches.
+
+Reproduce it — exit 0 at this revision:
+
+```bash
+python scripts/check_scope_ledger.py
+# Rows parsed: 13 under `WORKSPACE_ITEM_KEYS` (document states 13)
+```
+
+**One declared source, five checks:**
+
+| Check | Fires when |
+|---|---|
+| Parse integrity | The rows parsed disagree with the count this document's own heading states, or the table shape changes so that nothing parses — the vacuous pass is treated as a failure, not as silence |
+| Source loadability | `WORKSPACE_ITEM_KEYS` cannot be imported, is renamed or is emptied. A source that disappears must not read as "nothing to check" |
+| Undisposed elements | The collector names an item key that has no row here. Verified by planting `MirroredDatabase` in the constant on 2026-09-25: exit 1, naming the key, `@readme` as owing the row and `@collector` as maintaining the constant |
+| Stale rows | A row disposes a key `WORKSPACE_ITEM_KEYS` no longer contains — a signed decision about something that is not there |
+| Expired or undated reviews | A `deliberately excluded` row carries no `yyyy-mm-dd` review-by date, or any dated row's date has passed |
+
+**What it does not cover.** `TENANT_SETTING_MAP`, `ObjectType`, consumption surfaces,
+agent kinds, GA/preview status, and every item type this repository does not already
+name. Those are Sprints 7.3 and 7.4 and **nothing watches them today**. A clean run means
+one constant is fully disposed. It does not mean this tool's scope is current.
+
+**It does not fire on `untriaged`.** All four untriaged rows pass, because `untriaged` *is*
+a disposition and naming the agent who owes the answer is a valid landing state — a
+missing row is the failure, an honest empty is not. Emptying that set is Phase 7
+criterion 1: an owner's judgement, which no script can make.
+
+**The cost, stated before anyone meets it: this gate goes red on 2026-12-25.** The four
+exclusions dated `2026-12-24` come due that day and CI fails with nobody having changed a
+line — confirmed by running the audit as of 2026-12-25 (four expiries, rows 6–9) and as of
+2026-12-24 (silent). There is deliberately no bulk re-dating command, so clearing it costs
+four per-row edits, each with a re-verified reason and a recorded date. That is the review
+obligation working as designed, not a flake.
+
+**Two scripts parse this file**, so its shape is load-bearing: the gate asserts the number
+of rows it reads against the `13 rows` in the heading above, and
+[`tests/test_scope_ledger.py`](../tests/test_scope_ledger.py) imports the same parser.
+Change a row deliberately; never reformat the table, renumber it, or edit the heading
+without moving the count with it.
+
+---
+
 ## The rows that needed more than a line
 
 ### 4 — `dashboards`: open, not excluded
@@ -142,7 +210,8 @@ Power BI object with its own rules, not because anyone decided agent sources wer
 That decision has never been made. It is `@dataagent`'s to make, it is not a documentation
 judgement, and manufacturing a one-sentence reason here would be exactly the failure this
 document is supposed to prevent. Four rows therefore stay `untriaged`, which is the state
-the Phase 7 release gate forbids — correctly, and it is why Phase 7 is not met.
+Phase 7 release-gate criterion 1 forbids — correctly, and it is why that criterion is open
+and the phase cannot close at this revision.
 
 **A correction, recorded because it was nearly written as fact.** A working assumption
 held that `SQLAnalyticsEndpoint` was itself a documented data agent data source. It is
@@ -221,7 +290,9 @@ depends on `@collector` adding the key first.
   `deliberately excluded` row above carries **2026-12-24**.
 - **There is no bulk re-dating command, and there must not be one.** Clearing a review
   costs one deliberate per-row edit with a recorded reason. That cost is the point: a
-  guard people regenerate without reading is decoration.
+  guard people regenerate without reading is decoration. The absence is now asserted by
+  test — no `--update`, `--accept-all`, `--fix`, `--regenerate` or `--ignore` flag exists,
+  and `--update` exits 2.
 - **A review that found nothing is still evidence** and is written down with its date and
   the sources consulted, otherwise the next reviewer cannot tell a checked row from an
   unchecked one.
@@ -230,6 +301,8 @@ depends on `@collector` adding the key first.
 
 **Ownership.** This document is a collection-capability claim and is therefore a
 `REQUIRED_DOCS` entry in `scripts/check_agent_ownership.py`, accountable to `@readme`.
+Since Sprint 7.2 it is also the input to `scripts/check_scope_ledger.py`, which `@tester`
+owns: the accuracy of the rows is `@readme`'s, the checking of them is not.
 
 | Last full review | Reviewer | Source covered |
 |---|---|---|

@@ -86,10 +86,10 @@ At this review the documentation gate reported:
 
 - ruleset `2026.09.2`, **67 rules** across five object types — tenant 12, workspace 11,
   semantic model 18, report 11, Data Agent 15;
-- **530 passing** unit tests plus **2 skipped by design on Windows**, so the runner
-  reports `Ran 532 ... OK (skipped=2)`. **Read the convention before quoting it:** the
+- **573 passing** unit tests plus **2 skipped by design on Windows**, so the runner
+  reports `Ran 575 ... OK (skipped=2)`. **Read the convention before quoting it:** the
   bolded figure in this section is always the number that **passed**, never the number
-  that **ran**. 530 ≠ 532, and citing the "Ran" figure as "passing tests" has already
+  that **ran**. 573 ≠ 575, and citing the "Ran" figure as "passing tests" has already
   been corrected twice in this section. If you are copying a number out of a `unittest`
   run, subtract the skips first. The two skips are:
   `tests.test_evidence_sinks` cannot create a filename containing a control character
@@ -97,17 +97,22 @@ At this review the documentation gate reported:
   `tests.test_lakehouse`'s `dir_fd`-anchored deletion proof skips because Windows
   supports neither `os.O_DIRECTORY` nor `dir_fd` for `os.stat`/`os.unlink` — that test
   runs and passes on Linux/macOS, where the anchored delete is live, so on those
-  platforms the same revision reports 532 passing and 0 skipped;
+  platforms the same revision reports 575 passing and 0 skipped;
 
 - clean generated rule documentation, internal links, and synthetic self-assessment gate;
-- `python scripts/check_agent_ownership.py` exit 0 — **27** modules under `fabric_iq/`
-  and `scripts/` claimed exactly once, and the **7** documents and skills asserting a
+- `python scripts/check_agent_ownership.py` exit 0 — **28** modules under `fabric_iq/`
+  and `scripts/` claimed exactly once, and the **8** documents and skills asserting a
   privacy, identity, retention or collection-capability claim — or read by a model as
   instruction — each claimed by exactly one agent through an explicit `REQUIRED_DOCS`
   map. The seventh is [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md), owned by
-  `@collector`;
+  `@collector`; the eighth is [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md), owned by `@readme`,
+  which entered the map with Sprint 7.1;
+- `python scripts/check_scope_ledger.py` exit 0 — **1 declared shape source**
+  (`WORKSPACE_ITEM_KEYS`, 13 elements) reconciled against **13 ledger rows**, the count
+  the document states. One source is the whole of the gate's reach at this revision; see
+  **Per-Change Quality Gate** for what it therefore does not watch;
 - `python scripts/check_evidence_sinks.py` exit 0 — **75 writer destinations** and
-  documented output examples each resolve to a committed `.gitignore` rule, all **105
+  documented output examples each resolve to a committed `.gitignore` rule, all **109
   tracked files** remain trackable (none shadowed by a broad pattern such as `*.jsonl`
   or `Mart*.csv`), and no tracked file carries a real tenant identifier, UPN, email, or
   non-placeholder GUID. Both figures move with the working tree and are properties of the
@@ -120,24 +125,32 @@ At this review the documentation gate reported:
   registers them with the gate — both resolve to the ignored `artifacts/` rule. Prose
   that names an output path *is* an output example; that is the design, and it is the
   lesson of the 2026-09-23 exposure, which arrived through a documented path and not
-    through a collector. The API reality matrix has since been committed, which is part of
-    why the tracked-file figure now reads 105; the destination figure did not move with
-    it, because the `artifacts/live` example it carries was already registered here.
+    through a collector. The API reality matrix has since been committed, and Sprints 7.1
+    and 7.2 added four more tracked files (`docs/SCOPE_LEDGER.md`,
+    `scripts/check_scope_ledger.py` and its two test modules), which is why the
+    tracked-file figure now reads 109; the destination figure did not move with any of
+    them, because the `artifacts/live` example already registered here is the only output
+    path they name.
 
   All figures above were re-measured against the working tree being committed on
-  **2026-09-25** by running the four gate commands directly, rather than carried forward
-  from any agent's report. Two moved since the 2026-09-24 review: the ruleset token and
-  rule total (`2026.09.1`/65 → `2026.09.2`/67, and the per-type breakdown with them) and
-  the test count (486 → **530 passing**). **Modules (27), required documents (7), writer
-  destinations (75) and tracked files (105) did not move**, and were re-run twice to
-  confirm that rather than assumed. A figure that is expected to have drifted and has not
-  is still a measurement; record it as unchanged instead of quietly restating it.
+  **2026-09-25** by running the five gate commands directly, rather than carried forward
+  from any agent's report. Since the earlier 2026-09-25 measurement described below, four
+  moved, and all four move for the same reason — Sprints 7.1 and 7.2 landed: the test count
+  (530 → **573 passing**, `Ran 575`), modules (27 → **28**, `scripts/check_scope_ledger.py`),
+  required documents (7 → **8**, `docs/SCOPE_LEDGER.md`) and tracked files
+  (105 → **109**). **The ruleset token and rule total (`2026.09.2`/67) and writer
+  destinations (75) did not move**, and were re-run rather than assumed. A figure that is
+  expected to have drifted and has not is still a measurement; record it as unchanged
+  instead of quietly restating it. Earlier in the same session the ruleset token and rule
+  total had moved from the 2026-09-24 review (`2026.09.1`/65 → `2026.09.2`/67, and the
+  per-type breakdown with them) and the test count from 486 → 530.
 
-  The test figure moved **twice within this session**, which is the failure mode this
-  section exists to catch: it was first measured at 520 passing, then rose to 530 when
-  `@tester` added ten cases to `tests/test_skill_drift.py` (6 → 16 test methods). 530 is
-  the figure for the tree being committed, measured after that change and after
-  `@readme`'s documentation corrections landed. **The lesson is procedural, not
+  The test figure has now moved **three times within this session**, which is the failure
+  mode this section exists to catch: it was first measured at 520 passing, rose to 530
+  when `@tester` added ten cases to `tests/test_skill_drift.py` (6 → 16 test methods),
+  and rose again to 573 when Sprints 7.1 and 7.2 added `tests/test_scope_ledger.py` and
+  `tests/test_scope_ledger_gate.py`. 573 is the figure for the tree being committed,
+  measured after those changes landed. **The lesson is procedural, not
   arithmetic:** a baseline measured before concurrent work lands is stale on arrival, so
   re-measure at the commit boundary rather than at the start of the edit.
 
@@ -1479,8 +1492,8 @@ cleared without a recorded decision is counted as a gate failure, not as a pass.
 no element of a declared shape source is untriaged, every deliberate exclusion carries a
 reason, an owning agent and a review-by date, and no scope statement moves a score, a
 coverage figure or a confidence figure — nor is any of it mapped to `NOT_EVALUATED`,
-which reports missing evidence and never an absent rule. **All seven are open at this
-revision, and no work has started against any of them.**
+which reports missing evidence and never an absent rule. **Criterion 2 is met at this
+revision; the other six are open.**
 
 ### Sprint 7.1 — Record What We Deliberately Do Not Assess (the scope ledger) — 🟥 **OPEN**, not started
 
@@ -1727,14 +1740,24 @@ due. It does not mean Fabric stood still.
 
 ## Release Gate for Phase 7
 
-The phase closes only when all of the following are executable or evidenced. **All seven
-are open, and no work has started against any of them.**
+The phase closes only when all of the following are executable or evidenced. **Criterion 2
+is met at this revision (Sprint 7.2); the other six are open.**
 
 1. Every element in every declared shape source carries exactly one disposition, and the
-   untriaged set is empty. **Open.**
+   untriaged set is empty. **Open** — the ledger holds untriaged rows awaiting their
+   routed answers, and only one shape source is declared.
 2. The reconciliation check runs offline in CI as its own named step, appears in the
    per-change quality gate, and is negative-tested three ways — a new untriaged element, an
-   expired disposition, and a declared source that has vanished. **Open.**
+   expired disposition, and a declared source that has vanished. **Met (2026-09-25,
+   Sprint 7.2).** `scripts/check_scope_ledger.py` runs as the CI step *Check the scope
+   ledger disposes every element in code* on all four legs, is listed in **Per-Change
+   Quality Gate** above, and `tests/test_scope_ledger_gate.py` negative-tests all three
+   directions (`test_a_new_key_with_no_row_fails_and_is_named`,
+   `test_a_back_dated_review_fails_and_is_named`, and
+   `test_a_missing_constant_fails_rather_than_reporting_clean` with
+   `test_a_declaration_pointing_at_a_module_that_is_gone_fails`). This criterion is about
+   the check being *executable and unskippable*; it says nothing about how much shape the
+   check reaches, which is criterion 1's and 7.3/7.4's business.
 3. Every deliberate exclusion carries a reason, an owning agent and a review-by date. No
    exclusion is permanent by construction, and an undated one fails the check rather than
    being grandfathered. **Open.**
@@ -1943,6 +1966,7 @@ python assess.py --list-rules
 python scripts/build_rules_doc.py --check
 python scripts/check_agent_ownership.py
 python scripts/check_evidence_sinks.py
+python scripts/check_scope_ledger.py
 python -m unittest tests.test_docs
 python -m unittest tests.test_evidence_sinks
 python -m unittest tests.test_skill_drift
@@ -1956,7 +1980,25 @@ output.
 
 `check_agent_ownership.py` covers both `fabric_iq/` modules and the `REQUIRED_DOCS`
 documentation and Skill set; `check_evidence_sinks.py` covers writer destinations,
-tracked-file shadowing, and tracked identifiers; `tests.test_skill_drift` covers the
+tracked-file shadowing, and tracked identifiers; `check_scope_ledger.py` covers scope
+drift **for the sources it declares and for nothing else** — today that is the single
+constant `WORKSPACE_ITEM_KEYS` (13 keys), and `TENANT_SETTING_MAP`, `ObjectType`,
+consumption surfaces and agent kinds are deliberately **not** watched by it (Sprints
+7.3/7.4). Read "every declared source constant" as "the one that is declared", never as
+"everything". Within that scope it asserts five facts: the ledger table parsed and the
+number of rows parsed equals the number the document states; every declared source still
+imports to a non-empty sequence; every element of every declared source carries exactly
+one disposition in `docs/SCOPE_LEDGER.md`; no row disposes an element the code no longer
+names; and every `deliberately excluded` row carries a review-by date that has not passed
+— an undated exclusion fails too, because one that never comes back is permanent by
+neglect rather than by decision. It never reads the network and has no bulk `--update`
+flag by design — the manual cost on every fire is the point. One consequence a
+contributor should know before reading a red build as a flake: the four current
+exclusions are dated `2026-12-24`, so this check **will fail on 2026-12-25 with nobody
+having changed a line**, and clearing it costs a deliberate per-row edit with a recorded
+decision. That is the review obligation working. It runs in CI as its own named step,
+*Check the scope ledger disposes every element in code*, with exactly the command above;
+`tests.test_skill_drift` covers the
 values the Skill restates; `tests.test_standalone_guidance` covers the property that the
 tool works with no Skill present. All exit non-zero and name the offending path,
 address, owner, stated value, or unhomed concept. None may be skipped on a
