@@ -2,7 +2,7 @@
 
 Owner: **@roadmap-planner**. This document is authoritative for scope and release gates.
 
-Last evidence review: **2026-09-24** against ruleset `2026.09.1`.
+Last evidence review: **2026-09-25** against ruleset `2026.09.2`.
 
 ## Purpose
 
@@ -76,20 +76,27 @@ records, not earlier roadmap labels.
 | Data Agent readiness | Fifteen static rules consume supplied evidence and degrade missing inputs to `NOT_EVALUATED`. | No harness executes a corpus against a real agent; behavioural accuracy, refusal, latency, and persona isolation are therefore not measured by this repository. | 🟡 Static only |
 | Fabric publication | Notebook, Data Pipeline, Lakehouse, Gold Delta marts, Direct Lake semantic model/report, run summary, trends, burn-down, and CI exit gates exist. The model/report synthetic self-assessment gate is executable. A versioned schedule contract covering cadence, `concurrency: 1` overlap prevention, identity requirement, schedule-run housekeeping, failure notification, and rerun procedure is documented in `fabric/README.md` and `docs/INSTALL.md`; the Bronze/Silver/Gold retention contract is documented as 90/180/730 days in `fabric_iq/lakehouse.py` and `docs/IDENTITY_AND_RETENTION.md`, with a durable per-run manifest and a tested, explicitly invoked `LakehouseRetentionPruner.prune()` mechanism now implemented. | No actual unattended/scheduled run has been evidenced. Retention enforcement is a tested library mechanism only: no live deployment schedule invokes the pruner yet. “Scheduled” and “unattended” are not yet delivered claims. | 🟡 Schedulable |
 | Re-measurement | Comparable-run trends, automatic baseline selection, coverage-loss classification, and remediation-state comparison are implemented. | A repeatable operational cadence, ruleset-compatible baseline policy, and recorded remediation/re-measure cycle are not yet proven end to end. | 🟡 Mechanism delivered |
-| Consumption-surface coverage | Nothing. The 65 rules assess tenant, workspace, semantic model, report and Data Agent objects. | A 2026-09-24 documentation review found the **GA** Microsoft 365 consumption surface (Cowork, Copilot Chat) assessed by no rule, the **preview** Fabric IQ ontology item enumerated by the collector but judged by nothing, and one headline verdict standing for four different reachability paths. Planned as Phase 6; nothing is started. | 🟥 Not started |
+| Consumption-surface coverage | One of the three Sprint 6.1 rule families has shipped: `SEM-018` and `REP-011` assess **endorsement** (both MINOR), fed by Scanner `endorsementDetails` which the collector now carries with absence treated as unknown. A Sprint 6.1 availability record classifies all three Microsoft 365 gating settings as currently unevaluable. A non-normative `@scorer` design note for Sprint 6.2 exists in `docs/SCORING.md`. | A 2026-09-24 documentation review found the **GA** Microsoft 365 consumption surface (Cowork, Copilot Chat) assessed by no rule, the **preview** Fabric IQ ontology item enumerated by the collector but judged by nothing, and one headline verdict standing for four different reachability paths. The **tenant-setting** family is unevaluable at source; the **type-reachability** family is **blocked on the Sprint 6.2 decision** — today's engine has no rule outcome that states unreachability without moving a score or coverage. No Phase 6 release-gate criterion is met. | 🟥 Open, partially started |
 
 ### Verified Repository Baseline
 
 At this review the documentation gate reported:
 
-- ruleset `2026.09.1`, **65 rules** across five object types — tenant 12, workspace 11,
-  semantic model 17, report 10, Data Agent 15;
-- **486** passing unit tests, **2 skipped by design on Windows** (488 run) —
+- ruleset `2026.09.2`, **67 rules** across five object types — tenant 12, workspace 11,
+  semantic model 18, report 11, Data Agent 15;
+- **530 passing** unit tests plus **2 skipped by design on Windows**, so the runner
+  reports `Ran 532 ... OK (skipped=2)`. **Read the convention before quoting it:** the
+  bolded figure in this section is always the number that **passed**, never the number
+  that **ran**. 530 ≠ 532, and citing the "Ran" figure as "passing tests" has already
+  been corrected twice in this section. If you are copying a number out of a `unittest`
+  run, subtract the skips first. The two skips are:
   `tests.test_evidence_sinks` cannot create a filename containing a control character
   on NTFS, so the `-z` quoting proof skips rather than passing vacuously; and
   `tests.test_lakehouse`'s `dir_fd`-anchored deletion proof skips because Windows
-  supports neither `os.O_DIRECTORY` nor `dir_fd` for `os.stat`/`os.unlink` — the test
-  runs (0 skipped) and passes on Linux/macOS, where the anchored delete is live;
+  supports neither `os.O_DIRECTORY` nor `dir_fd` for `os.stat`/`os.unlink` — that test
+  runs and passes on Linux/macOS, where the anchored delete is live, so on those
+  platforms the same revision reports 532 passing and 0 skipped;
+
 - clean generated rule documentation, internal links, and synthetic self-assessment gate;
 - `python scripts/check_agent_ownership.py` exit 0 — **27** modules under `fabric_iq/`
   and `scripts/` claimed exactly once, and the **7** documents and skills asserting a
@@ -115,12 +122,44 @@ At this review the documentation gate reported:
     why the tracked-file figure now reads 105; the destination figure did not move with
     it, because the `artifacts/live` example it carries was already registered here.
 
-  All five figures above were re-verified against the current revision on **2026-09-24**
-  by running the four gate commands directly, and the stale values they replaced (403
-  tests, 26 modules, 62 destinations, 103 tracked files) had drifted since the previous
-  review. **The Phase 6 addition below moved none of them**: it is a documentation-only
-  change to this file, it adds no module, no rule, no test and no output path, and it must
-  never be cited as having changed a count.
+  All figures above were re-measured against the working tree being committed on
+  **2026-09-25** by running the four gate commands directly, rather than carried forward
+  from any agent's report. Two moved since the 2026-09-24 review: the ruleset token and
+  rule total (`2026.09.1`/65 → `2026.09.2`/67, and the per-type breakdown with them) and
+  the test count (486 → **530 passing**). **Modules (27), required documents (7), writer
+  destinations (75) and tracked files (105) did not move**, and were re-run twice to
+  confirm that rather than assumed. A figure that is expected to have drifted and has not
+  is still a measurement; record it as unchanged instead of quietly restating it.
+
+  The test figure moved **twice within this session**, which is the failure mode this
+  section exists to catch: it was first measured at 520 passing, then rose to 530 when
+  `@tester` added ten cases to `tests/test_skill_drift.py` (6 → 16 test methods). 530 is
+  the figure for the tree being committed, measured after that change and after
+  `@readme`'s documentation corrections landed. **The lesson is procedural, not
+  arithmetic:** a baseline measured before concurrent work lands is stale on arrival, so
+  re-measure at the commit boundary rather than at the start of the edit.
+
+#### Ruleset ledger note — `2026.09.1` is `AMBIGUOUS_FINGERPRINT`, not a hash
+
+`@scorer` bound the ruleset token to a catalogue fingerprint and incremented to
+`2026.09.2`. The ledger entry for the **previous** token carries
+`AMBIGUOUS_FINGERPRINT` rather than a hash, because `2026.09.1` was stamped on four
+different catalogues (61, 63, 65 and 67 rules) while nothing tied the token to the
+catalogue it described. The consequence is stronger than "old runs are not comparable
+with new ones": **runs stamped `2026.09.1` are not comparable with each other**, because
+the token never identified one ruleset. Two further consequences follow, and both are
+intended:
+
+- The first run at `2026.09.2` has an **empty trend section by design**. There is no
+  compatible baseline to select, and manufacturing one by joining across the boundary is
+  exactly the silent version join this roadmap's sequencing policy forbids.
+- Recording the ambiguity as a ledger value is the honest form. Back-filling a
+  fingerprint for `2026.09.1` would re-label evidence that already exists in someone's
+  Lakehouse.
+
+This roadmap's sequencing policy requires an explicit `@scorer` approval for any ruleset
+migration. **`@scorer` has approved this one**, which satisfies that requirement; it is
+recorded here so the approval is traceable to the policy that demanded it.
 
 Both checks were shown to be non-vacuous by deliberate negative tests on 2026-09-23:
 removing the `powerbi_report/` ignore rule, planting a UPN in a tracked file, and
@@ -684,7 +723,34 @@ tenant-derived evidence.
 
 1. **Outcome** — The project either demonstrates a read-only, reproducible route for
    executing a supplied synthetic corpus against a real agent, or records that the
-   execution surface is unavailable and keeps AGT-006…AGT-012 `NOT_EVALUATED`.
+   execution surface is unavailable, in which case **no `evaluation` evidence is
+   produced at all** and the eight rules that read it stay `NOT_EVALUATED`: `AGT-006`,
+   `AGT-007`, `AGT-008`, `AGT-009`, `AGT-010`, `AGT-011`, `AGT-012` and **`AGT-014`**
+   ("Answer latency is acceptable and measured", which reads
+   `evaluation.latency_p95_seconds`).
+
+   **Written out in full on purpose — do not collapse this to a range.** The set is
+   *not* contiguous: `AGT-013` sits between `AGT-012` and `AGT-014` and reads a declared
+   use-case shape, not evaluation evidence. The notation `AGT-006…AGT-012` was wrong in
+   two ways — it omitted `AGT-014` and it implied a range that does not exist — and range
+   notation will silently re-acquire the same defect the next time the catalogue moves.
+
+   **The distinction this sentence depends on.** The eight-rule answer is the
+   **absent-`evaluation`-key** case, which is the one this sprint means: the execution
+   surface was unavailable, so nothing was measured. It is **not** the empty-block case.
+   Verified against the engine on a fixture complete in every other respect, varying only
+   the evaluation surface:
+
+   | Subject | Outcome |
+   |---|---|
+   | `evaluation` key **absent** | all eight `NOT_EVALUATED` |
+   | `evaluation: {}` **present but empty** | `NOT_EVALUATED`: `AGT-007`, `AGT-008`, `AGT-009`, `AGT-014` — `FAILED`: `AGT-006`, `AGT-010`, `AGT-011`, `AGT-012` |
+
+   That split is correct and must not be smoothed over: **a campaign that ran and
+   recorded nothing is evidence of absence, not missing evidence.** An empty block is an
+   assertion and four rules rightly fail on it. Only the absent key means *we could not
+   look*. This is the same `FAILED`-versus-`NOT_EVALUATED` backbone the contract rests
+   on, applied to Data Agent evidence.
 2. **Current evidence** — Fifteen static Data Agent rules accept supplied metrics, but no
    repository harness executes questions, captures generated queries, measures refusal
    or latency, or tests persona isolation.
@@ -816,32 +882,47 @@ The phase closes only when all of the following are executable or evidenced:
 
 ## Phase 6 — Consumption-Surface Readiness 🟥
 
-**Nothing in this phase is delivered.** Every sprint below is **open** and none may be
-marked met, closed, or partially credited. This phase adds no rule, no object type, and
-no scoring behaviour at the revision that introduces it; it records a scope finding and
-the smallest increments that would close it.
+**No Phase 6 release-gate criterion is met.** Every sprint below is **open** and none
+may be marked closed. Since the phase was first recorded, three increments have landed —
+the Sprint 6.1 availability record, the Scanner `endorsementDetails` carry, and the
+endorsement rule family (`SEM-018`, `REP-011`) — and a non-normative `@scorer` design
+note for Sprint 6.2 has been written. Those are progress inside an open sprint, not a
+closed one. **Delivered work is named in each sprint's "Current evidence"; a criterion is
+met only where the Release Gate says so, and today it says so nowhere.**
 
 **Outcome.** A readiness verdict names the **consumption surface** it is about. An
 organisation learns whether its estate is reachable by the Microsoft 365 surfaces that
 are generally available today, by the in-Fabric agent surfaces, and by the preview
 ontology workload — as distinct answers, not as one number.
 
-**Concrete anchor.** The project is named `IsFabricReadyForIQ` and its 65 rules cover
+**Concrete anchor.** The project is named `IsFabricReadyForIQ` and its 67 rules cover
 tenant, workspace, semantic model, report and Data Agent objects. A documentation review
 on 2026-09-24 (recorded below) found that the Microsoft 365 consumption surface — which
 is **GA** — is assessed by nothing in the repository, while the Fabric IQ **ontology**
 item, which is **preview**, is named in the product title and has zero rules. The
-repository facts behind that statement were verified directly: `fabric_iq/models.py`
-declares exactly six `ObjectType` members and stops at `DATA_AGENT`; the words `M365`,
-`Microsoft 365`, `Cowork` and `Copilot Chat` appear nowhere in the repository except one
-unrelated `CHANGELOG.md` line; `python assess.py --list-rules` at ruleset `2026.09.1`
-returns no endorsement rule and exactly one rule mentioning geography, `TEN-006`.
+repository facts behind that statement were verified directly at that date:
+`fabric_iq/models.py` declares exactly six `ObjectType` members and stops at
+`DATA_AGENT`; the words `M365`, `Microsoft 365`, `Cowork` and `Copilot Chat` appear
+nowhere in the repository except one unrelated `CHANGELOG.md` line; `python assess.py
+--list-rules` at ruleset `2026.09.1` returned no endorsement rule and exactly one rule
+mentioning geography, `TEN-006`. **Two of those facts have since changed** — see the
+supersession note after the review — and the ontology and Microsoft 365 statements have
+not.
 
 **Falsifiable hypothesis.** The readiness properties that govern the GA Microsoft 365
 path — two tenant settings, artifact endorsement and discoverability, and whether an
 object's type is reachable at all — are either observable through the same read-only
 surfaces this project already uses, or they are not, in which case the rules that depend
 on them stay `NOT_EVALUATED` and the phase says so rather than inferring them.
+
+**A second constraint the hypothesis did not anticipate.** Observability is necessary but
+not sufficient. Type reachability is neither observable nor unobservable — it is
+**documented**: a paginated report's unreachability by Cowork is a published product
+behaviour, known without reading anything from the tenant. The blocker for that family is
+therefore not collection but **vocabulary**: today's engine offers a rule exactly three
+fates, and none of them states "in scope, known unreachable" without moving a score or a
+coverage figure. That is recorded in Sprint 6.1 item 5 and item 7 below, and analysed in
+the Sprint 6.2 design note.
 
 **Cheap check.** Before any rule is written, `@collector` confirms whether the two
 uncovered tenant settings and the item-level endorsement field are returned by an already
@@ -850,6 +931,8 @@ exercised read surface, and records the answer in
 A setting that cannot be read is a documented blind spot, not a default-on assumption —
 even though Microsoft documents one of the two as enabled by default. Encoding a vendor
 default as an observed tenant value is exactly how a collection gap becomes a verdict.
+**This check has run** (2026-09-25) and it returned the unwelcome answer for all three
+gates; the endorsement half returned a usable field. Details in Sprint 6.1 item 3.
 
 **Exit gate.** All five criteria in **Release Gate for Phase 6** are met; in particular,
 no single headline verdict is presented as readiness for a consumption surface whose
@@ -967,7 +1050,38 @@ re-quoted later as something it was not.
    implementation time**, with its verification date restated, exactly as
    `docs/KNOWN_LIMITATIONS.md` §8 requires of any encoded limit.
 
-### Sprint 6.1 — Assess the GA Microsoft 365 Consumption Surface — 🟥 **OPEN**, not started
+### Supersession Note — 2026-09-25 — What the 2026-09-24 Review Said That Is No Longer True
+
+The review above is a **dated record** and is left as written; that is the point of
+dating it. Two of its repository statements have since been overtaken, and one has been
+sharpened. Nothing in this note closes a criterion.
+
+- **"The 65-rule catalogue contains no endorsement rule" is no longer true.** `SEM-018`
+  and `REP-011` shipped (`d208087`), both **MINOR**, fed by Scanner `endorsementDetails`
+  which the collector now carries with absence treated as **unknown** rather than as
+  "not endorsed" (`55bd8a7`). The catalogue is now **67 rules** at ruleset `2026.09.2`.
+  The review's *reasoning* stands: discoverability was unassessed, and now one of its
+  three signals is.
+- **"Of the three gating settings only cross-geo is covered" is still true, and the
+  reason is now worse than the review assumed.** The review treated coverage as a
+  rule-authoring gap. The availability record (`d326e58`) shows it is a **collection**
+  gap that rule authoring cannot close: see Sprint 6.1 item 3.
+- **"All ten `REP-*` rules assess report quality; none assesses reachability" is still
+  true** — there are now eleven `REP-*` rules and `REP-011` is also a quality rule. The
+  count moved; the finding did not. Why no reachability rule exists is no longer merely
+  "nobody wrote one": see item 5.
+
+### Sprint 6.1 — Assess the GA Microsoft 365 Consumption Surface — 🟥 **OPEN**, partially started
+
+**Status: open.** One of the three rule families has shipped, one is unevaluable at
+source, and one is blocked on a decision that has not been made. The sprint closes when
+all three have an honest disposition, and it has none yet.
+
+| Rule family | Owner | State |
+|---|---|---|
+| Endorsement (`SEM-018`, `REP-011`, both MINOR) | `@semantic` | ✅ **Shipped** (`d208087`) |
+| Tenant settings (the two uncovered M365 gates) | `@tenant` | 🟥 **Open — unevaluable at source.** Both gates are currently unreadable; a rule would be born `NOT_EVALUATED` |
+| Type reachability (paginated reports, dashboards, agents, ontologies) | `@semantic` | 🟥 **Blocked on Sprint 6.2.** No rule outcome can express it today |
 
 Ordered first on purpose, and the ordering is counter-intuitive. The artifact in the
 product name — the ontology — is scheduled **last**, and the surface the product is not
@@ -980,21 +1094,38 @@ more defensible order. It is also the smaller change: this sprint adds no object
 1. **Outcome** — A run states whether the tenant's Microsoft 365 consumption path is
    open, and whether the estate is discoverable and reachable through it — or records
    explicitly that it could not tell.
-2. **Current evidence** — **Open**, and nothing exists. Zero repository occurrences of
-   `M365`, `Microsoft 365`, `Cowork` or `Copilot Chat` outside one unrelated
-   `CHANGELOG.md` line. Of the three documented gating settings only cross-geo is covered
-   by `TEN-006`. No endorsement rule exists in the 65-rule catalogue. No rule flags an
-   object whose **type** cannot be reached by either GA surface.
-3. **Smallest slice** — Not a rule. The first change is `@collector` establishing, in
-   [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md), whether *Share Fabric data with your
-   Microsoft 365 services* is readable from the Fabric admin settings surface this
-   project already uses, and whether item endorsement is returned by an enumeration
-   surface already exercised. The Microsoft 365 admin center setting is a **different
-   control plane** and may not be readable by a Fabric-scoped principal at all; if so it
-   is recorded as `absent` and its rule is born `NOT_EVALUATED`. Only after that record
-   exists does `@tenant` add the tenant-setting rules, and `@semantic`/`@tenant` the
-   endorsement and type-reachability rules, one field family at a time under the Sprint
-   5.2 discipline.
+2. **Current evidence** — **Open, with one family delivered.** What exists: the
+   endorsement rules `SEM-018` and `REP-011` (`d208087`, both MINOR), the Scanner
+   `endorsementDetails` carry that feeds them with absence treated as unknown
+   (`55bd8a7`), and the availability record (`d326e58`). What does not exist: any rule
+   over the two uncovered Microsoft 365 tenant gates — of the three documented gating
+   settings only cross-geo is covered, by `TEN-006` — and **no rule flags an object whose
+   type cannot be reached by either GA surface**, which item 5 explains is a vocabulary
+   limit and not an oversight.
+3. **Smallest slice** — ✅ **Delivered** (`d326e58`), and it returned the unwelcome
+   answer. Not a rule: the first change was `@collector` establishing in
+   [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md) whether the gating settings and
+   item-level endorsement are readable from surfaces this project already exercises. The
+   record says **all three Microsoft 365 gates are currently unevaluable**:
+   - *Share Fabric data with your Microsoft 365 services* (Fabric admin portal) —
+     `permission-blocked`. No tenant-admin endpoint answered under the identity used, so
+     this is a **scope** problem and is in principle recoverable by the Sprint 5.1
+     authorised principal.
+   - *Fabric data available in M365 Copilot* (Microsoft 365 admin center) — `absent`, and
+     classified a **permanent blind spot**: it is administered in a different control
+     plane, and **no widening of Fabric scope reaches it**. This one is not waiting on
+     5.1 or on anything else in this repository. A rule over it is born `NOT_EVALUATED`
+     and stays there.
+   - The public reference does **not establish the `settingName`** for the Fabric-portal
+     gate, so it is not even known whether that setting appears in the response at all.
+     Guessing a key name and reporting `absent` when the guess misses would manufacture a
+     blind spot; confirming the key is prerequisite work for `@collector`, not rule work.
+
+   The consequence for sequencing: the **endorsement** half of this slice succeeded and
+   its rules shipped; the **tenant-setting** half did not, so `@tenant`'s rules would
+   today be three `NOT_EVALUATED` results. Writing them is defensible — a named blind spot
+   beats a silent one — but it is a coverage cost with no score signal, and it must be
+   taken deliberately rather than to make a sprint look finished.
 4. **Dependencies** — `@collector` owns the availability record and any new read;
    `@tenant` owns tenant and workspace rules; `@semantic` owns report and semantic-model
    rules, including endorsement and reachability by type; `@readme` owns the Cowork and
@@ -1002,33 +1133,95 @@ more defensible order. It is also the smaller change: this sprint adds no object
    a public source and an exact verification date — **this roadmap does not write them
    there and must not be cited as if it had**; `@security` reviews any new scope. Sprint
    5.1's identity prerequisite binds any live confirmation performed here.
-5. **Validation** — Focused check: synthetic present, absent, null, forbidden and
-   malformed cases for each new setting and for endorsement produce the expected evidence
-   and rule outcome, and a fixture with a paginated report and a dashboard produces a
-   reachability finding without altering either object's existing quality score. Release
-   gate: no Microsoft 365 rule passes on an unread setting, a documented vendor default is
-   never substituted for an observed value, and every encoded Cowork or Copilot Chat limit
-   carries a source and verification date.
-6. **Risks and non-goals** — The Microsoft 365 admin center setting may be unreadable
-   from Fabric, which would leave one of the three gates permanently `NOT_EVALUATED`;
-   that is an honest outcome and not a reason to assume it. Cowork and Copilot Chat are
-   moving GA surfaces and their limitation lists will change. This sprint does **not**
-   assess Work IQ or Foundry IQ, does not evaluate Copilot answer quality, does not
-   measure whether users find the right report, does not license-check individual users,
-   and does not lower any existing report or model score because an object is
-   unreachable — reachability is a separate statement, not a quality deduction.
-7. **Commit boundary** — The availability record is a `@collector` boundary and lands
-   first, alone. Each rule family — tenant settings, endorsement, type reachability —
-   is its own owner's boundary with its own synthetic fixtures. The limitations
-   documentation is a separate `@readme` boundary. None of them may be bundled with the
-   Sprint 6.2 verdict change.
+5. **Validation** — Split by family, because the three families do not validate alike.
+   - **Endorsement and tenant settings** (ordinary scored quality rules): focused check —
+     synthetic present, absent, null, forbidden and malformed cases for each setting and
+     for endorsement produce the expected evidence and rule outcome. Release gate: no
+     Microsoft 365 rule passes on an unread setting, a documented vendor default is never
+     substituted for an observed value, and every encoded Cowork or Copilot Chat limit
+     carries a source and verification date.
+   - **Type reachability**: ⚠️ **this criterion is not executable against today's engine,
+     and the earlier version of this item was wrong to imply it was.** It previously read
+     *"a fixture with a paginated report and a dashboard produces a reachability finding
+     without altering either object's existing quality score"*. That is not a test anyone
+     can write yet. `ScoringEngine.score_object` gives a rule outcome exactly three fates
+     and there is no fourth:
 
-### Sprint 6.2 — Separate Consumption Surfaces in the Verdict — 🟥 **OPEN**, not started
+     | Outcome | Score | Coverage | Finding emitted |
+     |---|---|---|---|
+     | `PASSED` / `FAILED` / `PARTIAL` | counts | counts | yes |
+     | `NOT_EVALUATED` | no | **adds to `applicable_weight`, lowering coverage** | yes |
+     | `NOT_APPLICABLE` | no | skipped before `applicable_weight` | yes |
+
+     An honest `FAILED` on "unreachable by Cowork" enters the dimension mean and, at
+     `MAJOR` or `BLOCKING`, applies a cap — a quality deduction, which item 6 forbids.
+     `NOT_EVALUATED` is **not** the neutral escape hatch it looks like: it inflates
+     `applicable_weight`, lowers coverage on every object the rule touches, and can push
+     an object that was sitting just above the 50% publication floor into
+     `NOT_EVALUATED` **status**. The score did not move and the verdict did — and it is
+     also false, because a paginated report's unreachability is **documented, not
+     unknown**. `NOT_APPLICABLE` is the only genuinely zero-impact outcome and it means
+     *out of scope*; a paginated report is in scope and unreachable, so using it here
+     would bend the engine's vocabulary to dodge a constraint this project refuses to
+     dodge anywhere else.
+
+     **The intent stands and is the reason the phase is worth doing:** reachability must
+     not be a quality deduction. What was wrong was asserting it can be validated today.
+     **What has to exist first** is a decision from Sprint 6.2 on where a reachability
+     statement lives, and whatever engine or model change that decision implies. Only
+     then does the criterion become writable, and its writable form is the stricter one
+     the Sprint 6.2 design note proposes: a paginated report and a dashboard carry a
+     reachability statement while `score`, `raw_score`, `status`, `eligible`,
+     `confidence` and `coverage` stay **byte-identical** to the same fixture without the
+     feature. Until 6.2 is decided, this family has **no focused check to run** — and
+     that is the correct state to be in, not a gap to paper over.
+6. **Risks and non-goals** — The Microsoft 365 admin center setting is **confirmed**
+   unreadable from Fabric (item 3), so one of the three gates is permanently
+   `NOT_EVALUATED`; that is an honest outcome and it is now a measured one rather than a
+   risk. Cowork and Copilot Chat are moving GA surfaces and their limitation lists will
+   change. This sprint does **not** assess Work IQ or Foundry IQ, does not evaluate
+   Copilot answer quality, does not measure whether users find the right report, and does
+   not license-check individual users.
+
+   **The governing non-goal, restated as a constraint rather than a claim:**
+   reachability must be a separate statement, never a quality deduction — an object is
+   not worse-built because a consumption surface will not read its file type. **No
+   mechanism in this repository can express that today** (see item 5). So this is a
+   requirement on the Sprint 6.2 design, not a property this sprint may assert it
+   upholds. The failure mode to guard against is a well-meaning reachability rule shipped
+   as `NOT_EVALUATED` "for now": that quietly converts a documented product fact into a
+   coverage loss, and coverage loss is this engine's word for *we could not see*, not for
+   *we looked and the answer is no*.
+7. **Commit boundary and the dependency between 6.1 and 6.2** — The availability record
+   was a `@collector` boundary and landed first, alone (`d326e58`). The Scanner
+   `endorsementDetails` carry (`55bd8a7`) and the endorsement rules (`d208087`) followed
+   as separate boundaries with their own fixtures. Each remaining rule family is its own
+   owner's boundary. The limitations documentation is a separate `@readme` boundary.
+
+   **A correction to this item as first written.** It previously said the reachability
+   rules *"may not be bundled with the Sprint 6.2 verdict change"*. **The dependency runs
+   the other way.** The type-reachability family does not merely have to avoid 6.2 — it
+   **depends on** 6.2, because until 6.2 decides where a reachability statement lives
+   there is no outcome such a rule can honestly return (item 5). The two statements are
+   not variants of the same caution: "must not be bundled" would permit shipping the
+   rules first, which is precisely the mistake. Only that one family is blocked. The
+   **tenant-setting** and **endorsement** families are ordinary scored quality rules
+   about observable configuration and are unaffected by 6.2 — endorsement has already
+   shipped ahead of it, which is the proof that the block is narrow.
+
+### Sprint 6.2 — Separate Consumption Surfaces in the Verdict — 🟥 **OPEN**, design note written, decision not made
 
 **A `@scorer`-owned design question, deliberately left undecided here.** This entry
 states the problem and the constraint. It does not propose a shape, a field, a weight, a
 new number, or a report layout, because pre-deciding the design in a planning document is
-how a scoring change arrives without scorer review.
+how a scoring change arrives without scorer review. The `docs/SCORING.md` note is
+`@scorer`'s own analysis and is non-normative; this roadmap references it and neither
+ratifies nor restates it.
+
+**This sprint is now also a blocker, not only a successor.** Sprint 6.1's
+type-reachability family cannot be written until this decision exists — see Sprint 6.1
+item 5 and item 7. That inverts the dependency direction this roadmap originally
+recorded between the two sprints.
 
 1. **Outcome** — A reader can tell which consumption surface a verdict is about, and
    cannot mistake readiness for one surface as readiness for another.
@@ -1037,17 +1230,36 @@ how a scoring change arrives without scorer review.
    ontologies, an estate can score **100/100 across all fifteen Data Agent rules** and
    deliver nothing in Cowork; the verdict would not say so. Four reachability paths —
    Cowork, Copilot Chat, in-Fabric agents, the ontology workload — are currently collapsed
-   into one answer.
-3. **Smallest slice** — A `@scorer`-owned design note in `docs/SCORING.md` that states the
-   problem, enumerates the candidate shapes with their failure modes, and is reviewed
-   before any code moves. No engine change, no model change, and no report change lands in
-   the same increment as that note.
+   into one answer. A `@scorer` design note now exists in `docs/SCORING.md` (§ *Design
+   Note — Consumption-Surface Readiness (Sprint 6.2)*), **explicitly non-normative**. It
+   is an input to the decision, not the decision.
+3. **Smallest slice** — ✅ **Written, ❌ not ratified.** The slice was *"a design note
+   reviewed alone"*: a `@scorer`-owned note in `docs/SCORING.md` stating the problem,
+   enumerating candidate shapes with their failure modes, reviewed before any code moves.
+   **The note is written; the decision is not made.** Those are different milestones and
+   this roadmap will not merge them — a written note counts as the artifact, a ratified
+   decision counts as the gate. Release-gate criterion 4 stays **open**.
+
+   The note proposes a **per-surface reachability block orthogonal to the score**, and —
+   to its credit — states its own strongest counter-argument: that `eligible` works
+   precisely *because* it is load-bearing, while passive metadata nobody is forced to
+   consult has no teeth. That tension is unresolved, it is `@scorer`'s to resolve, and
+   **this roadmap does not resolve it, endorse a shape, or summarise the note as
+   decided.** Read the note; do not read this bullet as a substitute for it. No engine,
+   model or report change lands in the same increment as the note.
 4. **Dependencies** — `@scorer` owns the shared data model, the maths and the decision;
    `@lakehouse` owns any downstream mart or report consequence and must not pre-empt it;
    `@preceptor` reviews whether the resulting output is defensible to an operator;
-   `@readme` and `@remediation` follow the decision rather than anticipating it. Sprint
-   6.1 should land first so the reachability inputs exist before the verdict tries to
-   express them.
+   `@readme` and `@remediation` follow the decision rather than anticipating it.
+
+   **The relationship with Sprint 6.1 is bidirectional and must be read as two halves,
+   not one ordering.** Sprint 6.1's **availability record** lands first — and has
+   (`d326e58`) — so the verdict does not try to express inputs whose readability is
+   unknown, and so a surface state derived from an unread setting is `not_evaluated`
+   rather than a vendor default. But Sprint 6.1's **type-reachability rules** land
+   *after* this decision, because they have no honest outcome until it is made. The
+   endorsement and tenant-setting families sit on neither side of that and may proceed
+   independently.
 5. **Validation** — Focused check: a regression fixture in which an estate is strong on
    Data Agent rules and unreachable from Cowork must not produce an output a reader can
    read as "ready for Cowork". Release gate: whatever shape is chosen, eligibility, score
@@ -1132,7 +1344,9 @@ than silently wrong.
 ## Release Gate for Phase 6
 
 The phase closes only when all of the following are executable or evidenced. **All five
-are open.**
+are open.** One rule family (endorsement: `SEM-018`, `REP-011`) and two supporting
+records have landed inside Sprint 6.1, and the Sprint 6.2 design note has been written —
+**none of that meets a criterion below.**
 
 1. Every consumption surface the tool names in a verdict has at least one assessed
    input, and every surface it does **not** assess is stated as unassessed rather than
@@ -1140,13 +1354,39 @@ are open.**
 2. The two currently uncovered Microsoft 365 gating settings each map to a confirmed
    field or to an explicit unavailable classification recorded with the identity that
    obtained it, and a documented vendor default is never stored as an observed tenant
-   value. **Open.**
+   value. **Open.** The classifications now exist (`permission-blocked` and a permanent
+   `absent`, `d326e58`), but the criterion also requires the mapping to be expressed in
+   the run — no rule consumes either gate yet, and the Fabric-portal `settingName` is not
+   established, so it is not known whether that setting appears in the response at all.
 3. Type reachability is reported separately from object quality: a paginated report or a
-   dashboard is flagged as unreachable by a GA surface without its existing quality
-   score moving. **Open.**
+   dashboard is flagged as unreachable by a GA surface **with every quality figure on its
+   scorecard unchanged** — `score`, `raw_score`, `status`, `eligible`, `confidence` and
+   `coverage` identical to the same fixture without the feature. **Open, and blocked —
+   not merely unstarted.**
+
+   **This criterion is not satisfiable by the current engine, and the version of it
+   first recorded here was wrong to imply otherwise.** `ScoringEngine.score_object`
+   offers a rule outcome three fates and no fourth: `PASSED`/`FAILED`/`PARTIAL` move the
+   score; `NOT_EVALUATED` leaves the score alone but raises `applicable_weight` and so
+   lowers coverage estate-wide, which can push a marginal object through the 50%
+   publication floor into `NOT_EVALUATED` **status** — a changed verdict, and a falsehood
+   besides, since a paginated report's unreachability is documented rather than unknown;
+   `NOT_APPLICABLE` is the only zero-impact outcome and means *out of scope*, which an
+   in-scope unreachable object is not.
+
+   **The criterion is retained deliberately.** Its intent — reachability is a statement,
+   not a deduction — is what makes the phase worth doing, so it is not deleted or
+   weakened. **What must exist first** is a ratified Sprint 6.2 decision and whatever
+   engine or model change it implies. Until then this criterion has no executable form,
+   and anyone proposing to satisfy it with a `NOT_EVALUATED` reachability rule is
+   proposing to trade a documented fact for a coverage loss. It cannot be met by Sprint
+   6.1 alone.
 4. The per-surface verdict decision is made by `@scorer`, recorded in `docs/SCORING.md`,
    and does not merge surfaces into a single number; eligibility, score and confidence
-   remain three separate results throughout. **Open.**
+   remain three separate results throughout. **Open.** A design note exists in
+   `docs/SCORING.md` and is **explicitly non-normative**; this criterion requires a
+   **decision**, and writing down the candidate shapes is not making one. Do not credit
+   this criterion on the strength of the note.
 5. Ontology rules, if any exist, degrade to `NOT_EVALUATED` without readable evidence,
    carry a public source and exact verification date for every preview fact, and their
    introduction increments the ruleset version with a migration note. **Open.**
@@ -1158,8 +1398,14 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
 → 5.2 evidence reconciliation → 5.3 facts/calibration → 5.4 agent proof
 → 5.5 operational re-measurement`
 
-`(2026-09-24 documentation review — knowledge only, clears no gate) → 6.1 GA Microsoft
-365 surface → 6.2 per-surface verdict decision → 6.3 ontology object type (preview)`
+`(2026-09-24 documentation review — knowledge only, clears no gate) → 6.1 availability
+record ✅ + endorsement family ✅ → 6.2 per-surface verdict **decision** (note written,
+undecided) → 6.1 type-reachability family (blocked until 6.2 decides) → 6.3 ontology
+object type (preview)`
+
+The 6.1 tenant-setting family is unsequenced against 6.2: it is blocked on collection,
+not on the verdict shape, and may land whenever its inputs become readable — or be
+written deliberately as a named blind spot.
 
 - Sprint 5.0 is closed. It gated the live-tenant sprints: no proof run against a real
   tenant starts before every writer default and documented output path is confirmed
@@ -1188,12 +1434,16 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
   5.1 still needs an authorised test tenant and an approved read-only service principal,
   5.4 still needs its API proof, and 5.5 still depends on both. A documentation review
   changes none of that, because reading a product page is not observing a tenant.
-- Like Sprint 5.0.1, **most Phase 6 work carries no external blocker** — rule authoring,
-  fixtures, the `@scorer` design note and dated limitation sourcing are all repository
-  work — so it could proceed while 5.1 waits. That is a scheduling convenience and
-  nothing more: **it does not substitute for 5.1 and closes no Phase 5 criterion.** Any
-  Phase 6 slice that needs a live confirmation inherits Sprint 5.1's identity
-  prerequisite in full and waits behind it.
+- Like Sprint 5.0.1, **some Phase 6 work carries no external blocker** — fixtures, the
+  `@scorer` design note and dated limitation sourcing are all repository work — so it
+  could proceed while 5.1 waits. That is a scheduling convenience and nothing more: **it
+  does not substitute for 5.1 and closes no Phase 5 criterion.** Any Phase 6 slice that
+  needs a live confirmation inherits Sprint 5.1's identity prerequisite in full and waits
+  behind it. **This bullet previously said "most Phase 6 work" and generalised "rule
+  authoring" as unblocked; that was too broad.** Of the three Sprint 6.1 rule families,
+  one shipped, one is blocked on collection (and one of its gates permanently so), and
+  one is blocked on an internal design decision. Repository work being *possible* is not
+  the same as a rule being *writable*.
 - Within Phase 6 the order is deliberate and counter-intuitive: the **GA** Microsoft 365
   surface (6.1) precedes the **preview** ontology workload (6.3), even though the
   preview artifact is the one in the product name. Assess the shipping surface that
@@ -1201,7 +1451,17 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
   rule written against it today.
 - Sprint 6.3 must not start before 6.2 has a recorded decision. Adding an object type
   while the verdict still collapses every consumption surface into one number would bake
-  in the defect Phase 6 exists to remove.
+  in the defect Phase 6 exists to remove. **A written design note is not a recorded
+  decision**; the note in `docs/SCORING.md` is non-normative and does not release this
+  constraint.
+- **Sprint 6.1 does not cleanly precede 6.2.** The roadmap originally sequenced 6.1
+  wholly before 6.2 and, in 6.1 item 7, forbade bundling the reachability rules with the
+  6.2 change — which reads as "6.1 first, carefully". That is backwards for one of the
+  three families. 6.1's availability record precedes 6.2; 6.1's **type-reachability
+  rules depend on 6.2** and cannot be written before it, because no rule outcome in
+  today's engine states "in scope, known unreachable" without moving a score or a
+  coverage figure. The endorsement family proved the split is real by shipping ahead of
+  6.2 without touching it.
 
 ## Risks Across the Phase
 
@@ -1213,6 +1473,7 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
 | Calibration sample contains customer data | De-identify, retain outside git, and obtain Security approval before use. |
 | Scheduler cannot be represented portably | Document the environment-owned deployment step and validate it live; do not claim repository-provisioned scheduling. |
 | Ruleset changes break trend comparability | Start a new baseline or use an explicit compatible migration; never silently join versions. |
+| A fact is known but the engine has no outcome that can state it | Do not force it into `NOT_EVALUATED` — that reports *we could not see* for something we did see. Block the rule, record the blocker, and fix the vocabulary first. This is the Sprint 6.1 type-reachability case. |
 | Documentation drifts from implementation | Run the documentation gate before and after each increment; bounded claims block release when evidence is missing. |
 | Documentation, help text, or a flag default creates privacy exposure without any change to collection code | The 2026-09-23 audit exposed evidence through a documented example path, not through a collector. Treat docs, CLI help, and output defaults as part of the privacy surface: `scripts/check_evidence_sinks.py` asserts on every change that every writer and output flag is ignored at any supplied value, that no example steers output to a trackable location, and that tracked content holds no real identifier — including on documentation-only changes. |
 | Unowned documentation carries unaccountable privacy claims | Closed by Sprint 5.0. `scripts/check_agent_ownership.py` now audits `fabric_iq/` modules **and** an explicit `REQUIRED_DOCS` set, so `docs/IDENTITY_AND_RETENTION.md` (@readme), `docs/INSTALL.md` and `fabric/README.md` (@orchestrator), and `docs/SELF_ASSESSMENT.md` (@preceptor) each have exactly one owner, and an unowned required document fails the build. Any new document asserting a privacy, identity, or retention claim must be added to that map in the same change; the set is explicit precisely so that coverage cannot lapse silently. |

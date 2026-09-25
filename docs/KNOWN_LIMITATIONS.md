@@ -185,10 +185,11 @@ been verified against a live tenant:
 | Field | Consumed by | Status |
 |-------|-------------|--------|
 | AI data schema / Prep-for-AI selection | `SEM-008`, `SEM-009` | Unconfirmed |
-| AI instructions | `SEM-010`, `SEM-011` | Unconfirmed |
+| Synonyms on visible measures | `SEM-010` | Unconfirmed |
+| AI instructions | `SEM-011` | Unconfirmed |
 | Verified answers | `SEM-012` | Unconfirmed |
-| Data Agent definition and sources | `AGT-001` … `AGT-005` | Unconfirmed |
-| Agent instructions | `AGT-007` | Unconfirmed |
+| Data Agent definition and sources | `AGT-001`, `AGT-002`, `AGT-003`, `AGT-005` | Unconfirmed |
+| Agent instructions | `AGT-004` | Unconfirmed |
 
 **Consequence.** Rules reading an unavailable field will correctly return
 `NOT_EVALUATED` — which is honest, but means the corresponding readiness dimension is a
@@ -201,18 +202,34 @@ Unsupported inputs must continue to produce `NOT_EVALUATED`.
 
 ## 3. Agent Quality Is Declared, Not Measured
 
-`AGT-006` … `AGT-012` consume an `evaluation` block: accuracy, critical accuracy, persona
-count, leakage incidents, refusal behaviour, latency. Today that block is **supplied as
-input**. The tool does not yet execute a corpus against a live agent.
+Part of the Data Agent ruleset reads a supplied `evaluation` block: question bank size,
+executable queries, accuracy, critical accuracy, persona count, leakage incidents,
+refusal behaviour, tested languages and p95 latency. Today that block is **supplied as
+input** — the tool does not execute a corpus against a live agent. Without an evaluation
+block, `AGT-006`, `AGT-007`, `AGT-008`, `AGT-009`, `AGT-010`, `AGT-011`, `AGT-012` and
+`AGT-014` return `NOT_EVALUATED`. The set is listed rule by rule because it is **not a
+contiguous span**: the rule between `AGT-012` and `AGT-014` reads a declared use-case
+shape rather than an evaluation, so range notation over this set is wrong and must not
+be reintroduced.
 
 **Consequence.** An agent's behavioural score is only as trustworthy as the evaluation
-that produced it. With no evaluation supplied, those rules return `NOT_EVALUATED` — they
-never assume success.
+that produced it. With no `evaluation` key on the agent, every one of those rules is
+silent — none of them assumes success.
+
+An `evaluation` block that is present but empty is a *different* claim, and is read
+differently: it asserts a campaign that recorded nothing. Reproduced against the engine
+on **2026-09-25** at ruleset `2026.09.2`, `AGT-006`, `AGT-010` and `AGT-011` then
+**fail** — no question asked, fewer than two personas, no negative test — as does
+`AGT-012` for an agent that declares target languages when none of them was tested.
+`AGT-007`, `AGT-008`, `AGT-009` and `AGT-014` stay silent, for want of a measurement to
+read. So "the evaluation rules are unevaluated" is not the only shape an unmeasured
+agent takes.
 
 Refusal is the facet least likely to be supplied and the most consequential to leave
 unread. `AGT-011` wants observed evidence that an out-of-scope or adversarial prompt was
-declined; absent a corpus it returns `NOT_EVALUATED`, because an untested refusal path is
-not a refusal path. What an agent would actually do with a prompt outside its scope is
+declined. With no evaluation block it returns `NOT_EVALUATED`; with a block that records
+no negative test it **fails**, because an untested refusal path is not a refusal path.
+Either way, what an agent would actually do with a prompt outside its scope is
 precisely what this tool cannot tell you. Why that gap matters more than a thin metadata
 score is explained in
 [`docs/INTERPRETING_RESULTS.md` §5](./INTERPRETING_RESULTS.md#5-rules-that-surprise-people),
@@ -220,7 +237,8 @@ which is where the interpretation of a run belongs.
 
 **Resolution gate.** Phase 5 Sprint 5.4 first proves a supported read-only
 execution/readback surface. Only then may a corpus harness be implemented. If that
-surface is unavailable, `AGT-006` … `AGT-012` remain `NOT_EVALUATED`.
+surface is unavailable, `AGT-006`, `AGT-007`, `AGT-008`, `AGT-009`, `AGT-010`, `AGT-011`,
+`AGT-012` and `AGT-014` remain `NOT_EVALUATED` when no evaluation block is supplied.
 
 ## 4. The Tool Cannot Author An Evaluation Corpus
 

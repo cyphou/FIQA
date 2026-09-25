@@ -120,8 +120,8 @@ as input, and without it `AGT-006` … `AGT-012` **and `AGT-014`** return `NOT_E
 
 ## Rules That Surprise People
 
-Short forms of the six results that generate the most pushback, plus one standing caution
-about Power BI Q&A that the guide does not carry. Each of the six is explained, with
+Short forms of the results that generate the most pushback, plus one standing caution
+about Power BI Q&A that the guide does not carry. Each result is explained, with
 its rule IDs and the evidence behind it, in
 [`docs/INTERPRETING_RESULTS.md` § Rules that surprise people](../../../docs/INTERPRETING_RESULTS.md#5-rules-that-surprise-people)
 — route the user there rather than expanding from memory.

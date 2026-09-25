@@ -184,6 +184,40 @@ thing it was written to catch walks past it, and no agent is accountable for not
 
 ### Documentation
 
+- [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §3 "Agent Quality Is
+  Declared, Not Measured" — **the authority the Skill defers to carried the very error
+  the Skill had just been corrected for.** §3 stated the unevaluable set as
+  `AGT-006` … `AGT-012` in two places, omitting `AGT-014` (`minor`, latency, reads
+  `evaluation.latency_p95_seconds`), so a reader routed from `SKILL.md` — which says
+  that when this file disagrees, this file wins — got the pre-fix answer. Both
+  occurrences now enumerate the set rule by rule: `AGT-006`, `AGT-007`, `AGT-008`,
+  `AGT-009`, `AGT-010`, `AGT-011`, `AGT-012` and `AGT-014`, reproduced by stripping the
+  `evaluation` block from the sample agents and reading the engine's own findings. The
+  enumeration replaces range notation deliberately, and the section says why: the set is
+  not a contiguous span, because the rule between `AGT-012` and `AGT-014` reads a
+  declared use-case shape. Two further §3 claims were corrected in the same pass, both
+  found by re-reading rather than by the report: the facet list omitted question bank
+  size, executable queries and tested languages, naming six of the nine inputs the block
+  actually carries; and "absent a corpus `AGT-011` returns `NOT_EVALUATED`" was false for
+  the case that matters most — an `evaluation` block present but *empty* makes `AGT-006`,
+  `AGT-010`, `AGT-011` and (where target languages are declared) `AGT-012` **fail**,
+  while only `AGT-007`, `AGT-008`, `AGT-009` and `AGT-014` stay silent. A campaign that
+  recorded nothing is evidence of absence, and the section now says so.
+- [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §2 — two rows of the
+  metadata-availability table named rules that do not read the field on the row, one of
+  them contradicting §3 in the same file. `AGT-007` was listed as consuming **agent
+  instructions**; it reads `evaluation.executable_queries`, and the rule that reads
+  `agent.instructions` is `AGT-004`, which the row now names. `SEM-010` was listed under
+  **AI instructions**; it reads `measures[].synonyms`, and now has its own row, leaving
+  `SEM-011` alone against `ai_instructions`. The Data Agent definition row is enumerated
+  for the same reason as §3 rather than left as a range.
+- [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
+  "the **six** results that generate the most pushback" standing over seven bullets was
+  consistent but unverifiable: no mechanism can check a count of prose bullets, and
+  `@tester` declined to gate it because a structural bullet-count assertion would couple
+  the suite to the prose shape and break on a legitimate rewording. The numeral is
+  dropped from both sentences rather than gated. A prompt-time file should carry no
+  number a reader cannot check and a test will not defend.
 - [`.github/skills/fabric-iq-readiness/SKILL.md`](./.github/skills/fabric-iq-readiness/SKILL.md) —
   **re-reconciled against the engine on 2026-09-25 and re-dated**, not merely
   renumbered. This is the file a model treats as authoritative at prompt time, so a
@@ -196,8 +230,10 @@ thing it was written to catch walks past it, and no agent is accountable for not
   `docs/INTERPRETING_RESULTS.md` §5; the semantic-model and report checklists, which
   omitted the two new rules; `AGT-006` … `AGT-012`, which **understated the set** — the
   engine also returns `NOT_EVALUATED` for `AGT-014` without an evaluation block,
-  reproduced by running an agent with the block removed; and a "six results" preamble
-  standing over seven bullets. The §8 preamble now also points at §8.1 and states that
+  reproduced by running an agent with the block removed; and a preamble that counted
+  **six** results while standing over seven bullets, reconciled then by naming the
+  seventh as a standing caution and since resolved by dropping the numeral (above).
+  The §8 preamble now also points at §8.1 and states that
   endorsement is unobserved.
 - [`docs/KNOWN_LIMITATIONS.md`](./docs/KNOWN_LIMITATIONS.md) §8.1 (new)
   "Endorsement Absence And Value Set Are Both Undocumented" — the limitation entry owed
