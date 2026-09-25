@@ -33,6 +33,13 @@ day this file becomes wrong.
 
 Last observed: **2026-09-24**, ruleset `2026.09.1`, 65 rules.
 
+**Last documentation check: 2026-09-25 — which is not an observation date and must never
+be read as one.** On that day public Microsoft REST reference pages were read to name
+*which* endpoint would carry the fields Sprint 6.1 asks about. **No tenant was called, no
+payload was retained, no `BronzeRecord` was produced, and "Last observed" deliberately
+does not move.** Everything that check produced is confined to §11, which is labelled as
+documentation throughout; no row in §5 rests on it.
+
 ## 1. Scope — Read This Before Quoting Any Row
 
 This matrix records **one tenant** observed through **one read surface** on **one day**.
@@ -155,9 +162,25 @@ mutable display name and cross-surface joins would fail without raising.
 | `audit_log_enabled`, `owners` | TEN-010 | none exercised | no `200` | `permission-blocked` | No accountability evidence |
 | `copilot_capacity_designation_enabled` | TEN-011 | none exercised | no `200` | `permission-blocked` | — |
 | `purview_dlp_reviewed` | TEN-012 | none exercised | no `200` | `permission-blocked` | — |
+| *Share Fabric data with your Microsoft 365 services* — Fabric admin portal (no rule) | — | none exercised | no `200` | `permission-blocked` | Same cause as every `permission-blocked` row above: no tenant-admin endpoint answered. A future rule over this gate is **born `NOT_EVALUATED`**; the documented vendor default is not its value (§11.1) |
+| *Fabric data available in M365 Copilot* — **Microsoft 365 admin center** (no rule) | — | A, B | `200` | `absent` | **A different control plane.** The two surfaces that answered carry no such setting, and no Fabric-side endpoint is documented to carry it either (§11.2). This is a **permanent blind spot** for one of the three Microsoft 365 gates, not a scope that could be widened |
 
 TEN-008 is the **only rule in the entire 65-rule catalogue** that evaluated on this
 evidence, and it evaluated to `partial`.
+
+**Why the two Microsoft 365 rows carry different classes.** `permission-blocked` (§2)
+presumes an endpoint exists that a wider scope would open. The Fabric-portal setting is a
+Fabric tenant setting and would arrive with the rest of `/admin/tenantsettings` the day
+that endpoint answers `200`, so it is blocked for exactly the reason `fabric_enabled` is.
+The Microsoft 365 admin-center setting would not arrive with it: it is administered in
+another control plane, and **a Fabric-scoped read-only principal has no route to it at
+all**, so what remains is `absent` — the exercised surfaces answered `200` and do not
+carry it. Neither row is `preview-only`: both settings are GA, and per §2 that class stays
+empty until a preview gate is *observed*. Both rows are recorded on Sprint 6.1's stated
+terms — a setting that cannot be read is `absent` or blocked, and its rule is born
+`NOT_EVALUATED` rather than assumed from a documented default. The third Microsoft 365
+gate, cross-geo AI processing, is already above as `cross_geo_required` /
+`cross_geo_approved` (TEN-006) and is likewise unread.
 
 ### 5.2 Workspace identity and capacity
 
@@ -196,6 +219,7 @@ evidence, and it evaluated to `partial`.
 | `rls_required`, `rls_roles` | SEM-015 | B | `200`, no such field | `absent` | Blocking security rule unevaluable |
 | `hours_since_refresh`, `freshness_sla_hours` | SEM-016 | B | `200`, no such field | `absent` | No refresh history on this surface |
 | `schema_retrieval_error` | SEM-017 | B | not produced | `absent` | The collector sets this sentinel on the Scanner path only; on this surface there is no schema call to succeed or fail |
+| item endorsement (no rule) | — | B | `200`, no such field | `absent` | §3 records the six fields surface B returns; endorsement is not among them. **No enumeration surface exercised in this proof returns endorsement.** A documented carrier is named in §11.3 — documentation, not a reading |
 
 **All 17 `SEM-*` rules returned `NOT_EVALUATED`.** Catalog search enumerates semantic
 models; it describes none of them.
@@ -215,6 +239,7 @@ models; it describes none of them.
 | `audience`, `owner` | REP-008 | B | `200`, no such field | `absent` | — |
 | `monthly_views` | REP-009 | none | — | `absent` | Activity Events API, not exercised |
 | `verified_answer_candidates` | REP-010 | B | — | `absent` | — |
+| item endorsement (no rule) | — | B | `200`, no such field | `absent` | Same finding as §5.3: surface B carries no endorsement for a report either (§3). Unread, not negative — a documented carrier is named in §11.3 |
 
 ### 5.5 Data Agent
 
@@ -272,6 +297,11 @@ Stated plainly, because a matrix that quietly overreaches is worse than no matri
    privileges, and its scopes were never approved in advance. No row here shows what a
    read-only service principal would obtain, and no row may be quoted as 5.1 gate
    evidence — see the caveat at the top of this document.
+7. **Nothing about the Microsoft 365 consumption gates or about endorsement was
+   *observed*.** The two new §5.1 rows and the two endorsement rows say only what the
+   exercised surfaces did not carry. §11 names the endpoints Microsoft *documents* as
+   carrying these fields; that is a product claim read from a web page on 2026-09-25, not
+   a tenant reading, and it evidences no field for any tenant.
 
 ## 8. Handoff To Sprint 5.2
 
@@ -338,3 +368,148 @@ Related documents, owned elsewhere and updated by routing, never by editing:
   re-run exists; no roadmap entry may mark 5.1 cleared on this file.
 - `scripts/check_agent_ownership.py` (`@tester`) — `REQUIRED_DOCS` must gain an entry for
   this file, mapped to `collector`, so the claim cannot go unowned.
+
+## 11. Appendix — Documented Targets for Sprint 6.1 (**Checked 2026-09-25, Not Observed**)
+
+> **Read this paragraph before quoting anything below.** Sections 1–10 record what a read
+> surface *returned*. This section records what Microsoft's public reference pages *say*,
+> read on **2026-09-25**, with **no API call of any kind made** — no tenant, no fixture,
+> no `BronzeRecord`, no retained payload. It exists because Sprint 6.1 asks *which*
+> endpoint would carry three fields, and naming an endpoint is a documentation question.
+> It is forward-looking content on the same footing as §8, and it is **not evidence**:
+> product documentation states what a product is designed to do, never what a tenant is
+> configured to do or what a given identity may read. No sentence below may be quoted as
+> "we read this", and nothing here changes a class in §5.
+
+### 11.1 *Share Fabric data with your Microsoft 365 services* — the endpoint is known, the `settingName` is **not**
+
+- **The endpoint is one this project already calls.** `GET
+  https://api.fabric.microsoft.com/v1/admin/tenantsettings` (Admin API v1) returns the
+  tenant settings list; the caller must be a Fabric administrator or authenticate as a
+  service principal, with delegated scope `Tenant.Read.All` or `Tenant.ReadWrite.All`.
+  The documented limit is **25 requests per minute**, with `429` carrying `Retry-After`
+  ([reference](https://learn.microsoft.com/en-us/rest/api/fabric/admin/tenants/list-tenant-settings),
+  checked 2026-09-25). `fabric_iq/collectors/fabric_api.py` already issues exactly this
+  `GET` as its `tenant-settings` read, so **no new endpoint would be needed** — only a
+  key to read out of the response.
+- **The response shape is documented.** Each entry carries `settingName`, `title`,
+  `enabled`, `canSpecifySecurityGroups`, `enabledSecurityGroups`,
+  `excludedSecurityGroups`, `delegateToCapacity`, `delegateToDomain`,
+  `delegateToWorkspace`, `properties` and `tenantSettingGroup` (same page, 2026-09-25).
+- **The setting exists in the portal, under that exact title.** The Fabric tenant
+  settings index lists a group *Share data with your Microsoft 365 services* containing
+  the setting *Share Fabric data with your Microsoft 365 services*
+  ([index](https://learn.microsoft.com/en-us/fabric/admin/tenant-settings-index), checked
+  2026-09-25).
+- **What is *not* established, and is therefore not written down as a fact.** That index
+  page carries no API names at all, and the REST reference enumerates only three example
+  `settingName` values — `AdminApisIncludeDetailedMetadata`, `DatamartTenant`,
+  `CertifyDatasets` — none of which is this setting. **The `settingName` for *Share Fabric
+  data with your Microsoft 365 services* is not established from public reference on
+  2026-09-25.** It is consequently absent from this document and **not** wired into
+  `TENANT_SETTING_MAP`: a guessed key does not fail loudly, it reads as an absent setting
+  forever, which is precisely the silent gap this file exists to prevent. For the same
+  reason it is **not established that the setting is returned by that endpoint at all** —
+  the reference does not claim to enumerate the catalogue. Both questions are answered by
+  one live `GET` under Sprint 5.1's approved identity, and that call has not been made.
+- **The documented default, recorded only so that nobody substitutes it for a reading.**
+  The index page states the setting "is automatically enabled only if your Microsoft
+  Fabric and Microsoft 365 tenants are in the same geographical region" and that an admin
+  may disable it (2026-09-25). That is a vendor default. Sprint 6.1's release gate, and
+  §2 of this document, forbid it standing in for an observed value; the §5.1 row stays
+  `permission-blocked`.
+
+### 11.2 *Fabric data available in M365 Copilot* — another control plane, and a permanent blind spot
+
+- **Where it lives.** Microsoft documents three tenant settings gating Power BI data in
+  Microsoft 365 Copilot Chat: one in the **Microsoft 365 admin center** — *Fabric data
+  available in M365 Copilot*, enabled by default, and when an admin turns it off users
+  don't see Fabric context in Copilot responses — and two in the Fabric admin portal
+  ([connector overview](https://learn.microsoft.com/en-us/fabric/iq/connectors/microsoft-365-copilot-overview),
+  checked 2026-09-25).
+- **No Fabric-side read surface is documented for it.** The Fabric admin tenant-settings
+  reference (§11.1) covers Fabric tenant settings; nothing on it exposes a Microsoft 365
+  admin-center control. On the Microsoft Graph side, the beta `copilotAdminSetting`
+  resource exposes exactly one relationship — `limitedMode`, about sentiment prompts in
+  Teams meetings — and mentions Fabric nowhere
+  ([resource](https://learn.microsoft.com/en-us/graph/api/resources/copilotadminsetting?view=graph-rest-beta),
+  checked 2026-09-25). **No public read surface for this gate was established on
+  2026-09-25, in Fabric or in Graph beta.**
+- **Stated plainly, because Sprint 6.1 asked for it plainly.** A Fabric-scoped read-only
+  principal has no reason and no route to read a Microsoft 365 admin-center setting, and
+  **no Fabric surface exposes it**. For this tool that gate is a **permanent blind spot**
+  — permanent in the sense that no widening of Fabric scope reaches it. Closing it would
+  require a Microsoft 365 control-plane read, separately scoped and approved by
+  `@security`, which is outside Sprint 6.1 and outside this project's current grant. Any
+  rule written over this gate is **born `NOT_EVALUATED` and stays there**, and its
+  documented "enabled by default" is never its value.
+
+### 11.3 Endorsement — absent from every exercised surface, documented on the Scanner
+
+- **The observation, already on record.** §3 lists the six fields surface B returns per
+  item and states that endorsement is not among them. That is the whole answer to Sprint
+  6.1's third question: **no enumeration surface exercised in this proof returns item
+  endorsement**, for semantic models or for reports. §5.3 and §5.4 now carry it as
+  `absent`. Nothing was re-derived to say so.
+- **The documented carrier.** The Scanner result — `GET
+  https://api.powerbi.com/v1.0/myorg/admin/workspaces/scanResult/{scanId}` — documents an
+  `endorsementDetails` object on reports, datasets (semantic models), dataflows and
+  datamarts, whose fields are `endorsement` (string, "The endorsement status") and
+  `certifiedBy` (string)
+  ([reference](https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result),
+  checked 2026-09-25).
+- **Three nuances that must survive into whatever rule is written later.**
+  1. The reference types `endorsement` as a plain **string** and **does not enumerate its
+     allowed values**; only the sample value `"Certified"` appears anywhere on the page.
+     **The value set is not established from public reference on 2026-09-25**, so a rule
+     must not hardcode one and a normalizer must not reject an unrecognised value.
+  2. No documented `getInfo` parameter gates it. The documented query parameters are
+     `lineage`, `datasourceDetails`, `datasetSchema`, `datasetExpressions` and
+     `getArtifactUsers`, and only `datasetSchema` / `datasetExpressions` are documented as
+     requiring metadata scanning to be fully enabled
+     ([reference](https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-post-workspace-info),
+     checked 2026-09-25 — the same page restates the 500 requests/hour, 16 simultaneous
+     requests and 1–100 workspace IDs limits this collector already encodes). Whether an
+     unset tenant setting suppresses endorsement regardless is **not established**.
+  3. **"Endorsement is admin-readable" is surface-specific, not general.** The Fabric
+     admin item enumeration documents `id`, `type`, `name`, `description`, `state`,
+     `lastUpdatedDate`, `workspaceId`, `capacityId`, `creatorPrincipal` and `tags`, with
+     **no endorsement field**
+     ([reference](https://learn.microsoft.com/en-us/rest/api/fabric/admin/items/list-items),
+     checked 2026-09-25), and the Power BI admin dataset enumeration reference does not
+     mention endorsement at all
+     ([reference](https://learn.microsoft.com/en-us/rest/api/power-bi/admin/datasets-get-datasets-as-admin),
+     checked 2026-09-25). Picking the wrong enumeration surface would produce a
+     confident, permanent `absent`.
+- The Scanner was **not called** in this proof (§1, §7.1). Nothing above is an
+  availability claim for this tenant, this identity, or this collector.
+
+### 11.4 Every source, with the date it was checked
+
+| # | Claim it supports | Source | Checked |
+|---|---|---|---|
+| 1 | Tenant-settings endpoint, permissions, 25 req/min limit, response shape, three example `settingName` values | `https://learn.microsoft.com/en-us/rest/api/fabric/admin/tenants/list-tenant-settings` | 2026-09-25 |
+| 2 | *Share Fabric data with your Microsoft 365 services* exists in the Fabric admin portal, its group, its description and its regional default; the page carries no API names | `https://learn.microsoft.com/en-us/fabric/admin/tenant-settings-index` | 2026-09-25 |
+| 3 | Three gating settings, one of them in the Microsoft 365 admin center and enabled by default | `https://learn.microsoft.com/en-us/fabric/iq/connectors/microsoft-365-copilot-overview` | 2026-09-25 |
+| 4 | Graph beta `copilotAdminSetting` exposes only `limitedMode` and names no Fabric control | `https://learn.microsoft.com/en-us/graph/api/resources/copilotadminsetting?view=graph-rest-beta` | 2026-09-25 |
+| 5 | Scanner scan result documents `endorsementDetails` (`endorsement`, `certifiedBy`) on reports, datasets, dataflows, datamarts; `endorsement` is an unenumerated string | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result` | 2026-09-25 |
+| 6 | `getInfo` parameters and quotas; only schema/expressions require metadata scanning | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-post-workspace-info` | 2026-09-25 |
+| 7 | Fabric admin item enumeration carries no endorsement field | `https://learn.microsoft.com/en-us/rest/api/fabric/admin/items/list-items` | 2026-09-25 |
+| 8 | Power BI admin dataset enumeration reference does not document endorsement | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/datasets-get-datasets-as-admin` | 2026-09-25 |
+
+Reference pages move. Any of these claims is re-checkable by opening the URL and
+restating the date; a claim whose date is older than the behaviour it justifies should be
+re-read before it is encoded.
+
+### 11.5 What this appendix does **not** authorise
+
+- **No collector change ships with it.** Sprint 6.1 puts the availability record first and
+  alone. Wiring a `settingName` into `TENANT_SETTING_MAP`, or carrying
+  `endorsementDetails` through Scanner normalisation, is a separate `@collector` boundary
+  — and §11.1 says the key that boundary would need is not established.
+- **No rule, no `ObjectType`, no scoring change.** The tenant-setting, endorsement and
+  type-reachability rules belong to `@tenant` and `@semantic`, each with its own
+  synthetic fixtures, after this record exists.
+- **Nothing here clears Sprint 5.1.** Every live confirmation named above stays behind
+  5.1's prerequisite: an authorised tenant and an approved read-only service principal.
+
