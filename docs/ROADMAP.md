@@ -78,6 +78,8 @@ records, not earlier roadmap labels.
 | Re-measurement | Comparable-run trends, automatic baseline selection, coverage-loss classification, and remediation-state comparison are implemented. | A repeatable operational cadence, ruleset-compatible baseline policy, and recorded remediation/re-measure cycle are not yet proven end to end. | 🟡 Mechanism delivered |
 | Consumption-surface coverage | One of the three Sprint 6.1 rule families has shipped: `SEM-018` and `REP-011` assess **endorsement** (both MINOR), fed by Scanner `endorsementDetails` which the collector now carries with absence treated as unknown. A Sprint 6.1 availability record classifies all three Microsoft 365 gating settings as currently unevaluable. A non-normative `@scorer` design note for Sprint 6.2 exists in `docs/SCORING.md`. | A 2026-09-24 documentation review found the **GA** Microsoft 365 consumption surface (Cowork, Copilot Chat) assessed by no rule, the **preview** Fabric IQ ontology item enumerated by the collector but judged by nothing, and one headline verdict standing for four different reachability paths. The **tenant-setting** family is unevaluable at source; the **type-reachability** family is **blocked on the Sprint 6.2 decision** — today's engine has no rule outcome that states unreachability without moving a score or coverage. No Phase 6 release-gate criterion is met. | 🟥 Open, partially started |
 
+| Scope currency | Nothing. Two of the three kinds of decay are watched — product facts by `docs/KNOWN_LIMITATIONS.md` §8 and API surfaces by `docs/API_REALITY_MATRIX.md` — and the third is not. | No record exists of what the catalogue deliberately does not assess, and no check notices when Fabric grows an item type, consumption surface or agent kind that no rule covers. Both 2026-09-24 blind spots were found by a user's question while every gate was green: one sat in a constant the collector maintains, the other appeared nowhere in the repository at all. Phase 7 is the plan and none of it has started. | 🟥 Not started |
+
 ### Verified Repository Baseline
 
 At this review the documentation gate reported:
@@ -1391,6 +1393,374 @@ records have landed inside Sprint 6.1, and the Sprint 6.2 design note has been w
    carry a public source and exact verification date for every preview fact, and their
    introduction increments the ruleset version with a migration note. **Open.**
 
+---
+
+## Phase 7 — Scope-Drift Detection 🟥
+
+**Nothing in this phase is delivered.** No sprint below has started, no release-gate
+criterion is creditable, and this phase adds no rule, no object type and no scoring
+change at the revision that records it. It is a plan and is labelled as one.
+
+**Outcome.** The repository notices when Fabric grows something the rule catalogue does
+not assess, and says so out loud, instead of staying silently green.
+
+**Three kinds of decay, and the one nothing watches.**
+
+| Decay | Example | Watched today by |
+|---|---|---|
+| A product fact changes | A documented limit moves | `docs/KNOWN_LIMITATIONS.md` §8 — a public source and an exact verification date per fact, all eight rows re-verified 2026-09-24 |
+| An API surface changes | An endpoint gains or loses a field | [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md) — and only as far as one tenant, one identity, one day reaches |
+| **The product's shape changes** | A new item type, a new consumption surface, a new agent kind | **Nothing.** No record, no check, no statement in any verdict |
+
+The third is the dangerous one, and it is dangerous in a way the first two are not. A
+stale limit produces a wrong answer, which is embarrassing and findable. A shape change
+produces *no* wrong answer: every fact in the catalogue stays true, all 67 rules keep
+evaluating exactly what they were written to evaluate, and the thing they evaluate
+quietly stops being the whole subject. **A catalogue can be 100% accurate and 100%
+irrelevant**, and nothing in this repository can currently tell those two states apart.
+
+**Concrete anchor — it already happened twice, and a human found it both times.** The
+2026-09-24 product-fit review recorded in Phase 6 found that the **GA** Microsoft 365
+consumption surface (the Cowork plugin, Copilot Chat data answering) was assessed by
+nothing, and that the **preview** ontology item — the artifact this product is named
+after — had zero rules while `fabric_iq/collectors/fabric_api.py` **already** enumerated
+`Ontology` in `WORKSPACE_ITEM_KEYS` and **already** mapped an
+`OntologyPreview/AgentsEnabled` tenant setting in `TENANT_SETTING_MAP`. The engine could
+see ontologies and never judged them. At that moment the test suite was green, the
+documentation gate was green, the ownership gate was green and the evidence-sink gate was
+green. **It took a user asking "how does this fit with Cowork?" to surface a blind spot
+on generally available functionality.** Phase 7 exists because that question was the only
+detector in the system, and a question is not a gate.
+
+**Falsifiable hypothesis.** The part of Fabric's shape that the repository *already
+names in its own code* can be reconciled against the rule catalogue **entirely offline**
+— no tenant, no network, no service principal — and every element that is enumerated but
+unassessed can be listed exactly. The hypothesis is falsified if that list turns out to
+be long and dominated by elements nobody would ever assess, in which case the reconciliation
+is noise and the phase's real work is the disposition record, not the check.
+
+**Cheap check, and it already half-falsifies the hypothesis.** Reading the constants
+takes minutes and can be done before any ledger or gate exists. `WORKSPACE_ITEM_KEYS`
+carries **13** item containers; exactly **three** (`reports`, `datasets`, `DataAgent`)
+reach an assessed `ObjectType`; **ten** are enumerated and judged by nothing — `Ontology`
+among them, but so are `Notebook`, `Lakehouse` and `SQLAnalyticsEndpoint`, which nobody
+has claimed should carry readiness rules. `fabric_iq/models.py` declares **six**
+`ObjectType` members while the **Verified Repository Baseline** records rules against
+**five**: `CAPACITY` is declared and carries none. So a naive reconciliation fires eleven
+times on day one, of which perhaps two are real. **That settles the sprint order**: the
+baseline record comes first and the check second, because a check shipped against an
+empty baseline is a check that is red on arrival, and a check that is red on arrival is
+muted within a month.
+
+**Where drift strikes.** Using the layer model that frames this project's coverage — L0
+physical, L1 structural, L2 lexical, L3 semantic, L4 ontological, L5 behavioural, L6
+consumption — this phase watches the **boundaries** of L0, L4 and L6: a new item type is
+a new L0 subject, the ontology item is the L4 subject with zero rules, and a new
+consumption surface is an L6 reader nobody assessed. It watches none of L1–L3, because
+those are properties of objects already in scope and the catalogue already judges them,
+and it cannot watch L5, whose quality question is `NOT_EVALUATED` by design until Sprint
+5.4's proof exists. The model earns its place here for one reason only: it shows that a
+catalogue can be complete at L1–L3 and still be answering about the wrong set of objects.
+
+**The trap, named before the work starts.** A detector nobody can act on is decoration.
+This is the same failure the Skill's drift gate had before Sprint 5.0.1, and exactly the
+failure `@scorer` designed the ruleset fingerprint around: *a guard that fires on typo
+fixes teaches contributors to regenerate it reflexively, and a guard people regenerate
+without reading is decoration*. If this detector fires on every Fabric release note, or
+on every commit that touches a collector, it will be muted within a month and the
+repository will be worse off than before — because a muted gate produces the appearance
+of coverage. Three design constraints keep the ratio honest, and all three are release
+criteria below, not aspirations: **fire on transitions only** (a new untriaged element or
+an expired disposition, never on steady state); **no bulk re-dating command**, so clearing
+a fire costs one deliberate per-row edit with a reason; and a **noise budget** — a fire
+cleared without a recorded decision is counted as a gate failure, not as a pass.
+
+**Exit gate.** All seven criteria in **Release Gate for Phase 7** are met; in particular,
+no element of a declared shape source is untriaged, every deliberate exclusion carries a
+reason, an owning agent and a review-by date, and no scope statement moves a score, a
+coverage figure or a confidence figure — nor is any of it mapped to `NOT_EVALUATED`,
+which reports missing evidence and never an absent rule. **All seven are open at this
+revision, and no work has started against any of them.**
+
+### Sprint 7.1 — Record What We Deliberately Do Not Assess (the scope ledger) — 🟥 **OPEN**, not started
+
+1. **Outcome** — One record states, for every element of Fabric's shape the repository
+   already names, exactly one disposition: **assessed** (with rule IDs), **deliberately
+   excluded** (with a reason, an owning agent and a review-by date), **open** (with the
+   sprint that would close it), or **untriaged** — the state that must be empty. The
+   scope of a verdict becomes something an owner signed, rather than a by-product of
+   which collector happened to be written first.
+2. **Current evidence** — **Open. Nothing of the kind exists.** What exists is the
+   asymmetry, measurable today without a tenant: 13 item containers enumerated against 3
+   that reach an assessed object type; 6 settings in `TENANT_SETTING_MAP`; 6 `ObjectType`
+   members against 5 with rules. **None of those asymmetries is recorded anywhere as a
+   decision**, which is the whole finding — the repository's scope reads identically
+   whether an omission was considered and rejected or never noticed at all. That is
+   precisely why the ontology gap survived: the evidence of it was sitting in a constant
+   the collector maintains by hand.
+3. **Smallest slice** — Not the gate, and not all sources. Hand-write the ledger once for
+   **one** source, `WORKSPACE_ITEM_KEYS`, thirteen rows. This is the cheapest possible
+   test of whether a disposition can be written at all: if `@tenant`, `@semantic` and
+   `@dataagent` cannot say in one sentence each why `Notebook` is excluded and `Ontology`
+   is not, then automating the comparison would only make an unanswerable question fail
+   the build faster.
+4. **Dependencies** — An owner decision comes first: the ledger asserts a
+   **collection-capability claim** and is therefore a `REQUIRED_DOCS` document, so
+   whichever agent owns it must be added to the map in `scripts/check_agent_ownership.py`
+   **in the same change**. `@readme` is the proposed owner (it already owns release-claim
+   accuracy and the dated-sourcing discipline of §8), with `@collector` supplying the
+   item-type rows and `@tenant`/`@semantic`/`@dataagent` supplying dispositions for their
+   object types; `@tester` owns the entry check. The required-document count moves 7 → 8
+   in that commit and nowhere earlier. **No dependency on Sprint 5.1 or 6.2**: reading
+   this repository's own constants needs neither a tenant nor a verdict-shape decision.
+5. **Validation** — Focused check: every element of the declared source resolves to
+   exactly one disposition; a row marked excluded carries a reason, an owning agent and a
+   review-by date, and a row carrying none fails review. Release gate: no element is
+   untriaged and no exclusion is undated. **Note what this does not close** — a ledger is
+   the baseline a detector needs, not a detector. Closing 7.1 closes nothing in 7.2.
+6. **Risks and non-goals** — The real risk is that the ledger becomes somewhere to park
+   inconvenient truth: an exclusion reading "out of scope" with no reason is *worse* than
+   silence, because it looks decided. The reason field, the named owner and 7.3's review
+   obligation are the mitigation, and a reviewer should treat a reasonless exclusion as a
+   finding. Non-goals: no rule, no object type, no scoring change, no claim that an
+   excluded item type is unimportant, and no attempt to enumerate item types the
+   repository has never heard of — that is 7.3 and 7.4.
+7. **Commit boundary** — The ledger, its `REQUIRED_DOCS` entry and its ownership test are
+   one commit. A required document that is unclaimed for even one commit is the
+   gate-failing-open case Sprint 5.0.1 found. No rule module and no test of the engine is
+   touched.
+
+### Sprint 7.2 — Make the Ledger Executable (offline reconciliation) — 🟥 **OPEN**, not started
+
+1. **Outcome** — A check fails the build when a shape element appears in code with no
+   disposition, or when a disposition's review date has expired, and is silent otherwise.
+2. **Current evidence** — **Open. No such check exists.** The pattern does:
+   `scripts/check_agent_ownership.py` and `scripts/check_evidence_sinks.py`, both owned by
+   `@tester`, each enumerate from code, compare against an explicit map, and exit non-zero
+   naming the offending path and the required owner. The precedent also carries the
+   warning — Sprint 5.0.1 found the ownership parser could not begin a path with a dot, so
+   the gate reported clean over a file it had never read.
+3. **Smallest slice** — One source (`WORKSPACE_ITEM_KEYS`), one failure mode (an element
+   with no disposition), exit 1 naming the element and the agent who must triage it.
+   Expiry checking is the second slice, not the first. **Import the constant; never
+   re-type the list** — a gate holding its own copy of the thing it guards drifts from it,
+   and the drift is invisible in exactly the direction that matters.
+4. **Dependencies** — `@tester` owns the script and its tests and adds the module
+   ownership claim (modules move 27 → 28 in that commit); `@orchestrator` is involved only
+   if the check joins the documented per-change gate list, which it should. Sprint 7.1 is
+   a hard prerequisite. Independent of 5.1 and 6.2.
+5. **Validation** — Focused check: **three** negative tests, because two of them are the
+   ones that matter. (a) Plant a new key in the enumerated source → exit 1 naming it.
+   (b) Back-date a disposition past its review date → exit 1. (c) Remove a declared source
+   entirely → exit 1, because a source that disappears must not read as "nothing to
+   check". Release gate: the check runs in CI as its own named step, is listed in the
+   per-change gate, and each negative test is recorded as having been run and observed to
+   fail. A gate that cannot fail is not a gate.
+6. **Risks and non-goals** — The reflexive-regeneration trap is the design risk and is
+   handled by omission: **there is deliberately no bulk `--update` or `--accept-all`
+   flag.** The cost is manual work on every fire, and that cost is the point. The check
+   must also **never read the network**: a CI gate that fetches a vendor page is
+   non-deterministic, breaks the standard-library-only contract, and fails in the place
+   people trust most. Non-goal: detecting anything the repository does not already name.
+7. **Commit boundary** — Script, tests, module-ownership claim and gate-list entry in one
+   commit. No engine, model or rule file is touched.
+
+### Sprint 7.3 — Schedule the Attention Code Cannot Pay — 🟥 **OPEN**, not started
+
+1. **Outcome** — The classes of shape that exist only as prose — consumption surfaces,
+   agent kinds, GA/preview status, item types announced but not yet enumerated here —
+   carry a dated review obligation, so that the **absence of a review** becomes a build
+   failure even though the product change itself is invisible to any check.
+2. **Current evidence** — **Open.** This is the sprint that covers the miss the other
+   sprints structurally cannot, and the asymmetry must be stated plainly because it
+   decides how much the automated half is worth: **of the two 2026-09-24 findings, an
+   offline reconciliation would have caught the ontology one and would *not* have caught
+   Cowork.** `Ontology` sat in a constant the repository maintains, so the gap was
+   visible in the code's own vocabulary. The Microsoft 365 consumption surface appeared in
+   no constant, no endpoint and no item key — at that date the words `M365`,
+   `Microsoft 365`, `Cowork` and `Copilot Chat` appeared nowhere in the repository except
+   one unrelated `CHANGELOG.md` line. **No amount of self-reconciliation finds a thing the
+   repository has never mentioned.** The mechanism that would have caught it is a
+   calendar, and the precedent for it already works: `docs/KNOWN_LIMITATIONS.md` §8, a
+   public source and an exact verification date per fact.
+3. **Smallest slice** — One class, three rows: the Microsoft 365 surfaces (Cowork and
+   Copilot Chat), the in-Fabric agent surfaces, and the preview Fabric IQ workload — each
+   with a public source, a checked date and a review-by date. 7.2's expiry check covers
+   them with no new mechanism, which is why this sprint follows that one. **Cadence
+   proposal: 90 days**, and the reasoning is a noise argument, not a preference. Three to
+   five reviewable classes on a quarterly cycle fire a handful of times a year, each fire
+   costing one human one reading pass; a monthly cadence quadruples the fires without
+   quadrupling the product's rate of shape change, and an annual one leaves a blind spot
+   that outlives most planning horizons. If a review repeatedly finds nothing, lengthen
+   the cadence and record why — do not delete the row.
+4. **Dependencies** — `@readme` owns the dated sourcing, being already accountable for the
+   §8 discipline; `@roadmap-planner` converts any finding into a sprint; `@tester`'s 7.2
+   expiry check supplies the mechanism. No tenant, no 5.1, no 6.2.
+5. **Validation** — Focused check: a row whose review-by date has passed fails the 7.2
+   check naming the row and its owner; the same row re-dated with a source and a date
+   passes. Release gate: **a review that found nothing is itself evidence and must be
+   written down** with its date and the sources consulted — otherwise the next reviewer
+   cannot distinguish a checked surface from an unchecked one, which is the exact
+   confusion this phase exists to remove. **Open.**
+6. **Risks and non-goals** — This is a calendar, not a detector. It fails silently when a
+   human reads carelessly, and that failure cannot be negative-tested. Its honest claim is
+   narrow: it guarantees that somebody looked on a stated date, never that they saw.
+   Non-goals: no automated release-note ingestion, no network call in a gate, and no
+   treatment of a vendor documentation page as an observation of a tenant — the roadmap
+   already forbids that conversion and this sprint does not create an exception to it.
+7. **Commit boundary** — The review-obligation rows and their sourcing are a `@readme`
+   documentation boundary. No mechanism change belongs here; if the expiry check needs
+   work, that work is 7.2's.
+
+### Sprint 7.4 — Notice an Item Type the Tenant Has and the Collector Does Not — 🟥 **OPEN**, blocked on Sprint 5.1
+
+1. **Outcome** — A real estate carrying an item container this collector does not
+   recognise produces a recorded, visible statement instead of a silent drop.
+2. **Current evidence** — **Open and blocked.** The normaliser iterates
+   `WORKSPACE_ITEM_KEYS`; a container outside that tuple contributes to no count and is
+   reported by nothing, so a genuinely new Fabric item type sitting in a scanned workspace
+   is invisible to the run and to the operator alike. Whether unrecognised containers
+   actually appear, and under what key spelling, is **unknown**: the Scanner was not
+   exercised at all by the 2026-09-24 exploratory read.
+3. **Smallest slice** — `@collector` records in [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md)
+   whether a Scanner workspace payload carries containers outside the known tuple, and
+   records **key names only** — never contents, because an unknown container's contents
+   are un-triaged tenant evidence of unknown sensitivity. A counting mechanism follows
+   only if unrecognised keys are actually observed.
+4. **Dependencies** — Inherits Sprint 5.1 **in full**: an authorised tenant, a read-only
+   service principal whose scopes and evidence expiry `@security` approves beforehand, and
+   the expiry set at authorisation rather than afterwards. `@collector` owns the record.
+   This sprint may not be simulated from fixtures and called done — a synthetic payload
+   with an invented key proves the code path, not the product.
+5. **Validation** — Focused check: a fixture workspace carrying an unknown container
+   yields a scope statement while `score`, `raw_score`, `status`, `eligible`, `confidence`
+   and `coverage` stay identical to the same fixture without it. Release gate: the live
+   record exists under the approved identity, or the criterion stays open. The code-path
+   criterion and the observation criterion are **two criteria on purpose**; a fixture
+   proof closes the first and never the second.
+6. **Risks and non-goals** — An unknown key may be a preview flighting artefact, a
+   per-SKU difference, or a spelling variant of a type already known. Classifying it as a
+   new item type would **manufacture** drift, which is the mirror image of missing it:
+   record the key, do not interpret it. Non-goals: no rule, no object type, no score
+   effect, and no logging of container contents at any verbosity.
+7. **Commit boundary** — The collector's availability record is one boundary and comes
+   first; any counting mechanism and its fixtures follow separately. No live payload or
+   identifier is committed.
+
+### Sprint 7.5 — Say It in the Verdict — 🟥 **OPEN**, blocked on a ratified Sprint 6.2 decision
+
+1. **Outcome** — An operator reading a verdict can see the **assessment's own scope**:
+   which artifact types were assessed, which were present and not assessed, and which were
+   deliberately excluded — as a statement, never as a score.
+2. **Current evidence** — **Open, blocked, and last on purpose.** A verdict today is
+   silent about its own scope, so an estate full of unassessed item types reads exactly
+   like an estate the catalogue fully covers. This project's discipline is that missing
+   evidence is `NOT_EVALUATED` and never a pass; the analogue at catalogue level is that
+   an unassessed artifact type must be **visibly absent**, not silently absent.
+3. **Smallest slice** — Not code. `@scorer` records the requirement and its constraint
+   against the Sprint 6.2 decision: a scope statement is a property of the **run**, not an
+   outcome of a **rule**, and it must leave `score`, `raw_score`, `status`, `eligible`,
+   `confidence` and `coverage` identical — the same zero-impact constraint as Phase 6
+   criterion 3. The options, with their costs, stated here and **not decided**:
+   - **(a) Gate script only** (`scripts/`, CI). Cheapest; no engine change; no interaction
+     with 6.2; catches staleness at commit time, which is when the catalogue actually goes
+     stale. Cost: **invisible to the operator** — it protects the repository and not the
+     reader.
+   - **(b) Run output only** (console, structured output, Gold mart). Reaches the reader.
+     Cost: model and reporting changes owned by `@scorer` and `@lakehouse`, a mart column,
+     and it lands squarely in the verdict shape that Sprint 6.2 owns and has not decided.
+     It also arrives late: a catalogue goes stale in git months before anyone runs.
+   - **(c) Both, with the gate as the source of truth.** The pattern already proven by the
+     Skill drift check — one constant, an executable check holding every restatement to
+     it. Cost: two surfaces and one consistency test to keep them from contradicting.
+   **Recommended sequencing, which is a recommendation and not a decision:** take (a)
+   inside 7.2, hold (b) until 6.2 is ratified, and adopt (c) only after the ledger has
+   survived one full review cycle without being muted. The reason for the hold is
+   structural — a scope statement in a verdict *is* a verdict-shape change, and Phase 6
+   already forbids making one before 6.2 decides.
+4. **Dependencies** — `@scorer` owns the verdict shape and where this requirement lands;
+   `@lakehouse` owns mart and report impact; `@preceptor` should rule on whether an
+   unstated scope is a review dimension. Hard prerequisite: a **ratified** Sprint 6.2
+   decision. **Nothing in this sprint may pre-empt, anticipate or modify that decision**,
+   and the non-normative note in `docs/SCORING.md` is not released by anything written
+   here.
+5. **Validation** — Focused check: a fixture containing an unassessed present type
+   produces a scope statement while every quality figure on every scorecard is byte-identical
+   to the same fixture without the feature. Release gate: the statement appears in console
+   output, structured output and the mart; it is never counted in coverage and never
+   mapped to a rule outcome.
+6. **Risks and non-goals** — The strongest risk is vocabulary collapse in two directions:
+   a reader who sees "not assessed" and reads "failed", and an implementer who reaches for
+   `NOT_EVALUATED` because it is the nearest existing fate. It is neither. `NOT_EVALUATED`
+   says a rule's evidence was missing; `NOT_APPLICABLE` says an object was out of scope; a
+   scope statement says **no rule was ever written for this kind of thing**. Non-goals: no
+   new rule outcome, no cap, no coverage effect, no per-surface merge.
+7. **Commit boundary** — After 6.2 only, as a single `@scorer`-led boundary covering
+   model, engine, reporting and marts together — the same rule 6.3 applies to an object
+   type, and for the same reason: a half-registered concept is invisible to exactly the
+   checks that would catch it.
+
+### What This Phase Cannot Detect
+
+Stated here rather than discovered later, because a detector that is vague about its
+reach invites the assumption that silence means currency.
+
+- **A change Microsoft has not documented**, or has not shipped into a surface this
+  project reads. Nothing in 7.1–7.5 has any purchase on it.
+- **A change whose significance is a judgement call.** A capability added *inside* an
+  existing item type moves no item key, no setting name and no object type. Copilot
+  gaining a new answer path over an existing semantic model is invisible to every sprint
+  here — the shape is unchanged and only the meaning moved.
+- **A change in a control plane this project cannot reach.** The *Fabric data available in
+  M365 Copilot* gate is already classified a permanent blind spot administered elsewhere;
+  drift inside it is equally permanent.
+- **Its own blind spot.** A new source of shape added to the code without being registered
+  with the ledger is undetected by construction. 7.2's third negative test narrows this
+  and does not close it.
+- **Whether an assessed thing is assessed *well*.** This phase counts subjects, never
+  quality. L5 behavioural quality remains `NOT_EVALUATED` by design until Sprint 5.4
+  produces a real execution proof, and no scope statement may be read as a quality claim.
+
+**It narrows the hole; it does not close it.** Silence from this detector means one thing
+only: nothing changed in the places we already know how to look, and nobody's review came
+due. It does not mean Fabric stood still.
+
+## Release Gate for Phase 7
+
+The phase closes only when all of the following are executable or evidenced. **All seven
+are open, and no work has started against any of them.**
+
+1. Every element in every declared shape source carries exactly one disposition, and the
+   untriaged set is empty. **Open.**
+2. The reconciliation check runs offline in CI as its own named step, appears in the
+   per-change quality gate, and is negative-tested three ways — a new untriaged element, an
+   expired disposition, and a declared source that has vanished. **Open.**
+3. Every deliberate exclusion carries a reason, an owning agent and a review-by date. No
+   exclusion is permanent by construction, and an undated one fails the check rather than
+   being grandfathered. **Open.**
+4. **Historical replay.** Against a fixture of the repository's shape sources as they
+   stood before 2026-09-24, the check fires on the `Ontology` asymmetry — and the same test
+   records that it does **not** fire on the Microsoft 365 surface, naming 7.3's review
+   obligation as the only mechanism that covers that class. A detector claiming both
+   misses would be lying about its own reach, and the test exists to stop that claim being
+   made later. **Open.**
+5. **Noise budget honoured.** Over one full review cycle, every fire traces one-to-one to
+   a recorded triage decision or a completed review. A fire cleared by re-dating without a
+   recorded decision counts as a gate failure, not a pass. If the check fires on changes
+   unrelated to product shape, the check is wrong and is fixed or withdrawn — contributors
+   are not asked to absorb it. **Open.**
+6. No scope statement moves `score`, `raw_score`, `status`, `eligible`, `confidence` or
+   `coverage`, and none is mapped to `NOT_EVALUATED`, `NOT_APPLICABLE` or any other rule
+   outcome. **Open.**
+7. No part of the detector reads the network, requires a tenant, or depends on a
+   non-standard-library package. The live half (7.4) is a **separate** criterion and stays
+   open until an approved read-only identity produces its record; the offline half may not
+   be credited for it. **Open.**
+
+Closing the phase also requires publishing **What This Phase Cannot Detect** where
+operators read it — `@readme`, in `docs/KNOWN_LIMITATIONS.md` — because a detector shipped
+without its limits is precisely the decoration this phase exists to avoid.
+
 ## Sequencing and Release Policy
 
 `5.0 evidence-sink hygiene ✅ → 5.0.1 standalone operability ✅ → (2026-09-24 exploratory
@@ -1402,6 +1772,11 @@ read — knowledge only, clears no gate) → 5.1 API proof (next, open)
 record ✅ + endorsement family ✅ → 6.2 per-surface verdict **decision** (note written,
 undecided) → 6.1 type-reachability family (blocked until 6.2 decides) → 6.3 ontology
 object type (preview)`
+
+`(2026-09-24 product-fit review — a human found both gaps and the repository found
+neither) → 7.1 scope ledger → 7.2 offline reconciliation gate → 7.3 dated review
+obligation → 7.4 tenant-observed unknown item types (blocked on 5.1) → 7.5 scope
+statement in the verdict (blocked on a ratified 6.2)`
 
 The 6.1 tenant-setting family is unsequenced against 6.2: it is blocked on collection,
 not on the verdict shape, and may land whenever its inputs become readable — or be
@@ -1462,6 +1837,36 @@ written deliberately as a named blind spot.
   today's engine states "in scope, known unreachable" without moving a score or a
   coverage figure. The endorsement family proved the split is real by shipping ahead of
   6.2 without touching it.
+- **Phase 7 does not jump the queue either, and changes no blocker.** Sprint 5.1 still
+  needs an authorised test tenant and an approved read-only service principal, 5.4 still
+  needs its API proof, 5.5 still depends on both, and the Sprint 6.2 decision is still
+  unratified — nothing in Phase 7 decides it, and 6.1's type-reachability family still
+  waits behind it. Sprints 7.1–7.3 carry **no external blocker** because they read this
+  repository's own constants and its own review dates, which is the same scheduling
+  convenience Sprint 5.0.1 had and carries the same warning: **it closes no Phase 5 or
+  Phase 6 criterion.** 7.4 inherits 5.1's identity prerequisite in full and 7.5 waits for
+  a ratified 6.2.
+- Within Phase 7 the order is forced by the noise argument, not by preference: the
+  **ledger precedes the check**. A reconciliation shipped against an empty baseline fires
+  on eleven of the thirteen enumerated item containers on its first run, of which about
+  two are genuine gaps, and a gate that is red on arrival teaches contributors to clear it
+  without reading. 7.3 follows 7.2 because the expiry mechanism it needs is built there.
+- **Why this was chosen ahead of the ontology layer, and what deferring it costs.**
+  Sprint 6.3 is the ontological layer — entity types, bindings, relationships — and it is
+  the layer this product is named after. Phase 7 was scheduled first for two reasons:
+  it is **unblocked**, needing no tenant, no principal and no undecided verdict shape; and
+  it protects every later phase, 6.3 included, from going quietly out of scope. The cost is
+  real and is not cancelled by either reason. Deferring 6.3 means the named artifact keeps
+  **zero rules** for at least another cycle; an organisation that has generated an ontology
+  from a semantic model gets no readiness statement about the manual follow-up Microsoft
+  documents — time-series bindings, multi-key entity-type keys, relationship bindings; and
+  the project's name keeps promising more than its catalogue delivers, a gap one outside
+  question already exposed once. Two things make the trade defensible without making it
+  free: the ontology workload is **preview** and will change shape under any rule written
+  against it today, so deferral also avoids re-writing; and Phase 7 converts the omission
+  from a silent one into a recorded, dated, reviewable one — the difference between a gap
+  and a blind spot. **No part of Phase 7 assesses a single ontology, and none of it may be
+  cited as progress on 6.3.**
 
 ## Risks Across the Phase
 
@@ -1489,6 +1894,9 @@ written deliberately as a named blind spot.
 | A documented product default is stored as an observed tenant value | *Fabric data available in M365 Copilot* is documented as enabled by default, and it lives in the Microsoft 365 admin center, not the Fabric admin portal. Assuming the default because the setting is hard to read would convert a collection gap into a verdict. An unread setting is `NOT_EVALUATED`; a vendor default is never evidence about a tenant. |
 | A rule is written against a preview surface as though it were stable | The Fabric IQ workload and the ontology item are preview at 2026-09-24. Sprint 6.3 schedules the read-confirmation before the object type, requires `NOT_EVALUATED` without readable evidence, and requires a public source with an exact verification date on every encoded preview fact so a product change is detectable rather than silently wrong. |
 | Product documentation is mistaken for tenant observation | The 2026-09-24 product-fit review read public Microsoft Learn pages and called no API for readiness evidence. Documentation states what a product is designed to do, never what a tenant is configured to do. The review is recorded as a documentation review, clears no Phase 5 gate, and every fact it carries is marked for re-confirmation at implementation time. |
+| The catalogue stays 100% accurate and stops describing the product | Phase 7. Every encoded fact can remain true while the subject moves: on 2026-09-24 an unassessed **GA** consumption surface and an unassessed **preview** item the collector already enumerated were both found by a user's question, with the full test suite and all four gates green. A rule count is never evidence of relevance. Record what is deliberately not assessed, date every exclusion, and fail the build when an element is untriaged or a review comes due. |
+| A drift gate fires so often that contributors mute it | The failure `@scorer`'s ruleset fingerprint was designed around: a guard that fires on typo fixes teaches reflexive regeneration, and a guard people regenerate without reading is decoration. Phase 7's detector fires only on transitions — an untriaged element or an expired disposition — never on steady state; it ships **no** bulk re-dating command, so every fire costs a deliberate per-row edit; and its noise budget is a release criterion, where a fire cleared without a recorded decision counts as a gate failure. If it fires on changes unrelated to product shape, the check is fixed or withdrawn rather than tolerated. |
+| A detector is trusted for reach it does not have | Phase 7 sees only shape the repository already names, plus the staleness of human attention. It cannot see an undocumented change, a capability added inside an existing item type, or a control plane it cannot reach — and an offline reconciliation would have caught the ontology gap while missing Cowork entirely. Publish the limits alongside the detector, and read its silence as "nothing moved where we know how to look", never as "nothing moved". |
 
 ## Explicitly Out of Scope
 
@@ -1520,6 +1928,13 @@ written deliberately as a named blind spot.
   surface's result stand in for another's.
 - Treating a documented product default, a Microsoft Learn statement, or any other
   vendor documentation as an observation of a tenant's configuration.
+- Fetching vendor release notes, or making any network call, from inside a repository
+  gate. A check that depends on a remote page is non-deterministic and unrunnable
+  offline, and this project's gates are neither.
+- Treating an unassessed artifact type as a failure, a low score, or a coverage loss; or
+  reading a recorded exclusion as a statement that the excluded thing does not matter.
+- Claiming that a scope-drift check detects Fabric product change in general. It detects
+  shape the repository already names, and reviews that have come due.
 
 ## Per-Change Quality Gate
 
