@@ -190,22 +190,32 @@ thing it was written to catch walks past it, and no agent is accountable for not
 - [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) — a signed disposition for every
   element of Fabric's shape this repository already names in its own code. One source,
   `WORKSPACE_ITEM_KEYS`, and its thirteen item containers: **3 assessed** (reports,
-  datasets, Data Agents), **2 open** (dashboards, Ontology — each naming the sprint),
-  **4 deliberately excluded** (dataflows, datamarts, notebooks, SQL analytics endpoints —
-  each with a reason, an owning agent and a `2026-12-24` review-by date) and **4
-  untriaged** (Lakehouse, KQLDatabase, Eventhouse, GraphModel — each naming the agent who
-  owes the answer, all four routed to `@dataagent`). Before it, the repository's scope
+  datasets, Data Agents), **4 open** (dashboards, Ontology, Lakehouse, KQLDatabase — each
+  naming the sprint or the path that would close it), **5 deliberately excluded**
+  (dataflows, datamarts, notebooks, SQL analytics endpoints, Eventhouse — each with a
+  reason, an owning agent and a `2026-12-24` review-by date) and **1 untriaged**
+  (GraphModel, naming `@collector` as owing the identification question and `@dataagent`
+  the ruling that follows it). Rows 10–13 were triaged by `@dataagent` on 2026-09-25 on a
+  stated test — the assessed subject is the artefact an agent's source binding names,
+  where a readiness fact lives on that artefact and cannot be observed from the agent —
+  which put Lakehouse and KQLDatabase in scope as subjects that no object type can reach
+  yet, excluded Eventhouse as a duplicate subject at the container grain, and left
+  GraphModel untriaged because the Scanner key's referent is unverified. **Phase 7
+  release-gate criterion 1 therefore stays open**, which is the correct outcome of that
+  triage rather than a failure of it. Before this document, the repository's scope
   read identically whether an omission had been considered and rejected or never noticed.
   Every product fact it leans on carries its source URL and the date it was verified. The
   ledger adds no rule, moves no score and is mapped to no rule outcome.
   [`scripts/check_scope_ledger.py`](./scripts/check_scope_ledger.py) then made it
   executable: CI fails when the collector names an item type the ledger does not dispose,
   when a row disposes a key the code has dropped, or when a dated exclusion outlives its
-  review. **Consequence, stated rather than discovered:** the four exclusions come due on
+  review. **Consequence, stated rather than discovered:** the five exclusions come due on
   2026-12-25, so CI goes red that day with nobody having changed a line, and there is
-  deliberately no bulk re-dating command — clearing it costs four per-row edits with
-  recorded reasons. The ledger is a baseline, not a detector: no row in it passes a
-  Phase 7 release-gate criterion, and the document routes the reader to
+  deliberately no bulk re-dating command — clearing it costs five per-row edits with
+  recorded reasons, four owed by `@readme` and row 12 owed by `@dataagent`. Reproduced
+  2026-09-25 by running the audit at both dates: five expiries as of 2026-12-25 (rows 6–9
+  and 12), none as of 2026-12-24. The ledger is a baseline, not a detector: no row in it
+  passes a Phase 7 release-gate criterion, and the document routes the reader to
   [`docs/ROADMAP.md`](./docs/ROADMAP.md) for which criteria are met rather than restating
   a status it does not own.
 

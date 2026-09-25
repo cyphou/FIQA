@@ -28,11 +28,11 @@ which collector happened to be written first.
   offline in CI as its own named step, appears in the per-change quality gate, and is
   negative-tested three ways — is recorded **met at this revision (2026-09-25)** in
   [`ROADMAP.md`](ROADMAP.md), and it was met by `@tester`'s script and `@orchestrator`'s
-  gate-list entry, not by anything written here. The other six criteria are open;
-  criterion 1 in particular requires the untriaged set to be empty, and four rows below
-  carry it. **Read the roadmap's *Release Gate for Phase 7* for the current status of
+  gate-list entry, not by anything written here. The other six criteria are open.
+  **Read the roadmap's *Release Gate for Phase 7* for the current status of
   each** — crediting or withholding a criterion is the roadmap owner's act, and this
-  bullet goes stale the moment one moves.
+  bullet goes stale the moment one moves. Criterion 1 in particular requires the untriaged
+  set to be empty, and **one row below carries it** (row 13, `GraphModel`, blocked on Q3).
 - **It is not a scoring input.** No row adds a rule, an `ObjectType`, a weight or a
   threshold. No row moves a score, a coverage figure or a confidence figure, and **no row
   is mapped to `NOT_EVALUATED`** — that outcome reports missing *evidence*, never an
@@ -60,7 +60,7 @@ failure — it is simply unwatched.
 | **assessed** | The engine reaches this item type and judges it | The rule IDs |
 | **deliberately excluded** | Considered, and decided against | A reason, an owning agent, a review-by date |
 | **open** | Intended, not done | The sprint that would close it |
-| **untriaged** | Nobody has answered | The agent who must answer. **This disposition must be empty at the Phase 7 release gate. It is not empty today — four rows carry it.** |
+| **untriaged** | Nobody has answered | The agent who must answer. **This disposition must be empty at the Phase 7 release gate. It is not empty today — one row carries it** (row 13, `GraphModel`, blocked on Q3). |
 
 **An exclusion reading "out of scope" with no reason is worse than silence, because it
 looks decided.** A reasonless exclusion is a review finding, not a pass. Where a
@@ -96,12 +96,12 @@ python assess.py --list-rules          # 67 rules, ruleset 2026.09.2
 | 7 | `datamarts` | **deliberately excluded** | Same reachability basis as `dataflows`: a self-service store whose only documented path into an IQ answer is the semantic model it surfaces | `@readme` | 2026-12-24 |
 | 8 | `Notebook` | **deliberately excluded** | Compute and authoring, not a queryable subject: no documented Fabric IQ surface grounds on a notebook and it appears in no documented data agent source list | `@readme` | 2026-12-24 |
 | 9 | `SQLAnalyticsEndpoint` | **deliberately excluded** | A derived surface, not an authored item — every lakehouse provisions one automatically, so any readiness statement about it is a statement about its parent item (row 10) | `@readme` | 2026-12-24 |
-| 10 | `Lakehouse` | **untriaged** | Documented Fabric data agent data source; nobody has decided whether agent *sources* are assessed subjects | **`@dataagent` must answer** | — |
-| 11 | `KQLDatabase` | **untriaged** | Documented Fabric data agent data source; same unanswered question as row 10 | **`@dataagent` must answer** | — |
-| 12 | `Eventhouse` | **untriaged** | Container of KQL databases; its disposition is the *grain* half of row 11's question and must not be decided separately | **`@dataagent` must answer** | — |
-| 13 | `GraphModel` | **untriaged** | Graph is a documented data agent source **in preview**, and the key's correspondence to that item is unverified against a live scan | **`@dataagent`, with `@collector` on the key mapping** | — |
+| 10 | `Lakehouse` | **open** | Q1 answered 2026-09-25 by `@dataagent`: a documented agent source is an assessed subject in its own right where a readiness fact lives on it and is unobservable from the agent. `AGT-001` and `AGT-005` judge the agent's *declaration* about a lakehouse (supported type, reachability, routing text authored on the agent); the table and column metadata the generated SQL is written against is a fact about the lakehouse and nothing reads it. In scope as a subject, unassessable today: Sprint 5.1 first (no exercised endpoint returns that metadata), then a `@scorer`-owned object type on the Sprint 6.3 pattern | `@dataagent` (ruling), `@scorer` (object type), `@collector` (read record) | n/a — tracked by the sprint |
+| 11 | `KQLDatabase` | **open** | Same ruling as row 10, and Q2 answered with it: the assessed subject is the artefact the agent's source binding names, which the documented list gives as "a KQL database" and not its container (row 12). In scope as a subject, unassessable today for the same two reasons, and closed by the same path — Sprint 5.1, then an object type on the Sprint 6.3 pattern | `@dataagent` (ruling), `@scorer` (object type), `@collector` (read record) | n/a — tracked by the sprint |
+| 12 | `Eventhouse` | **deliberately excluded** | Q2's grain half, decided with row 11 and not separately. An eventhouse "is a container that can hold multiple databases" (verified 2026-09-25) and no documented data agent source list names it, so a readiness statement about an eventhouse is a statement about the KQL databases inside it — row 9's duplicate-subject basis applied to a parent instead of a child. Re-opened if a readiness fact is shown to live on the eventhouse alone and to change an agent's answer | `@dataagent` | 2026-12-24 |
+| 13 | `GraphModel` | **untriaged** | Q1 is answered and does not settle this row. Graph is a documented data agent source **in preview**, and whether this Scanner key denotes the Fabric graph item is still unverified (Q3, `@collector`). Signing a disposition over a name whose referent is unconfirmed is the exact error the row 9 correction recorded, so the honest state is untriaged and Phase 7 criterion 1 stays open | **`@collector` must answer Q3; `@dataagent` then rules in one line** | — |
 
-**Tally: 3 assessed, 2 open, 4 deliberately excluded, 4 untriaged.** Every key resolves to
+**Tally: 3 assessed, 4 open, 5 deliberately excluded, 1 untriaged.** Every key resolves to
 exactly one disposition; none carries two.
 
 ---
@@ -137,17 +137,18 @@ agent kinds, GA/preview status, and every item type this repository does not alr
 name. Those are Sprints 7.3 and 7.4 and **nothing watches them today**. A clean run means
 one constant is fully disposed. It does not mean this tool's scope is current.
 
-**It does not fire on `untriaged`.** All four untriaged rows pass, because `untriaged` *is*
-a disposition and naming the agent who owes the answer is a valid landing state — a
-missing row is the failure, an honest empty is not. Emptying that set is Phase 7
+**It does not fire on `untriaged`.** The one remaining untriaged row passes, because
+`untriaged` *is* a disposition and naming the agent who owes the answer is a valid landing
+state — a missing row is the failure, an honest empty is not. Emptying that set is Phase 7
 criterion 1: an owner's judgement, which no script can make.
 
-**The cost, stated before anyone meets it: this gate goes red on 2026-12-25.** The four
+**The cost, stated before anyone meets it: this gate goes red on 2026-12-25.** The five
 exclusions dated `2026-12-24` come due that day and CI fails with nobody having changed a
-line — confirmed by running the audit as of 2026-12-25 (four expiries, rows 6–9) and as of
-2026-12-24 (silent). There is deliberately no bulk re-dating command, so clearing it costs
-four per-row edits, each with a re-verified reason and a recorded date. That is the review
-obligation working as designed, not a flake.
+line — confirmed by running the audit as of 2026-12-25 (five expiries, rows 6–9 and 12) and
+as of 2026-12-24 (silent), re-run after row 12 was excluded on 2026-09-25. There is
+deliberately no bulk re-dating command, so clearing it costs five per-row edits, each with a
+re-verified reason and a recorded date — four owed by `@readme` and row 12 owed by
+`@dataagent`. That is the review obligation working as designed, not a flake.
 
 **Two scripts parse this file**, so its shape is load-bearing: the gate asserts the number
 of rows it reads against the `13 rows` in the heading above, and
@@ -195,11 +196,13 @@ belongs to `@semantic` — it is routed below rather than settled here.
 nothing extra to set up" (verified 2026-09-25). Nobody authors one, nobody configures one
 independently of its parent, and its tables are a T-SQL projection of the parent's Delta
 tables. A ledger row that assessed it separately would count the same data twice. This
-exclusion deliberately does **not** pre-empt row 10: if `@dataagent` rules lakehouses in
-scope, the subject is still the lakehouse, and this row is re-opened only if a readiness
-fact turns out to live on the endpoint and nowhere else.
+exclusion deliberately did **not** pre-empt row 10, and that conditional has since fired in
+the direction it anticipated: on 2026-09-25 `@dataagent` ruled lakehouses in scope as
+subjects (row 10, now `open`), and the subject is still the lakehouse — this row did not
+move. It is re-opened only if a readiness fact turns out to live on the endpoint and
+nowhere else.
 
-### 10–13 — the asymmetry this ledger will not paper over
+### 10–13 — the asymmetry, and the rule that resolves it
 
 The repository assesses the **agent** (15 rules) and **none of its documented sources**.
 The documented source list is "a warehouse, a lakehouse, a Power BI semantic model, a KQL
@@ -207,11 +210,64 @@ database, a mirrored database, or an ontology" (verified 2026-09-25), plus graph
 and Microsoft Graph. Of those, the semantic model *is* assessed — because it is also a
 Power BI object with its own rules, not because anyone decided agent sources were in scope.
 
-That decision has never been made. It is `@dataagent`'s to make, it is not a documentation
-judgement, and manufacturing a one-sentence reason here would be exactly the failure this
-document is supposed to prevent. Four rows therefore stay `untriaged`, which is the state
-Phase 7 release-gate criterion 1 forbids — correctly, and it is why that criterion is open
-and the phase cannot close at this revision.
+**Q1, answered 2026-09-25 by `@dataagent`.** A data agent's data sources *are* assessed
+subjects in their own right — but only on a stated test, because "the agent reads it" would
+swallow the whole estate. The test is: **the assessed subject is the artefact the agent's
+source binding names, and it is a subject where a readiness fact lives on that artefact and
+cannot be observed from the agent.** Three existing rules already read sources and none of
+them contradicts this, because two of them read the *agent*:
+
+- `AGT-001` judges supported type and reachability — attributes of the agent's binding.
+- `AGT-005` judges the routing description, which is **authored on the agent**, not on the
+  lakehouse. Both are agent attributes wearing a source's name.
+- `AGT-003` is the exception, and it is the precedent. It defers to the source's **own
+  scorecard** because the readiness fact — the metadata and Prep-for-AI configuration "the
+  agent's DAX generator reads", in the rule's own remediation text — lives on the model and
+  is invisible from the agent. A lakehouse and a KQL database carry the exact analogue: the
+  table and column names and descriptions the generated SQL or KQL is written against.
+
+So rows 10 and 11 are **in scope as subjects**, and the only reason they are not assessed is
+that the subject does not exist yet. That is `open`, not `assessed` and not `excluded`:
+
+- Not `assessed` — there is no `ObjectType`, no rule, and no read. `API_REALITY_MATRIX.md`
+  records that not one tenant-admin endpoint has returned `200` here, and that even a
+  semantic model's `tables` and `columns` are `absent` on both exercised surfaces. A rule
+  family born today would be `NOT_EVALUATED` on every run, which is a scorecard-shaped hole
+  — the same trap Sprint 6.3 names for the ontology object type.
+- Not `excluded` — an exclusion here would sign the claim that a lakehouse's own metadata
+  cannot affect an agent's answer, which contradicts `AGT-003`'s remediation text and the
+  product behaviour it describes. That is the reasonless exclusion this document exists to
+  prevent, arriving with a reason that happens to be false.
+
+**Q2, answered with row 11: the grain is the KQL database, not the eventhouse.** The
+documented source is "a KQL database"; an eventhouse "is a container that can hold multiple
+databases" (verified 2026-09-25) and appears in no documented source list. Two databases in
+one eventhouse can differ in exactly the metadata quality that decides an answer, so a
+container-level readiness statement is either a restatement of its children or a statement
+about capacity and caching that belongs to the workspace and capacity rules. Row 12 is
+therefore **excluded as a duplicate subject** — row 9's basis applied to a *parent* rather
+than a *child*, and both fall out of the same test: the subject is the artefact the binding
+names. Its re-open condition is written into the row and is real, not decorative: a
+readiness fact that lives on the eventhouse alone and changes an agent's answer.
+
+**Row 13 stays `untriaged`, deliberately.** Q1 does not settle it, because the obstacle is
+not the judgement — it is that nobody has confirmed the key denotes the Fabric graph item at
+all, and graph is preview. Applying the Q1 test to `GraphModel` today would sign a
+disposition over a name whose referent is unverified, which is precisely the mistake the
+correction below records. Q3 is routed to `@collector` and is now the **only** thing holding
+this row. **Phase 7 release-gate criterion 1 therefore stays open**, which is the correct
+outcome of this triage rather than a failure of it; crediting or withholding that criterion
+is the roadmap owner's act in any case.
+
+**What this ruling does not do.** It adds no rule, no `ObjectType`, no collector read and no
+scoring change, and it moves no score. `AGT-003` behaves exactly as before — and its pattern
+remains answerable for **one source type out of six**, which is now a recorded consequence
+rather than an unexamined one: `fabric_iq/scoring.py` builds `source_scores` only for
+sources whose `type` is `semantic_model`, so "every source is itself ready" is literally
+unasked for a lakehouse. Whether that pattern generalises once a source object type exists,
+or whether the agent should instead carry a per-source-type readiness rule, is a rule-design
+question (Q5 below), and which sprint carries the object type and its collection
+prerequisite is the roadmap owner's (Q6). Both are routed, neither is settled here.
 
 **A correction, recorded because it was nearly written as fact.** A working assumption
 held that `SQLAnalyticsEndpoint` was itself a documented data agent data source. It is
@@ -221,14 +277,16 @@ the auto-provisioning fact instead.
 
 ---
 
-## Questions routed, not decided
+## Questions routed, and the two now answered
 
-| # | Question | Routed to | Rows it settles |
-|---|---|---|---|
-| Q1 | Are Fabric data agent **data sources** assessed subjects in their own right, or is the agent the only assessed subject and its sources merely inputs? | `@dataagent` | 10, 11, 12, 13 |
-| Q2 | If sources are in scope, at what **grain** — the eventhouse, or the KQL database inside it? | `@dataagent` | 11, 12 |
-| Q3 | Does the Scanner key `GraphModel` correspond to the Fabric **graph** item, and is any of its metadata readable by a read-only caller? | `@collector` | 13 |
-| Q4 | Should an upstream producer's refresh state become an input to a **semantic-model** rule, given that `SEM-016` currently reads freshness from the model alone? | `@semantic` | 6, 7 (does not change their disposition; may add a rule elsewhere) |
+| # | Question | Routed to | Rows it settles | Status |
+|---|---|---|---|---|
+| Q1 | Are Fabric data agent **data sources** assessed subjects in their own right, or is the agent the only assessed subject and its sources merely inputs? | `@dataagent` | 10, 11, 12 (**not** 13) | **Answered 2026-09-25 by `@dataagent`.** They are subjects — on a stated test: the assessed subject is the artefact the agent's source binding names, where a readiness fact lives on that artefact and cannot be observed from the agent. Rows 10 and 11 become `open`, row 12 `deliberately excluded`. It does not settle row 13, which turns on Q3 |
+| Q2 | If sources are in scope, at what **grain** — the eventhouse, or the KQL database inside it? | `@dataagent` | 11, 12 | **Answered 2026-09-25 with Q1, not separately.** The KQL database: it is what the documented source list names and what the binding attaches to. The eventhouse is the container, excluded as a duplicate subject on row 9's basis |
+| Q3 | Does the Scanner key `GraphModel` correspond to the Fabric **graph** item, and is any of its metadata readable by a read-only caller? | `@collector` | 13 | **Open**, and now the only thing holding row 13 — the judgement it needed is made, the identification is not |
+| Q4 | Should an upstream producer's refresh state become an input to a **semantic-model** rule, given that `SEM-016` currently reads freshness from the model alone? | `@semantic` | 6, 7 (does not change their disposition; may add a rule elsewhere) | **Open** |
+| Q5 | Once a source object type exists, does `AGT-003`'s defer-to-the-source's-own-scorecard pattern generalise to a lakehouse and a KQL database, or should the agent carry a per-source-type readiness rule instead? | `@dataagent` (rule design), with `@scorer` on the object type | none — raised by the Q1 ruling, changes no disposition | **Open.** Today `fabric_iq/scoring.py` populates `source_scores` only for `semantic_model` sources, so `AGT-003` is answerable for one source type of six |
+| Q6 | Which sprint owns the source-as-subject object type and its collection prerequisite? No sprint currently carries rows 10 and 11; the closing path named there (Sprint 5.1, then the Sprint 6.3 pattern) is a prerequisite and a precedent, not an owner. | `@orchestrator` (roadmap owner) | 10, 11 — their **closing sprint**, not their disposition | **Open.** No roadmap change is made here; naming a sprint that does not exist would be the scheduling equivalent of a reasonless exclusion |
 
 No question above is routed to `@tenant`: `WORKSPACE_ITEM_KEYS` contains no tenant-level
 element. `TENANT_SETTING_MAP` is where `@tenant`'s dispositions will be owed, and that
@@ -286,8 +344,10 @@ depends on `@collector` adding the key first.
 
 ## Maintaining this document
 
-- **Review cadence: 90 days**, matching the cadence proposed in Sprint 7.3. Every
-  `deliberately excluded` row above carries **2026-12-24**.
+- **Review cadence: 90 days**, matching the cadence proposed in Sprint 7.3. All **five**
+  `deliberately excluded` rows above carry **2026-12-24** — rows 6–9 owed by `@readme` and
+  row 12 owed by `@dataagent`, who excluded it. Re-verified with the audit on 2026-09-25:
+  five expiries as of 2026-12-25, none as of 2026-12-24.
 - **There is no bulk re-dating command, and there must not be one.** Clearing a review
   costs one deliberate per-row edit with a recorded reason. That cost is the point: a
   guard people regenerate without reading is decoration. The absence is now asserted by
@@ -297,7 +357,9 @@ depends on `@collector` adding the key first.
   the sources consulted, otherwise the next reviewer cannot tell a checked row from an
   unchecked one.
 - **Changing a disposition is an owner's act.** `@readme` owns this document's accuracy and
-  its dated sourcing; it does not own the judgements in rows 10–13 and will not write them.
+  its dated sourcing; it does not own the judgements in rows 10–13 and did not write them.
+  Those rows were ruled by `@dataagent` on 2026-09-25 (Q1 and Q2), row 13 excepted — it
+  waits on `@collector`'s Q3 — and row 12's review-by date is `@dataagent`'s to clear.
 
 **Ownership.** This document is a collection-capability claim and is therefore a
 `REQUIRED_DOCS` entry in `scripts/check_agent_ownership.py`, accountable to `@readme`.
@@ -306,4 +368,9 @@ owns: the accuracy of the rows is `@readme`'s, the checking of them is not.
 
 | Last full review | Reviewer | Source covered |
 |---|---|---|
-| 2026-09-25 | `@readme` | `WORKSPACE_ITEM_KEYS` (13 of 13 rows) |
+| 2026-09-25 | `@readme` | `WORKSPACE_ITEM_KEYS` — rows 1–9 (9 of 13), plus this document's structure, sources and review dates |
+| 2026-09-25 | `@dataagent` | `WORKSPACE_ITEM_KEYS` — rows 10–13 (4 of 13): the Q1/Q2 ruling, row 12's exclusion reason and date, and row 13 left `untriaged` pending Q3 |
+
+**13 of 13 rows reviewed on 2026-09-25, by two reviewers.** The split is recorded rather
+than aggregated: rows 10–13 are `@dataagent`'s judgement, and a review record that
+attributed them to `@readme` would be the same class of defect as a stale count.
