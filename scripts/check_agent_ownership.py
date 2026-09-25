@@ -46,6 +46,15 @@ REQUIRED_DOCS: dict[str, str] = {
     # and a stale row here reads as evidence that was never collectable. Only the
     # agent that owns `fabric_iq/collectors/` can answer for it.
     "docs/API_REALITY_MATRIX.md": "collector",
+    # States, per Fabric item type the collector enumerates, whether this repository
+    # assesses it -- and when it does not, whether that was decided or merely never
+    # noticed. It is a standing claim about collection capability read from the
+    # opposite side to the matrix above: not "what can be acquired" but "what, once
+    # acquired, is judged". It goes stale the moment `WORKSPACE_ITEM_KEYS` changes,
+    # and a stale row reads as a decision that was never made -- which is precisely
+    # the failure the ledger was written to end. Only a named owner can answer for
+    # that, so the document may never sit unclaimed.
+    "docs/SCOPE_LEDGER.md": "readme",
     # Names which identities are read, where they land, and how long they are kept.
     "docs/IDENTITY_AND_RETENTION.md": "readme",
     # Tells an operator how to act on a verdict, and it is the path the console and

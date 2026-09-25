@@ -23,6 +23,15 @@ in writing must be reproducible by someone who runs the commands.
 - `.github/skills/fabric-iq-readiness/SKILL.md` — the agent-facing Skill. It is what a
   model treats as authoritative at prompt time, and it restates engine-owned thresholds
   in prose, so it is gated like any other published claim.
+- `docs/SCOPE_LEDGER.md` — the signed disposition for every element of Fabric's shape the
+  repository already names in its own code: **assessed** (with rule IDs), **deliberately
+  excluded** (reason, owning agent, review-by date), **open** (naming the sprint), or
+  **untriaged** (naming the agent who owes the answer). It is a collection-capability
+  claim and a dated-sourcing document, which is why it sits with the §8 discipline rather
+  than with a rule owner. This agent owns the document's accuracy, its sources and its
+  review dates; it does **not** own the judgements inside rows whose subject belongs to
+  another agent, and it routes those by name rather than writing a reason on their
+  behalf. A ledger is a baseline, not a detector — it makes no gate pass.
 - `docs/IDENTITY_AND_RETENTION.md` — identity, scopes and retention: which identity runs
   the collector, what it may touch, where the evidence lands and how long it is kept.
   **@security** audits this document but owns no file by design, so the accountable
