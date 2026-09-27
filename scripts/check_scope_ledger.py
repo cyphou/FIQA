@@ -7,7 +7,7 @@ was a snapshot: `WORKSPACE_ITEM_KEYS` could gain a fourteenth key and nothing
 would notice, which is the exact failure mode the ledger was written to end --
 scope that reads identically whether an omission was decided or never seen.
 
-Six questions, answered against the real constants and the real document:
+Seven questions, answered against the real constants and the real document:
 
 1. **Did the table actually parse?**
    Asked first, and asked loudly. If the row regex silently matches nothing,
@@ -56,6 +56,18 @@ Six questions, answered against the real constants and the real document:
    it. Note the symmetry: check 2 already fails when a *declared source has no
    section*, so with this the source-to-section mapping is a bijection in both
    directions.
+
+7. **Has a dated consumption-surface fact outlived its review?**
+   Added in Sprint 8.1. ``fabric_iq.surfaces.CONSUMPTION_SURFACES`` records dated,
+   sourced facts about where IQ items can be consumed (status, licences, tenant
+   settings), and each surface carries a ``review_by`` date. Those facts are
+   vendor statements that go stale on the vendor's schedule, not ours, so a
+   ``review_by`` earlier than today fails and names the surface key. When clean,
+   the report states the nearest review date, so the next obligation is visible
+   before it fires. The registry is imported at call time and, like every source
+   here, has **no fallback copy**: a registry that disappears or empties is a
+   failure, never "nothing to review". This check is dates only -- surfaces are
+   not ledger elements and are never reconciled against a ledger section.
 
 **The review calendar (Sprint 7.3).** ``docs/SCOPE_LEDGER.md`` also carries a
 ``## The review calendar -- ..., N rows`` section, whose rows watch classes of
@@ -156,6 +168,30 @@ DECLARED_SOURCES: tuple[Source, ...] = (
         maintainer="@collector",
     ),
 )
+
+class DatedRegistry(NamedTuple):
+    """A constant whose elements each carry a ``review_by`` date (Sprint 8.1).
+
+    Not a ledger source: its elements are never reconciled against a ledger
+    section, only held to their dates. ``maintainer`` owns the constant and is
+    named both when an element expires and when the registry stops loading.
+    """
+
+    attribute: str
+    module: str
+    maintainer: str
+
+
+#: Every dated registry this gate holds to its review dates. Declared, not
+#: discovered, so a registry that vanishes is a failure rather than a silence.
+DATED_REGISTRIES: tuple[DatedRegistry, ...] = (
+    DatedRegistry(
+        attribute="CONSUMPTION_SURFACES",
+        module="fabric_iq.surfaces",
+        maintainer="@scorer",
+    ),
+)
+
 
 #: `| 6 | `dataflows` | **deliberately excluded** | reason | `@readme` | 2026-12-24 |`
 ROW = re.compile(
@@ -551,7 +587,83 @@ def check_reviews(sections: list[Section], as_of: datetime.date) -> list[str]:
     return problems
 
 
-CHECKS = ("parse", "sources", "undeclared", "undisposed", "stale", "expired")
+class SurfaceReview(NamedTuple):
+    """The nearest ``review_by`` found in a dated registry, for the clean report."""
+
+    attribute: str
+    count: int
+    nearest: datetime.date
+    key: str
+
+
+def check_surface_reviews(
+    as_of: datetime.date,
+    registries: tuple[DatedRegistry, ...] = DATED_REGISTRIES,
+) -> tuple[list[str], list[SurfaceReview]]:
+    """Dated registry elements whose ``review_by`` is earlier than ``as_of``.
+
+    Returns ``(problems, reviewed)``. ``reviewed`` carries, per registry that
+    loaded, the element count and its nearest review date, so a clean report can
+    say *when* the next obligation falls due rather than merely that none has.
+    Due *on* ``as_of`` is not yet expired, matching :func:`check_reviews`.
+    """
+    problems: list[str] = []
+    reviewed: list[SurfaceReview] = []
+    if not registries:
+        problems.append(
+            "DATED_REGISTRIES is empty -- no consumption-surface review date is held to "
+            f"anything. {DECLARING_AGENT} must restore the declaration."
+        )
+    for registry in registries:
+        where = f"{registry.module}.{registry.attribute}"
+        try:
+            module = importlib.import_module(registry.module)
+        except Exception as exc:
+            problems.append(
+                f"dated registry `{where}` is unreadable: cannot import {registry.module} "
+                f"({exc.__class__.__name__}: {exc}). A registry that disappears is not "
+                f'"nothing to review" -- {registry.maintainer} must restore it, or '
+                f"{DECLARING_AGENT} must retire its declaration in DATED_REGISTRIES."
+            )
+            continue
+        elements = tuple(getattr(module, registry.attribute, None) or ())
+        if not elements:
+            problems.append(
+                f"dated registry `{where}` is missing or empty. A registry that disappears is "
+                f'not "nothing to review" -- {registry.maintainer} must restore it, or '
+                f"{DECLARING_AGENT} must retire its declaration in DATED_REGISTRIES."
+            )
+            continue
+        dated: list[tuple[datetime.date, str]] = []
+        for element in elements:
+            key = str(getattr(element, "key", element))
+            raw = getattr(element, "review_by", None)
+            try:
+                review_by = datetime.date.fromisoformat(str(raw))
+            except ValueError:
+                problems.append(
+                    f"`{where}` surface `{key}` carries review_by {raw!r}, which is not a "
+                    f"yyyy-mm-dd date -- {registry.maintainer} must set one. An undated "
+                    "product fact is never re-read."
+                )
+                continue
+            dated.append((review_by, key))
+            if review_by < as_of:
+                problems.append(
+                    f"`{where}` surface `{key}` was due for review on "
+                    f"{review_by.isoformat()} and today is {as_of.isoformat()} -- "
+                    f"{registry.maintainer} must re-read the public sources its prerequisites "
+                    "cite, correct any fact that moved (status, licence, tenant setting), "
+                    "update read_on and record a new review_by. There is no bulk re-dating "
+                    "command and there must not be one."
+                )
+        if dated:
+            nearest, key = min(dated)
+            reviewed.append(SurfaceReview(where, len(elements), nearest, key))
+    return problems, reviewed
+
+
+CHECKS = ("parse", "sources", "undeclared", "undisposed", "stale", "expired", "surfaces")
 
 HEADINGS = {
     "parse": "Ledger table did not parse (every check below would be vacuous)",
@@ -560,6 +672,7 @@ HEADINGS = {
     "undisposed": "Elements in code with no disposition in the ledger",
     "stale": "Ledger rows disposing an element the code no longer names",
     "expired": "Dispositions and watched classes past their review-by date",
+    "surfaces": "Consumption surfaces past their review_by date",
 }
 
 
@@ -567,10 +680,15 @@ def audit(
     ledger_path: str = LEDGER_PATH,
     as_of: datetime.date | None = None,
     sources: tuple[Source, ...] = DECLARED_SOURCES,
+    registries: tuple[DatedRegistry, ...] = DATED_REGISTRIES,
 ) -> dict[str, list[str]]:
     """Run every check and return the problems found, keyed by check name."""
     as_of = as_of or datetime.date.today()
     problems: dict[str, list[str]] = {name: [] for name in CHECKS}
+
+    # Surface review dates live in code, not in the ledger, so they are checked
+    # even when the ledger itself cannot be read.
+    problems["surfaces"], _reviewed = check_surface_reviews(as_of, registries)
 
     try:
         text = read_ledger(ledger_path)
@@ -621,7 +739,13 @@ def count_problems(problems: dict[str, list[str]]) -> int:
     return sum(len(found) for found in problems.values())
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, today: datetime.date | None = None) -> int:
+    """CLI entry point.
+
+    ``today`` is injectable for tests only and is deliberately *not* a flag: a
+    command-line option that moves "today" is an option that silences every
+    review obligation this gate enforces.
+    """
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--quiet", action="store_true", help="suppress the report")
     parser.add_argument(
@@ -631,7 +755,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    as_of = datetime.date.today()
+    as_of = today or datetime.date.today()
     problems = audit(args.ledger, as_of)
 
     if not args.quiet:
@@ -666,6 +790,12 @@ def main(argv: list[str] | None = None) -> int:
                     f"Rows parsed:       {len(section.rows)} under `{section.source}` "
                     f"(document states {section.stated_count})"
                 )
+        _surface_problems, reviewed = check_surface_reviews(as_of)
+        for review in reviewed:
+            print(
+                f"Surface reviews:   {review.count} surfaces in {review.attribute} -- nearest "
+                f"review_by {review.nearest.isoformat()} (`{review.key}`)"
+            )
         for name in CHECKS:
             if problems[name]:
                 print(f"\n{HEADINGS[name]}:")
@@ -675,8 +805,17 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "\nClean: every element of every declared source carries exactly one "
                 "disposition, every section names a declared source, every row names a live "
-                "element, and no review -- disposition or watched class -- has expired."
+                "element, and no review -- disposition, watched class or consumption "
+                "surface -- has expired."
             )
+        if not problems["surfaces"]:
+            # Stated whenever the surface check is clean, independently of the
+            # ledger, so the next obligation is visible before it fires.
+            for review in reviewed:
+                print(
+                    f"Next surface review: {review.nearest.isoformat()} "
+                    f"(`{review.key}` in {review.attribute})."
+                )
 
     return 1 if count_problems(problems) else 0
 

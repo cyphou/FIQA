@@ -30,6 +30,13 @@ code moved:
     author's integrity rather than by this gate. That is the vacuous-gate pattern
     living inside the anti-drift gate.
 
+And the Sprint 8.1 addition:
+
+(f) :class:`TestConsumptionSurfaceReviewsExpire` -- every
+    ``fabric_iq.surfaces.CONSUMPTION_SURFACES`` ``review_by`` earlier than today
+    fails and names the surface key; a clean run states the nearest review date.
+    "Today" is injectable in-process (``main(argv, today=...)``) and never a flag.
+
 And the trap (c) exists to protect against, tested directly in
 :class:`TestTheParseCannotBeVacuous`: if the row regex silently matches nothing,
 every element looks disposed and the gate prints success over a document it never
@@ -57,10 +64,12 @@ import unittest
 
 from scripts.check_scope_ledger import (
     CALENDAR_KIND,
+    DATED_REGISTRIES,
     DECLARED_SOURCES,
     LEDGER_KIND,
     LEDGER_PATH,
     REQUIRED_CALENDAR_SECTIONS,
+    DatedRegistry,
     Source,
     audit,
     count_problems,
@@ -104,6 +113,14 @@ def run(argv):
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         code = main(argv)
+    return code, buffer.getvalue()
+
+
+def run_on(argv, today):
+    """Invoke the CLI in-process as if ``today`` were the date."""
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        code = main(argv, today=today)
     return code, buffer.getvalue()
 
 
@@ -737,6 +754,135 @@ class TestASectionMustNameADeclaredSource(unittest.TestCase):
         for section in calendars:
             self.assertNotRegex(section.source, r"^[A-Z_][A-Z0-9_]*$")
         self.assertEqual(audit()["undeclared"], [])
+
+
+class TestConsumptionSurfaceReviewsExpire(unittest.TestCase):
+    """(f) Sprint 8.1: `CONSUMPTION_SURFACES` review_by dates must come due.
+
+    Every surface fact is a vendor statement with a ``review_by`` date. A date in
+    the past must fail and name the surface key; a clean run must say when the
+    next review falls due. Dates are derived from the live registry, never
+    transcribed, so re-dating a surface cannot silently break these proofs.
+    """
+
+    @staticmethod
+    def nearest():
+        from fabric_iq.surfaces import CONSUMPTION_SURFACES
+
+        return min(
+            (datetime.date.fromisoformat(s.review_by), s.key) for s in CONSUMPTION_SURFACES
+        )
+
+    def test_an_expired_surface_fails_and_names_its_key(self):
+        due, key = self.nearest()
+        after = due + datetime.timedelta(days=1)
+        problems = audit(LEDGER_PATH, as_of=after)
+        self.assertEqual(len(problems["surfaces"]), 1, problems["surfaces"])
+        message = problems["surfaces"][0]
+        self.assertIn(f"`{key}`", message)
+        self.assertIn(due.isoformat(), message)
+        self.assertIn(after.isoformat(), message)
+        self.assertIn("@scorer", message)
+        code, output = run_on([], after)
+        self.assertEqual(code, 1)
+        self.assertIn("Consumption surfaces past their review_by date", output)
+        self.assertIn(f"`{key}`", output)
+        self.assertNotIn("Clean:", output)
+
+    def test_an_in_memory_back_dated_surface_fails_and_is_the_only_problem(self):
+        import dataclasses
+
+        from fabric_iq import surfaces
+
+        original = surfaces.CONSUMPTION_SURFACES
+        mutated = tuple(
+            dataclasses.replace(s, review_by="2020-01-01")
+            if s.key == "m365_copilot_cowork"
+            else s
+            for s in original
+        )
+        self.assertNotEqual(mutated, original, "the mutation anchor is gone")
+        with source_attribute(surfaces, "CONSUMPTION_SURFACES", mutated):
+            problems = audit()
+            code, output = run([])
+        self.assertEqual(code, 1)
+        self.assertEqual(len(problems["surfaces"]), 1, problems["surfaces"])
+        self.assertIn("`m365_copilot_cowork`", problems["surfaces"][0])
+        self.assertIn("2020-01-01", problems["surfaces"][0])
+        self.assertEqual(count_problems(problems), 1, problems)
+        self.assertIn("m365_copilot_cowork", output)
+        self.assertEqual(count_problems(audit()), 0, "the real registry must recover")
+
+    def test_a_future_review_passes_and_reports_the_nearest_date(self):
+        from fabric_iq.surfaces import CONSUMPTION_SURFACES
+
+        due, key = self.nearest()
+        # The whole gate is green on the real tree today...
+        code, output = run_on([], datetime.date.today())
+        self.assertEqual(code, 0, output)
+        self.assertIn("Clean:", output)
+        self.assertIn(f"Next surface review: {due.isoformat()} (`{key}`", output)
+        self.assertIn(f"Surface reviews:   {len(CONSUMPTION_SURFACES)} surfaces", output)
+        # ...and the surface check alone stays green up to and including the due
+        # date (same boundary as ledger rows). Ledger rows may fall due earlier,
+        # so only the surface facts are asserted at the boundary.
+        for today in (due - datetime.timedelta(days=1), due):
+            with self.subTest(today=today):
+                self.assertEqual(audit(LEDGER_PATH, as_of=today)["surfaces"], [])
+                _code, output = run_on([], today)
+                self.assertNotIn("Consumption surfaces past their review_by date", output)
+                self.assertIn(f"Next surface review: {due.isoformat()} (`{key}`", output)
+
+    def test_an_undated_surface_fails(self):
+        import dataclasses
+
+        from fabric_iq import surfaces
+
+        mutated = tuple(
+            dataclasses.replace(s, review_by="soon") if s.key == "ontology" else s
+            for s in surfaces.CONSUMPTION_SURFACES
+        )
+        with source_attribute(surfaces, "CONSUMPTION_SURFACES", mutated):
+            problems = audit()
+        self.assertEqual(len(problems["surfaces"]), 1, problems["surfaces"])
+        self.assertIn("`ontology`", problems["surfaces"][0])
+        self.assertIn("not a yyyy-mm-dd date", problems["surfaces"][0])
+
+    def test_a_registry_that_disappears_fails_rather_than_reporting_clean(self):
+        from fabric_iq import surfaces
+
+        for label, kwargs in (("deleted", {"delete": True}), ("emptied", {})):
+            with self.subTest(label):
+                with source_attribute(surfaces, "CONSUMPTION_SURFACES", (), **kwargs):
+                    problems = audit()
+                self.assertEqual(len(problems["surfaces"]), 1, problems["surfaces"])
+                self.assertIn("missing or empty", problems["surfaces"][0])
+                self.assertIn("@scorer", problems["surfaces"][0])
+        gone = DatedRegistry("CONSUMPTION_SURFACES", "fabric_iq.surfaces_renamed", "@scorer")
+        problems = audit(LEDGER_PATH, registries=(gone,))
+        self.assertIn("cannot import", problems["surfaces"][0])
+        self.assertTrue(audit(LEDGER_PATH, registries=())["surfaces"])
+
+    def test_the_registry_is_declared_not_transcribed(self):
+        self.assertEqual(
+            [(r.module, r.attribute) for r in DATED_REGISTRIES],
+            [("fabric_iq.surfaces", "CONSUMPTION_SURFACES")],
+        )
+        with open(SCRIPT, encoding="utf-8") as handle:
+            script = handle.read()
+        # No surface key may appear in the gate: a copy would hide a new surface.
+        from fabric_iq.surfaces import CONSUMPTION_SURFACES
+
+        for surface in CONSUMPTION_SURFACES:
+            self.assertNotIn(f'"{surface.key}"', script)
+
+    def test_today_is_injectable_in_process_but_never_a_flag(self):
+        for flag in ("--today", "--as-of", "--date"):
+            with self.subTest(flag):
+                with self.assertRaises(SystemExit) as raised:
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        main([flag, "2020-01-01"])
+                self.assertEqual(raised.exception.code, 2)
 
 
 class TestTheGateHasNoEscapeHatch(unittest.TestCase):
