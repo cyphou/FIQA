@@ -46,7 +46,14 @@ which collector happened to be written first.
   **Read the roadmap's *Release Gate for Phase 7* for the current status of
   each** — crediting or withholding a criterion is the roadmap owner's act, and this
   bullet goes stale the moment one moves. Criterion 1 in particular requires the untriaged
-  set to be empty, and **one row below carries it** (row 13, `GraphModel`, blocked on Q3).
+  set to be empty, and **since 2026-09-27 no row below carries `untriaged`** — row 13
+  (`GraphModel`) was signed `deliberately excluded` by `@dataagent` once `@collector`
+  answered Q3, and the tally under the table reads **0 untriaged**, counted from the rows
+  rather than asserted here. That is the criterion's *precondition* met, and **nothing
+  more: the criterion is not credited here.** Crediting it is `@orchestrator`'s act in
+  [`ROADMAP.md`](ROADMAP.md), and an empty set today says nothing about whether it stays
+  empty — Sprint 7.4 reconciles this repository against item types it has never named, and
+  every one of those arrives untriaged.
   And the three review-calendar rows are checked for **one thing only**: that a review
   happened by the date the row states. A calendar is not a detector — the absence of a
   review now fails the build, a careless review still passes it, and neither tells anyone
@@ -78,13 +85,13 @@ failure — it is simply unwatched.
 | **assessed** | The engine reaches this item type and judges it | The rule IDs |
 | **deliberately excluded** | Considered, and decided against | A reason, an owning agent, a review-by date |
 | **open** | Intended, not done | The sprint that would close it |
-| **untriaged** | Nobody has answered | The agent who must answer. **This disposition must be empty at the Phase 7 release gate. It is not empty today — one row carries it** (row 13, `GraphModel`, blocked on Q3). |
+| **untriaged** | Nobody has answered | The agent who must answer. **This disposition must be empty at the Phase 7 release gate. It is empty today: 0 of the 13 rows carry it** — counted from the table below, whose tally reads `0 untriaged`, since row 13 (`GraphModel`) was signed `deliberately excluded` on 2026-09-27. Empty is a state, not a credit: criterion 1 is the roadmap owner's to move. |
 
 **An exclusion reading "out of scope" with no reason is worse than silence, because it
 looks decided.** A reasonless exclusion is a review finding, not a pass. Where a
-defensible one-sentence reason could not be written, the row below says `untriaged` and
-names the agent who owes the sentence — an honest empty is the finding, a confident
-placeholder is the failure.
+defensible one-sentence reason cannot be written, the row says `untriaged` and names the
+agent who owes the sentence — an honest empty is the finding, a confident placeholder is
+the failure. No row is in that state today; the discipline is what keeps it that way.
 
 ---
 
@@ -117,9 +124,9 @@ python assess.py --list-rules          # 67 rules, ruleset 2026.09.2
 | 10 | `Lakehouse` | **open** | Q1 answered 2026-09-25 by `@dataagent`: a documented agent source is an assessed subject in its own right where a readiness fact lives on it and is unobservable from the agent. `AGT-001` and `AGT-005` judge the agent's *declaration* about a lakehouse (supported type, reachability, routing text authored on the agent); the table and column metadata the generated SQL is written against is a fact about the lakehouse and nothing reads it. In scope as a subject, unassessable today: Sprint 5.1 first (no exercised endpoint returns that metadata), then a `@scorer`-owned object type on the Sprint 6.3 pattern | `@dataagent` (ruling), `@scorer` (object type), `@collector` (read record) | n/a — tracked by the sprint |
 | 11 | `KQLDatabase` | **open** | Same ruling as row 10, and Q2 answered with it: the assessed subject is the artefact the agent's source binding names, which the documented list gives as "a KQL database" and not its container (row 12). In scope as a subject, unassessable today for the same two reasons, and closed by the same path — Sprint 5.1, then an object type on the Sprint 6.3 pattern | `@dataagent` (ruling), `@scorer` (object type), `@collector` (read record) | n/a — tracked by the sprint |
 | 12 | `Eventhouse` | **deliberately excluded** | Q2's grain half, decided with row 11 and not separately. An eventhouse "is a container that can hold multiple databases" (verified 2026-09-25) and no documented data agent source list names it, so a readiness statement about an eventhouse is a statement about the KQL databases inside it — row 9's duplicate-subject basis applied to a parent instead of a child. Re-opened if a readiness fact is shown to live on the eventhouse alone and to change an agent's answer | `@dataagent` | 2026-12-24 |
-| 13 | `GraphModel` | **untriaged** | Q1 is answered and does not settle this row. Graph is a documented data agent source **in preview**, and whether this Scanner key denotes the Fabric graph item is still unverified (Q3, `@collector`). Signing a disposition over a name whose referent is unconfirmed is the exact error the row 9 correction recorded, so the honest state is untriaged and Phase 7 criterion 1 stays open | **`@collector` must answer Q3; `@dataagent` then rules in one line** | — |
+| 13 | `GraphModel` | **deliberately excluded** | Q3 answered 2026-09-27: the item type is the Fabric graph item, and the Q1 test then fails on **both** limbs. Binding — the data agent pages' source list names **Microsoft Graph**, a Microsoft 365 API that can never be a workspace item, not this item; the Fabric graph item's claim to be an agent source rests on one preview sentence on the graph workload page and appears on neither agent page. Readability — every readiness fact about a graph model (`dataSources[]`, node and edge mappings, `graphType`) sits in the definition, documented only behind `Item.ReadWrite.All` with no read-only scope offered, and `security.agent.md` forbids the assessor to hold a write scope: *the check is wrong, not the scope*. Unassessable **by policy**, not merely unobserved — no sprint changes a documented grant requirement, which is why this is not `open`. Not a claim that graph readiness is unimportant. Re-opened if either fact moves: a read-only route to the definition, or a data agent source list naming the Fabric graph item | `@dataagent` | 2026-12-24 |
 
-**Tally: 3 assessed, 4 open, 5 deliberately excluded, 1 untriaged.** Every key resolves to
+**Tally: 3 assessed, 4 open, 6 deliberately excluded, 0 untriaged.** Every key resolves to
 exactly one disposition; none carries two.
 
 ---
@@ -162,21 +169,28 @@ when nobody reviewed, never when the product moved. The rest are Sprint 7.4's pr
 nothing watches them at all. A clean run means one constant is fully disposed and no
 review is overdue. It does not mean this tool's scope is current.
 
-**It does not fire on `untriaged`.** The one remaining untriaged row passes, because
-`untriaged` *is* a disposition and naming the agent who owes the answer is a valid landing
-state — a missing row is the failure, an honest empty is not. Emptying that set is Phase 7
-criterion 1: an owner's judgement, which no script can make.
+**It does not fire on `untriaged`.** An untriaged row passes, because `untriaged` *is* a
+disposition and naming the agent who owes the answer is a valid landing state — a missing
+row is the failure, an honest empty is not. **No row exercises that today: the set has
+been empty since 2026-09-27**, so this is a statement about what the gate would do, not
+about a row you can go and read. Emptying that set was Phase 7 criterion 1's precondition;
+crediting the criterion is an owner's judgement, which no script can make and which this
+document does not make either.
 
 **The cost, stated before anyone meets it: this gate goes red on 2026-12-25.** Every dated
 row in this document carries `2026-12-24`, so they all come due that day and CI fails with
 nobody having changed a line. The invariant is **one deliberate per-row edit per dated
 row**, each with a re-verified reason or a recorded reading; there is deliberately no bulk
 re-dating command. Reproduced by running the audit as of 2026-12-25 and as of 2026-12-24:
-**eight expiries and zero** respectively — the five exclusions (rows 6–9 and 12) *and*,
-since the calendar was wired up, the three calendar rows (1–3). Four exclusions are owed by
-`@readme`, row 12 by `@dataagent`, and all three calendar rows by `@readme`. That is the
-review obligation working as designed, not a flake. Add a dated row and the count rises
-with it; the number above is what reproduces today, not a ceiling.
+**nine expiries and zero** respectively — the six exclusions (rows 6–9, 12 and 13) *and*,
+since the calendar was wired up, the three calendar rows (1–3). Seven are owed by
+`@readme` (exclusion rows 6–9 and all three calendar rows) and two by `@dataagent`
+(rows 12 and 13). That is the review obligation working as designed, not a flake. **The
+number moves with the table and is re-measured, never transcribed:** it read five when
+only the exclusions were dated, eight once the calendar was gated (2026-09-25), and nine
+since row 13 gained a date (re-measured 2026-09-27, the audit run at both dates again).
+Add a dated row and it rises again; the number above is what reproduces today, not a
+ceiling.
 
 **Two scripts parse this file**, so its shape is load-bearing in two places: the gate
 asserts the number of rows it reads against the `13 rows` in the ledger heading and the
@@ -271,11 +285,15 @@ checked surface from an unchecked one. Append a row per review; never overwrite 
 | 2026-09-25 | `m365-consumption-surfaces` | `@readme` | `cowork-overview`, `microsoft-365-copilot-overview` (both read live, in full) | **Nil — no change.** GA status, grounding scope, the DLP asymmetry (applies in Copilot Chat, "isn't currently supported in Cowork") and the conditional agent/ontology exclusion all read exactly as recorded on 2026-09-24/25. The Copilot Chat page reports "Last updated on 2026-09-23", so the re-read covered a page revised two days before it | 2026-12-24 |
 | 2026-09-25 | `in-fabric-agent-surfaces` | `@readme` | `concept-data-agent`, `graph/overview`, `copilot-fabric-overview` (all read live, in full) | **Nil — no change to anything a row depends on.** The six-source list and graph's preview status are unchanged. Two facts newly written down here because nothing in this document had recorded them: the data agent itself is stated GA, and agent-related Purview risk discovery and auditing is stated preview. Neither moves a disposition | 2026-12-24 |
 | 2026-09-25 | `fabric-iq-workload-preview` | `@readme` | `iq/overview`, `iq/ontology/overview` (both read live, in full) | **Nil — still preview.** Both the ontology item and the Fabric IQ workload are labelled preview on the live pages. Row 5 and Sprint 6.3 stand as written | 2026-12-24 |
+| 2026-09-27 | `in-fabric-agent-surfaces` | `@readme` | `concept-data-agent` only (read live, in full) — **a partial, unscheduled re-read of one of that row's three sources**, triggered by two dated readings of it disagreeing | **Not nil — a finding, and it is about the page, not about a change.** The page carries **two different enumerations** of a data agent's data sources: *Prerequisites* names a mirrored database and not Microsoft Graph; *Selecting data sources* names Microsoft Graph and not a mirrored database. Both quoted verbatim in [*Sources*](#sources), neither preferred. Neither names the Fabric graph item ("graph model"/"GraphModel": 0 occurrences; "Microsoft Graph": 5), which **supports** row 13 rather than disturbing it. Also newly recorded: "Eventhouse KQL databases are supported as KQL data sources for data agents", routed to `@dataagent` for rows 11–12 and acted on by nobody here. No disposition changed | 2026-12-24 — **unchanged.** A partial read of one source does not reset a calendar row whose obligation is all three; row 2 stays due and stays gated |
 
 **No review in this log found a change**, and that is the expected shape of a first entry
 written on the same day the rows were sourced. It is recorded anyway, because the value of
 the log is only realised when a later reviewer can tell *checked and unchanged* from *never
-checked*.
+checked*. **The fourth entry (2026-09-27) is the exception that shows the log earning its
+keep:** it found no product change either, but it found that one source page states its
+own source list two different ways — which only became visible because two readings were
+dated and both were kept.
 
 ### Recorded finding — the experiment that closed this gap (2026-09-25)
 
@@ -351,8 +369,10 @@ heading was recognised, **nothing in the table above had to be edited to become
 enforceable**, and no date moved.
 
 **What did not change.** The calendar is still a calendar. The forward cost it adds is in
-[*What the gate checks*](#what-the-gate-checks-and-what-it-does-not) above — eight dated
-rows now come due on 2026-12-24, not five.
+[*What the gate checks*](#what-the-gate-checks-and-what-it-does-not) above — at this
+revision it took the dated rows coming due on 2026-12-24 from five to **eight**. (That
+figure is historical: it is **nine** as of 2026-09-27, after row 13 was signed and dated.
+The current number lives in *What the gate checks* and is re-measured there, not here.)
 
 ---
 
@@ -448,14 +468,72 @@ than a *child*, and both fall out of the same test: the subject is the artefact 
 names. Its re-open condition is written into the row and is real, not decorative: a
 readiness fact that lives on the eventhouse alone and changes an agent's answer.
 
-**Row 13 stays `untriaged`, deliberately.** Q1 does not settle it, because the obstacle is
-not the judgement — it is that nobody has confirmed the key denotes the Fabric graph item at
-all, and graph is preview. Applying the Q1 test to `GraphModel` today would sign a
-disposition over a name whose referent is unverified, which is precisely the mistake the
-correction below records. Q3 is routed to `@collector` and is now the **only** thing holding
-this row. **Phase 7 release-gate criterion 1 therefore stays open**, which is the correct
-outcome of this triage rather than a failure of it; crediting or withholding that criterion
-is the roadmap owner's act in any case.
+**Row 13, ruled 2026-09-27 by `@dataagent`: `deliberately excluded`, because the Q1 test
+fails on both of its limbs.** Q3 (`API_REALITY_MATRIX.md` §11.6) came back in two halves and
+established the **item** without establishing the **container**: `GraphModel` is the Fabric
+graph item — spelled exactly so in the `ItemType` enum of the item APIs, with its own
+`/v1/workspaces/{workspaceId}/graphModels` service and a published definition schema — while
+the scan-result reference enumerates sixteen `Workspace Info` properties and not one Fabric
+item container, so this key's spelling, and the other seven Fabric keys', remain **assumed**.
+That second half does not decide this row in either direction and is deliberately not used as
+if it did: it is a collector-correctness question over eight keys at once, settled by one
+observed scan result, and it is routed below rather than borrowed here. If the Scanner does
+emit this container, the reasoning that follows applies to it; if it does not, there is less
+to assess, not more.
+
+Now apply the Q1 test — *the assessed subject is the artefact the agent's source binding
+names, where a readiness fact lives on that artefact and cannot be observed from the agent*.
+It gives a different answer here than it gave for rows 10 and 11, on each limb separately:
+
+- **Which graph the binding names.** The data agent pages — concept and creation, both read
+  2026-09-27 — enumerate their sources and name **Microsoft Graph**, "organizational data
+  accessible through Microsoft Graph". Microsoft Graph is a Microsoft 365 API: it is not a
+  Fabric workspace item and can never appear in `WORKSPACE_ITEM_KEYS`. Neither page contains
+  the string "graph model" or "GraphModel". The Fabric graph item's claim to be an agent
+  source rests on a single sentence on the graph workload page — "Fabric Data Agent supports
+  graph as a data source (preview)", via NL2GQL — and on nothing else. So the sentence row 13
+  used to carry, *"Graph is a documented data agent source in preview"*, was true of **two
+  different artefacts** and identified neither, and the six-source list a Q1 disposition would
+  normally reach for is a list about the other one. This row is signed on the workload page's
+  sentence, named as such, and not on the agent pages' list.
+- **Where the readiness fact lives, and who may read it.** Grant the workload page its
+  sentence, and the `AGT-003` analogue is immediate: what an NL2GQL query is written against
+  is the graph's own definition — `dataSources[]`, the node and edge mappings, `graphType` —
+  and none of it is visible from the agent. Every one of those facts sits in the part
+  documented behind `POST .../graphModels/{graphModelId}/getDefinition`: *"The caller must
+  have **read and write** permissions for the GraphModel"*, delegated scope
+  **`Item.ReadWrite.All`**, with no read-only alternative offered. What read-only surfaces do
+  return is shallow metadata — `id`, `displayName`, `description`, `type`, `workspaceId`,
+  `sensitivityLabel` — and not one readiness fact among them.
+
+**The second finding is what makes this an exclusion rather than an `open`, and it is the
+part that changed the answer.** `.github/agents/security.agent.md` is categorical: the
+assessor must never hold a write scope, and *"if a proposed check requires one, the check is
+wrong, not the scope"*. Rows 10 and 11 are `open` because no **exercised** endpoint returns
+lakehouse or KQL-database metadata *yet*; Sprint 5.1 exercises endpoints, so Sprint 5.1 can
+move them. Here the documented route to the readiness facts requires a grant this tool is
+forbidden to hold, so Sprint 5.1 would exercise the same endpoint and be refused by the same
+policy. **Unassessable by policy is not unassessable today**, and `open` is contractually
+obliged to name the sprint that would close it. No sprint closes a documented grant
+requirement; naming 5.1 anyway would be the scheduling equivalent of a reasonless exclusion —
+the defect Q6 declined to commit — so the honest word is `deliberately excluded`, dated.
+
+**What this exclusion does not say.** It does not say a graph model's readiness cannot reach
+an answer — the paragraph above *assumes* it can, which is exactly why the row carries a
+review date and two re-open conditions instead of being closed. It says this assessor cannot
+reach that fact at any privilege level it is permitted to hold, and that a rule family born
+on the shallow surface would report `NOT_EVALUATED` on every run about everything that
+matters: the scorecard-shaped hole rows 10 and 11 refuse, arriving by a different route. The
+re-open conditions are single documented facts, checkable in one reading: **a read-only route
+to the definition** (or any read-only surface that carries `dataSources[]`), or **a data agent
+source list that names the Fabric graph item rather than Microsoft Graph**. Both are due at
+the 2026-12-24 review, owed by `@dataagent`.
+
+**And this ruling adds nothing.** No rule, no `ObjectType`, no collector read, no scoring
+change, no score moved — and in particular no authority to correct or confirm the spelling in
+`WORKSPACE_ITEM_KEYS`, which stays assumed until a scan result is observed. **The `untriaged`
+set is now empty**, which is reported here and credited nowhere: Phase 7 release-gate
+criterion 1 is the roadmap owner's to move, and no row in this document moves it.
 
 **What this ruling does not do.** It adds no rule, no `ObjectType`, no collector read and no
 scoring change, and it moves no score. `AGT-003` behaves exactly as before — and its pattern
@@ -475,13 +553,13 @@ the auto-provisioning fact instead.
 
 ---
 
-## Questions routed, and the two now answered
+## Questions routed, and the three now answered
 
 | # | Question | Routed to | Rows it settles | Status |
 |---|---|---|---|---|
 | Q1 | Are Fabric data agent **data sources** assessed subjects in their own right, or is the agent the only assessed subject and its sources merely inputs? | `@dataagent` | 10, 11, 12 (**not** 13) | **Answered 2026-09-25 by `@dataagent`.** They are subjects — on a stated test: the assessed subject is the artefact the agent's source binding names, where a readiness fact lives on that artefact and cannot be observed from the agent. Rows 10 and 11 become `open`, row 12 `deliberately excluded`. It does not settle row 13, which turns on Q3 |
 | Q2 | If sources are in scope, at what **grain** — the eventhouse, or the KQL database inside it? | `@dataagent` | 11, 12 | **Answered 2026-09-25 with Q1, not separately.** The KQL database: it is what the documented source list names and what the binding attaches to. The eventhouse is the container, excluded as a duplicate subject on row 9's basis |
-| Q3 | Does the Scanner key `GraphModel` correspond to the Fabric **graph** item, and is any of its metadata readable by a read-only caller? | `@collector` | 13 | **Open**, and now the only thing holding row 13 — the judgement it needed is made, the identification is not |
+| Q3 | Does the Scanner key `GraphModel` correspond to the Fabric **graph** item, and is any of its metadata readable by a read-only caller? | `@collector` | 13 | **Answered 2026-09-27 by `@collector`** (`API_REALITY_MATRIX.md` §11.6), in two halves. The item: `GraphModel` **is** the Fabric graph item, exact spelling, with its own service and definition schema. The container: that the **Scanner** emits a key of that spelling is **not** established — the scan-result reference names no Fabric item container at all — so this and the other seven Fabric keys stay assumed, and one observed scan result settles all eight (`@collector`, behind Sprint 5.1). Readability splits: shallow metadata is documented read-only, the definition only behind `Item.ReadWrite.All`. Row 13 ruled `deliberately excluded` on that split by `@dataagent`, 2026-09-27 |
 | Q4 | Should an upstream producer's refresh state become an input to a **semantic-model** rule, given that `SEM-016` currently reads freshness from the model alone? | `@semantic` | 6, 7 (does not change their disposition; may add a rule elsewhere) | **Open** |
 | Q5 | Once a source object type exists, does `AGT-003`'s defer-to-the-source's-own-scorecard pattern generalise to a lakehouse and a KQL database, or should the agent carry a per-source-type readiness rule instead? | `@dataagent` (rule design), with `@scorer` on the object type | none — raised by the Q1 ruling, changes no disposition | **Open.** Today `fabric_iq/scoring.py` populates `source_scores` only for `semantic_model` sources, so `AGT-003` is answerable for one source type of six |
 | Q6 | Which sprint owns the source-as-subject object type and its collection prerequisite? No sprint currently carries rows 10 and 11; the closing path named there (Sprint 5.1, then the Sprint 6.3 pattern) is a prerequisite and a precedent, not an owner. | `@orchestrator` (roadmap owner) | 10, 11 — their **closing sprint**, not their disposition | **Open.** No roadmap change is made here; naming a sprint that does not exist would be the scheduling equivalent of a reasonless exclusion |
@@ -515,7 +593,10 @@ a public source and an exact date per fact, because product limits age.
 |---|---|---|
 | Cowork "grounds on Power BI reports and the semantic models behind them. It doesn't currently ground on Power BI dashboards, paginated (RDL) reports, share links, or other Fabric items like lakehouses or eventhouses" | [Fabric IQ in Microsoft 365 Copilot Cowork](https://learn.microsoft.com/fabric/iq/connectors/cowork-overview) | 2026-09-25, live page |
 | Copilot Chat: "Unsupported content: Paginated reports (RDL), dashboards, and top-level apps aren't supported" | [Fabric IQ in Microsoft 365 Copilot Chat](https://learn.microsoft.com/fabric/iq/connectors/microsoft-365-copilot-overview) | 2026-09-25, live page |
-| Data agent data sources: "A warehouse, a lakehouse, a Power BI semantic model, a KQL database, a mirrored database, or an ontology" | [Fabric data agent creation (concepts)](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | 2026-09-25, live page |
+| Data agent data sources, **Prerequisites section**: "At least one of these data sources, with data: A warehouse, a lakehouse, a Power BI semantic model, a KQL database, **a mirrored database**, or an ontology" | [Fabric data agent creation (concepts)](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | 2026-09-25, live page; re-read verbatim 2026-09-27 |
+| Data agent data sources, **"Selecting data sources" section of the same page**: "A Fabric data agent supports up to five data sources in any combination, including lakehouses, warehouses, KQL databases, Power BI semantic models, ontologies, and **Microsoft Graph**" — a *different* enumeration, on the same page, on the same day. See the finding below the table | [Fabric data agent creation (concepts)](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | 2026-09-27, live page |
+| Neither enumeration names the Fabric **graph item**: the strings "graph model" and "GraphModel" occur **zero** times on that page, while "Microsoft Graph" occurs five times | [Fabric data agent creation (concepts)](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | 2026-09-27, live page (counted on the fetched page text) |
+| "Eventhouse KQL databases are supported as KQL data sources for data agents; agents query Eventhouse data in place without data movement" | [Fabric data agent creation (concepts)](https://learn.microsoft.com/fabric/data-science/concept-data-agent) | 2026-09-27, live page |
 | The same list, restated on the creation path; **no mention of a SQL analytics endpoint anywhere on either page** | [Create a Fabric data agent](https://learn.microsoft.com/fabric/data-science/how-to-create-data-agent) | 2026-09-25, live page |
 | "Fabric Data Agent supports graph as a data source (preview)" | [What is graph in Microsoft Fabric?](https://learn.microsoft.com/fabric/graph/overview) | 2026-09-25, live page |
 | "Every lakehouse automatically provisions a SQL analytics endpoint when created — there's nothing extra to set up" | [What is the SQL analytics endpoint for a lakehouse?](https://learn.microsoft.com/fabric/data-engineering/lakehouse-sql-analytics-endpoint) | 2026-09-25, live page |
@@ -530,6 +611,44 @@ The last five rows are the sourcing behind
 [*The review calendar*](#the-review-calendar--classes-that-exist-only-as-prose-3-rows) and
 are repeated inside those rows deliberately: a reviewer reading a calendar row must see the
 source without navigating away from the date it is held to.
+
+**A recorded finding — the page is internally inconsistent about its own source list
+(verified 2026-09-27).** Two dated readings of
+[the same Learn page](https://learn.microsoft.com/fabric/data-science/concept-data-agent)
+disagreed, and the resolution is that **the page disagrees with itself.** It carries two
+enumerations of a data agent's data sources, in different sections, and they are not the
+same list:
+
+| Section | Enumeration as written | Names a mirrored database | Names Microsoft Graph |
+|---|---|---|---|
+| *Prerequisites* | "A warehouse, a lakehouse, a Power BI semantic model, a KQL database, a mirrored database, or an ontology" | **yes** | no |
+| *Fabric data agent configuration → Selecting data sources* | "lakehouses, warehouses, KQL databases, Power BI semantic models, ontologies, and Microsoft Graph" (capped at "up to five data sources in any combination") | no | **yes** |
+
+Both were re-read live on **2026-09-27** and both are quoted verbatim in the table above,
+**on purpose**: a reader who finds only one of them will otherwise "correct" a correct
+quote. This document **picks no winner** — choosing one enumeration would be an editorial
+act dressed as sourcing, and neither section is labelled as superseding the other. What is
+recorded is the observable fact: *the vendor page states two different source lists, and
+a claim of the form "the documented source list" is therefore under-specified until it
+names the section it came from.* Every quotation of this list in this document now does.
+
+**What it does not disturb.** Row 13's exclusion is unaffected and is not re-opened here:
+**neither** enumeration names the Fabric graph item — "graph model" and "GraphModel" occur
+zero times on the page, and the five occurrences of "Microsoft Graph" are the Microsoft 365
+API, which can never be a workspace item. The referent trap row 13 turns on is visible in
+both lists, not just one, so this finding **strengthens** that ruling rather than
+disturbing it. Rows 6–9 are likewise unaffected: `dataflows`, `datamarts`, `Notebook` and
+`SQLAnalyticsEndpoint` appear in **neither** enumeration, which is the fact those rows
+lean on.
+
+**Flagged to `@dataagent`, not acted on here.** The same page carries a sentence this
+document had not recorded: "Eventhouse KQL databases are supported as KQL data sources for
+data agents; agents query Eventhouse data in place without data movement" (2026-09-27). It
+reads as support for the Q2 grain ruling behind rows 11 and 12 — the database is the named
+source, the eventhouse the container — but **rows 11 and 12 are `@dataagent`'s**, and
+whether it changes anything there is their call, not this document's. It is sourced here
+and routed to them; no row was edited on the strength of it. The same applies to the
+"up to five data sources" cap, which is `AGT-002`'s subject and not a scope disposition.
 
 **A note on one source that moved.** The Power BI datamart overview path now redirects to a
 data-modelling hub rather than to a datamart article. That is an observation about a URL,
@@ -546,20 +665,25 @@ database** — are not enumerated in `WORKSPACE_ITEM_KEYS` at all. They are reco
 an observation about the *source constant's* completeness, not as ledger rows: a ledger row
 requires an element the repository already names, and reconciling this repository against
 Fabric's actual item catalogue is Sprint 7.4's job. A future ledger row for either of them
-depends on `@collector` adding the key first.
+depends on `@collector` adding the key first. **Their sourcing is not symmetric, and the
+difference is now recorded rather than smoothed over:** a warehouse is named by *both*
+enumerations on the data agent page, a mirrored database by the *Prerequisites* one only
+(see the finding in [*Sources*](#sources)). Neither observation is strong enough to move
+anything here, and the weaker of the two is flagged as weaker.
 
 ---
 
 ## Maintaining this document
 
 - **Review cadence: 90 days**, the cadence Sprint 7.3 proposes, applied in two places.
-  All **five** `deliberately excluded` ledger rows carry **2026-12-24** — rows 6–9 owed by
-  `@readme` and row 12 owed by `@dataagent`, who excluded it. The **three**
+  All **six** `deliberately excluded` ledger rows carry **2026-12-24** — rows 6–9 owed by
+  `@readme` and rows 12 and 13 owed by `@dataagent`, who excluded both. The **three**
   review-calendar rows carry the same date and the same cadence, and are owed by `@readme`.
-  Both are enforced by the same expiry check: re-verified with the audit on 2026-09-25,
-  **eight expiries as of 2026-12-25 — five exclusions and three calendar rows — and none
-  as of 2026-12-24.** A calendar date passing unnoticed is now a build failure; what it is
-  still not is a signal that the product moved.
+  Both are enforced by the same expiry check: re-measured with the audit on 2026-09-27,
+  **nine expiries as of 2026-12-25 — six exclusions and three calendar rows — and none
+  as of 2026-12-24.** (It read eight before row 13 was dated; the figure is re-run at each
+  revision, never carried forward.) A calendar date passing unnoticed is now a build
+  failure; what it is still not is a signal that the product moved.
 - **There is no bulk re-dating command, and there must not be one.** Clearing a review
   costs one deliberate per-row edit with a recorded reason. That cost is the point: a
   guard people regenerate without reading is decoration. The absence is now asserted by
@@ -569,11 +693,17 @@ depends on `@collector` adding the key first.
   the sources consulted, otherwise the next reviewer cannot tell a checked row from an
   unchecked one. For the calendar rows there is a place to write it: append to
   [*The review log*](#the-review-log--a-review-that-found-nothing-is-still-evidence) and
-  never overwrite an entry. Its first three entries are all nil results, recorded as such.
+  never overwrite an entry. Its first three entries are all nil results, recorded as such;
+  the fourth (2026-09-27) is not, and is the reason the rule about never overwriting is
+  worth its cost.
 - **Changing a disposition is an owner's act.** `@readme` owns this document's accuracy and
   its dated sourcing; it does not own the judgements in rows 10–13 and did not write them.
-  Those rows were ruled by `@dataagent` on 2026-09-25 (Q1 and Q2), row 13 excepted — it
-  waits on `@collector`'s Q3 — and row 12's review-by date is `@dataagent`'s to clear.
+  Those rows were ruled by `@dataagent`: rows 10–12 on 2026-09-25 (Q1 and Q2) and **row 13
+  on 2026-09-27**, once `@collector` answered Q3 in
+  [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md) §11.6. The review-by dates on rows 12
+  **and 13** are `@dataagent`'s to clear, and a source finding that touches those rows —
+  such as the two-enumeration finding recorded in [*Sources*](#sources) — is routed to
+  them rather than written into their rows by this agent.
 
 **Ownership.** This document is a collection-capability claim and is therefore a
 `REQUIRED_DOCS` entry in `scripts/check_agent_ownership.py`, accountable to `@readme`.
@@ -583,12 +713,16 @@ owns: the accuracy of the rows is `@readme`'s, the checking of them is not.
 | Last full review | Reviewer | Source covered |
 |---|---|---|
 | 2026-09-25 | `@readme` | `WORKSPACE_ITEM_KEYS` — rows 1–9 (9 of 13), plus this document's structure, sources and review dates |
-| 2026-09-25 | `@dataagent` | `WORKSPACE_ITEM_KEYS` — rows 10–13 (4 of 13): the Q1/Q2 ruling, row 12's exclusion reason and date, and row 13 left `untriaged` pending Q3 |
+| 2026-09-25 | `@dataagent` | `WORKSPACE_ITEM_KEYS` — rows 10–13 (4 of 13): the Q1/Q2 ruling, row 12's exclusion reason and date, and row 13 left `untriaged` pending Q3. **Partly superseded by the 2026-09-27 entry below**, which settles row 13; the Q1/Q2 ruling on rows 10–12 stands as written |
 | 2026-09-25 | `@readme` | **The review calendar** — all 3 rows, sourced and dated from a live re-read of the six Learn pages named in their cells. Findings: three nil results, logged individually |
+| 2026-09-27 | `@dataagent` | `WORKSPACE_ITEM_KEYS` — row 13 (`GraphModel`) alone: signed **deliberately excluded**, with a reason, an owner and a 2026-12-24 review-by date, on `@collector`'s Q3 answer. This is what emptied the `untriaged` set |
+| 2026-09-27 | `@readme` | **Sources and dates only** — a partial re-read of `concept-data-agent` and a reconciliation of this document's prose to the signed row 13 (counts, expiry arithmetic, the two-enumeration finding). **No row, no tally and no calendar date was touched** |
 
-**13 of 13 ledger rows reviewed on 2026-09-25, by two reviewers, and 3 of 3 calendar rows
-by one.** The split is recorded rather than aggregated: rows 10–13 are `@dataagent`'s
-judgement, and a review record that attributed them to `@readme` would be the same class of
-defect as a stale count. The two tables are also counted separately — **13 and 3, never
-16** — because they are held to different mechanisms: the thirteen are reconciled against a
-constant, the three are reconciled against nothing and are held only to their dates.
+**13 of 13 ledger rows reviewed, by two reviewers, and 3 of 3 calendar rows by one.** The
+dates differ and are kept apart: rows 1–9 and all three calendar rows on 2026-09-25 by
+`@readme`, rows 10–12 on 2026-09-25 and **row 13 on 2026-09-27** by `@dataagent`. The
+split is recorded rather than aggregated: rows 10–13 are `@dataagent`'s judgement, and a
+review record that attributed them to `@readme` would be the same class of defect as a
+stale count. The two tables are also counted separately — **13 and 3, never 16** — because
+they are held to different mechanisms: the thirteen are reconciled against a constant, the
+three are reconciled against nothing and are held only to their dates.

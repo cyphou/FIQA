@@ -33,12 +33,14 @@ day this file becomes wrong.
 
 Last observed: **2026-09-24**, ruleset `2026.09.1`, 65 rules.
 
-**Last documentation check: 2026-09-25 — which is not an observation date and must never
-be read as one.** On that day public Microsoft REST reference pages were read to name
-*which* endpoint would carry the fields Sprint 6.1 asks about. **No tenant was called, no
-payload was retained, no `BronzeRecord` was produced, and "Last observed" deliberately
-does not move.** Everything that check produced is confined to §11, which is labelled as
-documentation throughout; no row in §5 rests on it.
+**Last documentation check: 2026-09-27 — which is not an observation date and must never
+be read as one.** Two such checks have now run: **2026-09-25** (Sprint 6.1 — which endpoint
+would carry three fields) and **2026-09-27** (Q3 — what the Scanner key `GraphModel`
+denotes, and what a read-only caller may read of it). On both days public Microsoft REST
+reference pages were read and nothing else happened: **no tenant was called, no payload was
+retained, no `BronzeRecord` was produced, and "Last observed" deliberately does not move —
+it is still 2026-09-24.** Everything either check produced is confined to §11, which is
+labelled as documentation throughout; no row in §5 rests on any of it.
 
 ## 1. Scope — Read This Before Quoting Any Row
 
@@ -369,17 +371,26 @@ Related documents, owned elsewhere and updated by routing, never by editing:
 - `scripts/check_agent_ownership.py` (`@tester`) — `REQUIRED_DOCS` must gain an entry for
   this file, mapped to `collector`, so the claim cannot go unowned.
 
-## 11. Appendix — Documented Targets for Sprint 6.1 (**Checked 2026-09-25, Not Observed**)
+## 11. Appendix — Documented, **Not Observed**
 
 > **Read this paragraph before quoting anything below.** Sections 1–10 record what a read
 > surface *returned*. This section records what Microsoft's public reference pages *say*,
-> read on **2026-09-25**, with **no API call of any kind made** — no tenant, no fixture,
-> no `BronzeRecord`, no retained payload. It exists because Sprint 6.1 asks *which*
-> endpoint would carry three fields, and naming an endpoint is a documentation question.
-> It is forward-looking content on the same footing as §8, and it is **not evidence**:
-> product documentation states what a product is designed to do, never what a tenant is
-> configured to do or what a given identity may read. No sentence below may be quoted as
-> "we read this", and nothing here changes a class in §5.
+> with **no API call of any kind made** — no tenant, no fixture, no `BronzeRecord`, no
+> retained payload. It is forward-looking content on the same footing as §8, and it is
+> **not evidence**: product documentation states what a product is designed to do, never
+> what a tenant is configured to do or what a given identity may read. No sentence below
+> may be quoted as "we read this", and nothing here changes a class in §5.
+>
+> This is the single quarantine for documented-but-unobserved facts in this project.
+> Anything that arrives by reading a web page lands here or nowhere, and it carries the
+> date it was read. Two checks have run:
+>
+> - **§11.1–§11.3, checked 2026-09-25** — Sprint 6.1: *which* endpoint would carry the
+>   two Microsoft 365 consumption gates and item endorsement.
+> - **§11.6, checked 2026-09-27** — Q3 from `docs/SCOPE_LEDGER.md`: what the Scanner key
+>   `GraphModel` denotes, and whether a read-only caller may read any of its metadata.
+>
+> §11.4 holds every source for both, with its date.
 
 ### 11.1 *Share Fabric data with your Microsoft 365 services* — the endpoint is known, the `settingName` is **not**
 
@@ -556,6 +567,17 @@ vanishing. **No rule consumes these fields** — that remains `@semantic`'s boun
 | 8 | Power BI admin dataset enumeration reference does not document endorsement | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/datasets-get-datasets-as-admin` | 2026-09-25 |
 | 9 | Report and Dataset scan-result properties are a *subset* depending on "the API called, caller permissions, and the availability of data in the Power BI database" — so an omitted `endorsementDetails` is documented as possibly unread, and the page never states how a non-endorsed item is represented (§11.3.1) | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result` | 2026-09-25 |
 | 10 | The product documents three endorsement levels (Promoted, Certified, Master data) and names **no** API field — portal vocabulary, not the API value set (§11.3.1) | `https://learn.microsoft.com/en-us/fabric/governance/endorsement-overview` | 2026-09-25 |
+| 11 | The Scanner scan result's `Workspace Info` object enumerates sixteen properties and **no Fabric item container**; the string `GraphModel` occurs **zero** times on the page and the only "Graph" occurrences are `graphId` and the Azure AD Graph API (§11.6) | `https://learn.microsoft.com/en-us/rest/api/power-bi/admin/workspace-info-get-scan-result` | 2026-09-27 |
+| 12 | The metadata-scanning overview describes what the scanner APIs extract and enumerates **no item types and no container names** (§11.6) | `https://learn.microsoft.com/en-us/fabric/governance/metadata-scanning-overview` | 2026-09-27 |
+| 13 | The Fabric admin item enumeration's `ItemType` enum contains `GraphModel` — PascalCase, glossed "A GraphModel." — alongside `GraphQuerySet`, `Ontology` and `DataAgent`; the endpoint needs `Tenant.Read.All` or `Tenant.ReadWrite.All`, is itself marked Preview, and is capped at 200 requests/hour (§11.6) | `https://learn.microsoft.com/en-us/rest/api/fabric/admin/items/list-items` | 2026-09-27 |
+| 14 | The workspace item enumeration carries the same `ItemType` enum spelling, `GraphModel` (§11.6) | `https://learn.microsoft.com/en-us/rest/api/fabric/core/items/list-items` | 2026-09-27 |
+| 15 | `GET /v1/workspaces/{workspaceId}/graphModels` — Service: GraphModel, v1; **viewer** workspace role; `Workspace.Read.All` or `Workspace.ReadWrite.All`; service principals supported; `429` carries `Retry-After`; sample item carries `id`, `displayName`, `description`, `type: "GraphModel"`, `workspaceId`, `sensitivityLabel`; "GraphModel item is currently in Preview" (§11.6) | `https://learn.microsoft.com/en-us/rest/api/fabric/graphmodel/items/list-graph-models` | 2026-09-27 |
+| 16 | `GET /v1/workspaces/{workspaceId}/graphModels/{graphModelId}` returns **properties** of the item on `Item.Read.All` or `Item.ReadWrite.All` (§11.6) | `https://learn.microsoft.com/en-us/rest/api/fabric/graphmodel/items/get-graph-model` | 2026-09-27 |
+| 17 | `POST .../graphModels/{graphModelId}/getDefinition` returns the public definition and states *"The caller must have **read and write** permissions for the GraphModel"*, required delegated scope **`Item.ReadWrite.All`** — no read-only scope is offered (§11.6) | `https://learn.microsoft.com/en-us/rest/api/fabric/graphmodel/items/get-graph-model-definition` | 2026-09-27 |
+| 18 | The Graph Model definition's parts are `dataSources` (`DataSource[]`, each `name`/`type: "DeltaTable"`/`properties.path`), `graphDefinition` (node and edge tables with property mappings), `graphType` and `stylingConfiguration` — i.e. the source bindings live in the definition, not in the item properties (§11.6) | `https://learn.microsoft.com/en-us/rest/api/fabric/articles/item-management/definitions/graph-model-definition` | 2026-09-27 |
+| 19 | *Graph in Microsoft Fabric* is the labeled-property-graph workload over OneLake; it states "Fabric Data Agent supports graph as a data source (preview)" and "Graph-powered AI reasoning is currently in preview", with NL2GQL (§11.6) | `https://learn.microsoft.com/en-us/fabric/graph/overview` | 2026-09-27 |
+| 20 | The data agent concept page enumerates the supported sources as Lakehouse, Warehouse, Power BI semantic model, KQL database (including Eventhouse), ontology and **Microsoft Graph** — "organizational data accessible through Microsoft Graph". It never says "graph model" or "GraphModel" (§11.6) | `https://learn.microsoft.com/en-us/fabric/data-science/concept-data-agent` | 2026-09-27 |
+| 21 | The data agent creation page gives the same six-source list, again naming **Microsoft Graph** and never a Fabric graph item (§11.6) | `https://learn.microsoft.com/en-us/fabric/data-science/how-to-create-data-agent` | 2026-09-27 |
 
 Reference pages move. Any of these claims is re-checkable by opening the URL and
 restating the date; a claim whose date is older than the behaviour it justifies should be
@@ -573,6 +595,143 @@ re-read before it is encoded.
 - **No rule, no `ObjectType`, no scoring change.** The tenant-setting, endorsement and
   type-reachability rules belong to `@tenant` and `@semantic`, each with its own
   synthetic fixtures, after this record exists.
+- **No key in `WORKSPACE_ITEM_KEYS` is added, removed or re-spelled by §11.6.** That
+  check was asked what a name denotes, not to act on the answer. It found that the
+  Scanner container spelling is **not** established from public reference — for
+  `GraphModel` or for any other Fabric key — and the correct response to an unestablished
+  spelling is to write the gap down, not to guess a better one. Changing the constant is a
+  separate `@collector` boundary and needs an observed scan result, not a reference page.
 - **Nothing here clears Sprint 5.1.** Every live confirmation named above stays behind
   5.1's prerequisite: an authorised tenant and an approved read-only service principal.
+
+### 11.6 Q3 — what `GraphModel` denotes, and what a read-only caller may read of it (**Checked 2026-09-27, Not Observed**)
+
+`docs/SCOPE_LEDGER.md` routes Q3 to `@collector`: *does the Scanner key `GraphModel`
+correspond to the Fabric graph item, and is any of its metadata readable by a read-only
+caller?* It is two questions, they have different answers, and the value of the row-13
+formulation is that it refused to let one stand in for the other. **No call of any kind was
+made.** Every statement below is a reading of a public reference page on **2026-09-27**,
+sourced in §11.4 rows 11–21.
+
+#### 11.6.1 The item exists and the name is exact — **established**
+
+- `GraphModel` is a documented Fabric item type, spelled **exactly that way**, in the
+  `ItemType` enum of both the admin enumeration `GET /v1/admin/items` and the workspace
+  enumeration `GET /v1/workspaces/{workspaceId}/items`, glossed "A GraphModel." (rows 13,
+  14). The enum also carries `GraphQuerySet`, a **second** graph item this project's
+  constant does not name.
+- It has its own service — Service: **GraphModel**, API version v1 — at
+  `/v1/workspaces/{workspaceId}/graphModels`, whose documented sample item carries
+  `"type": "GraphModel"` (row 15).
+- It has a published item-definition schema, *Graph Model definition*, with parts
+  `dataSources`, `graphDefinition`, `graphType`, `stylingConfiguration` (row 18).
+- It belongs to *Graph in Microsoft Fabric*, the labeled-property-graph workload over
+  OneLake (row 19), and **every** GraphModel REST page carries the note *"GraphModel item
+  is currently in Preview"* (rows 15–17).
+
+**So the name has a referent, and the referent is the Fabric graph item.** That is more
+than was known when row 13 was written, and it is the half that closes.
+
+#### 11.6.2 That the **Scanner** emits a container spelled `GraphModel` is **not established**
+
+Q3 asks about a *Scanner key*. The Scanner is a different API from the item APIs above,
+and the reference does not support the crossing.
+
+- The scan-result reference's `Workspace Info` object enumerates **sixteen** properties and
+  **not one Fabric item container**: `capacityId`, `dashboards`, `dataRetrievalState`,
+  `dataflows`, `datamarts`, `datasets`, `defaultDatasetStorageFormat`, `description`, `id`,
+  `isOnDedicatedCapacity`, `name`, `reports`, `state`, `tags`, `type`, `users`. The string
+  `GraphModel` occurs **zero** times on the page; every occurrence of "Graph" is `graphId`
+  or the Azure AD Graph API (row 11).
+- The metadata-scanning overview names what the scanner APIs extract and enumerates **no
+  item types and no container names** (row 12).
+
+**Therefore: that the Scanner returns a workspace container keyed `GraphModel` is not
+established from public reference on 2026-09-27.** Nor is the spelling of the other seven
+Fabric keys in `WORKSPACE_ITEM_KEYS` — `DataAgent`, `Ontology`, `Lakehouse`, `Notebook`,
+`KQLDatabase`, `Eventhouse`, `SQLAnalyticsEndpoint`. The constant's comment, *"Fabric item
+types come back in singular PascalCase"*, is **consistent** with the `ItemType` enum and is
+**not confirmed** by it: the enum is a `type` *value* inside an item payload from the item
+APIs, while `WORKSPACE_ITEM_KEYS` holds a container *key* in a scan result from the Scanner.
+Those are different positions in different APIs, and agreement in one does not establish the
+other. Reasoning from the neighbouring keys would be reasoning from the same unconfirmed
+assumption seven more times.
+
+**Why this matters more than a spelling quibble.** A wrong container key does not fail
+loudly. `FabricApiCollector._items()` returns `[]` for a key that is absent, `items_total`
+undercounts by exactly the items in the container that was never read, and `WKS-009` then
+scores scan coverage against a denominator that is quietly too small — a *more* complete
+looking tenant than the truth. That is the failure mode of a guessed `settingName` (§11.1)
+transplanted into a different constant, and it is why §11.5 forbids acting on this section.
+**One observed scan result settles all eight spellings at once**, and that observation is
+behind Sprint 5.1.
+
+#### 11.6.3 Read-only readability — documented, and it splits in two
+
+Three surfaces are documented to carry GraphModel metadata, and the split between them is
+the answer:
+
+| Documented surface | Scope the reference requires | Read-only? | What it carries |
+|---|---|---|---|
+| `GET /v1/admin/items` (row 13) | `Tenant.Read.All` or `Tenant.ReadWrite.All`; 200 req/hour; endpoint itself marked Preview | **Yes** on the read scope | Enumeration only — the fields §11.3 lists: `id`, `type`, `name`, `description`, `state`, `lastUpdatedDate`, `workspaceId`, `capacityId`, `creatorPrincipal`, `tags`. No endorsement, no definition |
+| `GET /v1/workspaces/{workspaceId}/graphModels` (row 15) | **viewer** workspace role; `Workspace.Read.All` or `Workspace.ReadWrite.All`; `429` carries `Retry-After` | **Yes** on the read scope and the viewer role | `id`, `displayName`, `description`, `type`, `workspaceId`, `sensitivityLabel`. Workspace-scoped: it needs a workspace id and a role **per workspace**, so it is not a tenant sweep |
+| `GET .../graphModels/{graphModelId}` (row 16) | `Item.Read.All` or `Item.ReadWrite.All` | **Yes** on the read scope | Item properties only |
+| `POST .../graphModels/{graphModelId}/getDefinition` (row 17) | *"The caller must have **read and write** permissions for the GraphModel"*, delegated scope **`Item.ReadWrite.All`** — **no read-only scope is offered** | **No** | The definition: `dataSources[]` with each source's `type` and `path`, the node and edge tables, `graphType`, `stylingConfiguration` (row 18) |
+
+Read the last row carefully, because it is the finding.
+
+- **Shallow metadata is documented as read-only readable.** Name, description, type,
+  workspace, sensitivity label, and tenant-wide discovery on `Tenant.Read.All`.
+- **The definition is not.** And the definition is where a GraphModel's source bindings
+  live — which tables in OneLake the graph is built over, how nodes and edges map to
+  columns. Every readiness fact a rule would want about a graph model is in the part
+  documented behind `Item.ReadWrite.All`.
+- **The verb is not the objection; the grant is.** A POST that only reads is fine here —
+  Scanner `getInfo` is exactly that and this collector issues it. What is not fine is
+  holding `Item.ReadWrite.All`. Requesting a write scope in order to perform a read means
+  holding, for the duration, every write that scope confers on every item in the tenant.
+  This project's read-only guarantee is a statement about the **grant**, not only about
+  the method, so **this tool may not ask for that scope** and the definition is out of
+  reach by policy rather than merely unobserved.
+
+**The honest summary of half two.** Documented as read-only readable: **shallow item
+metadata, on three surfaces**. Documented as requiring a write-bearing scope, and therefore
+unreachable for this tool at any privilege level it is permitted to hold: **the definition,
+which is the only part a rule would have anything to say about**. And **none of it is
+observed** — no tenant has been asked, no `BronzeRecord` exists, "Last observed" stays
+**2026-09-24**, and whether any tenant has the preview enabled at all is unknown.
+
+#### 11.6.4 A referent trap this check found, recorded for `@dataagent`
+
+Row 13 reads *"Graph is a documented data agent source in preview."* That sentence is true
+of **two different artefacts**, and the pages disagree about which:
+
+- The **data agent** pages — concept and creation, both checked 2026-09-27 — enumerate six
+  sources: lakehouses, warehouses, Power BI semantic models, KQL databases, ontologies and
+  **Microsoft Graph**, described as "organizational data accessible through Microsoft
+  Graph". Neither page contains the string "graph model" or "GraphModel" (rows 20, 21).
+  Microsoft Graph is a Microsoft 365 API. It is **not** a Fabric workspace item and can
+  never appear in `WORKSPACE_ITEM_KEYS`.
+- The **graph workload** page states separately that "Fabric Data Agent supports graph as a
+  data source (preview)" via NL2GQL (row 19). That one *is* the Fabric graph item.
+
+So both readings are documented, of different things, on different pages, and the
+sentence in row 13 does not distinguish them. This is `@dataagent`'s input under Q1, not a
+`@collector` ruling, and it is recorded here so nobody has to re-derive it: **the six-source
+list a Q1 disposition would normally read names Microsoft Graph, not `GraphModel`; the
+Fabric graph item's claim to be an agent source rests on the graph workload page alone.**
+
+#### 11.6.5 What this section does **not** do
+
+- **It classifies nothing `preview-only`.** Every GraphModel REST page says the item is in
+  Preview. That is a vendor statement on a web page, not an observed preview gate — no
+  banner, no `preview` flag, no feature-gated error from a tenant. §2 holds that class
+  empty until a gate is **observed**, and a product fact does not become an observation by
+  being inconvenient to leave unrecorded.
+- **It adds no row to §5 and changes no class.** `GraphModel` appears nowhere in the
+  matrix proper, and after this check it still does not.
+- **It touches no code.** See §11.5: the spelling is unestablished, and an unestablished
+  spelling is written down, not corrected.
+- **It clears no gate.** Not Sprint 5.1, whose prerequisites are unchanged; and crediting
+  any Phase 7 criterion is the roadmap owner's act, not this file's.
 

@@ -187,6 +187,44 @@ thing it was written to catch walks past it, and no agent is accountable for not
 
 ### Documentation
 
+- [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) — **the `untriaged` set is empty
+  (2026-09-27), and the document now says so in every place it used to say the opposite.**
+  `@dataagent` signed row 13 (`GraphModel` → **deliberately excluded**, owner `@dataagent`,
+  review by 2026-12-24) on `@collector`'s Q3 answer, taking the tally to **3 assessed,
+  4 open, 6 deliberately excluded, 0 untriaged**. `@readme` reconciled the prose that the
+  signature falsified: the disposition vocabulary's `untriaged` cell, the *What this
+  document is not* bullet on release-gate criterion 1, and the gate section's "it does not
+  fire on `untriaged`" note, which described a row that no longer exists. **Phase 7
+  criterion 1 is not credited here** — its precondition is met, and crediting it is
+  `@orchestrator`'s act in [`docs/ROADMAP.md`](./docs/ROADMAP.md); a document that credits
+  its own criterion is the failure mode the ledger was written against.
+  **The expiry arithmetic moved with the table: eight → nine.** Row 13 is the sixth dated
+  exclusion, so 2026-12-25 now comes due with six exclusions (rows 6–9, 12, 13) plus three
+  calendar rows. Re-measured rather than transcribed, by calling `audit()` at explicit
+  dates: **0 expiries as of 2026-12-24, 9 as of 2026-12-25** (and 9 as of 2026-12-26 — the
+  obligation does not decay). Seven are owed by `@readme` (rows 6–9 and the three calendar
+  rows), two by `@dataagent` (rows 12 and 13). The gate asserts the invariant, not the
+  literal, so nothing was red — the prose was simply behind the table, which is exactly the
+  drift this document exists to make visible.
+  **A source finding, recorded as a finding rather than resolved by preference.** Two dated
+  readings of the same Learn page disagreed about a data agent's source list. Re-read live
+  on 2026-09-27: **the page carries two different enumerations and they disagree with each
+  other** — *Prerequisites* names "a mirrored database" and not Microsoft Graph;
+  *Selecting data sources* names "Microsoft Graph" and not a mirrored database. Both are
+  now quoted verbatim in [*Sources*](./docs/SCOPE_LEDGER.md#sources), each labelled with
+  the section it came from, and **neither is preferred**: picking a winner would be an
+  editorial act dressed as sourcing. The consequence for this repository is that "the
+  documented source list" is under-specified until it names a section, so every quotation
+  of it now does. This **strengthens row 13 rather than re-opening it**: "graph model" and
+  "GraphModel" occur **zero** times on that page while "Microsoft Graph" occurs five, so
+  *neither* list names the Fabric graph item — the referent trap the row turns on is in
+  both. Also newly sourced and **routed, not acted on**: "Eventhouse KQL databases are
+  supported as KQL data sources for data agents" reads as support for the Q2 grain ruling
+  behind rows 11–12, which are `@dataagent`'s to change. The review log gains its first
+  non-nil entry, marked as a *partial* read that does **not** reset the calendar row's
+  2026-12-24 date. No row, no tally, no calendar row and no routed question was edited by
+  `@readme`; `python scripts/check_scope_ledger.py` exits 0 before and after.
+
 - [`docs/SCOPE_LEDGER.md`](./docs/SCOPE_LEDGER.md) — **the review calendar** (Sprint 7.3,
   smallest slice): three classes of Fabric's shape that exist **only as prose** now carry a
   public source, an exact verification date and a 90-day review date —
@@ -211,7 +249,9 @@ thing it was written to catch walks past it, and no agent is accountable for not
   forward cost reads **eight** per-row edits on 2026-12-25 (five exclusions plus three
   calendar rows). Each of those three was reproduced before being written: the back-dated
   calendar row exits 1, `CHECKS` holds six names, and the audit run as of 2026-12-25 and
-  2026-12-24 returns **eight expiries and zero**.
+  2026-12-24 returns **eight expiries and zero**. *(Both figures are that revision's:
+  since row 13 was dated on 2026-09-27 the forward cost is **nine**, re-measured — see the
+  entry above.)*
   The calendar remains a **calendar, not a detector**: what changed is that the *absence*
   of a review fails the build — it still guarantees that somebody looked on a stated date,
   never that they saw — it adds no rule, moves no score, and passes no Phase 7 criterion.
@@ -247,8 +287,11 @@ thing it was written to catch walks past it, and no agent is accountable for not
   which put Lakehouse and KQLDatabase in scope as subjects that no object type can reach
   yet, excluded Eventhouse as a duplicate subject at the container grain, and left
   GraphModel untriaged because the Scanner key's referent is unverified. **Phase 7
-  release-gate criterion 1 therefore stays open**, which is the correct outcome of that
-  triage rather than a failure of it. Before this document, the repository's scope
+  release-gate criterion 1 therefore stayed open at that revision**, which was the correct
+  outcome of that triage rather than a failure of it. *(Superseded on 2026-09-27: row 13
+  is now `deliberately excluded`, making the counts **6 deliberately excluded / 0
+  untriaged** — see the entry above. The 2026-09-25 triage of rows 10–12 stands as
+  written.)* Before this document, the repository's scope
   read identically whether an omission had been considered and rejected or never noticed.
   Every product fact it leans on carries its source URL and the date it was verified. The
   ledger adds no rule, moves no score and is mapped to no rule outcome.
@@ -261,7 +304,8 @@ thing it was written to catch walks past it, and no agent is accountable for not
   per-row edit per dated row, with a recorded reason or a recorded reading. Reproduced
   2026-09-25 by running the audit at both dates: **eight** expiries as of 2026-12-25 (the
   five exclusions, rows 6–9 and 12, plus the three review-calendar rows once those were
-  gated) and none as of 2026-12-24. The ledger is a baseline, not a detector: no row in it
+  gated) and none as of 2026-12-24 — **nine** on the same measurement re-run 2026-09-27,
+  once row 13 became the sixth dated exclusion. The ledger is a baseline, not a detector: no row in it
   passes a Phase 7 release-gate criterion, and the document routes the reader to
   [`docs/ROADMAP.md`](./docs/ROADMAP.md) for which criteria are met rather than restating
   a status it does not own.

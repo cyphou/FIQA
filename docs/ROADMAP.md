@@ -77,7 +77,7 @@ records, not earlier roadmap labels.
 | Fabric publication | Notebook, Data Pipeline, Lakehouse, Gold Delta marts, Direct Lake semantic model/report, run summary, trends, burn-down, and CI exit gates exist. The model/report synthetic self-assessment gate is executable. A versioned schedule contract covering cadence, `concurrency: 1` overlap prevention, identity requirement, schedule-run housekeeping, failure notification, and rerun procedure is documented in `fabric/README.md` and `docs/INSTALL.md`; the Bronze/Silver/Gold retention contract is documented as 90/180/730 days in `fabric_iq/lakehouse.py` and `docs/IDENTITY_AND_RETENTION.md`, with a durable per-run manifest and a tested, explicitly invoked `LakehouseRetentionPruner.prune()` mechanism now implemented. | No actual unattended/scheduled run has been evidenced. Retention enforcement is a tested library mechanism only: no live deployment schedule invokes the pruner yet. “Scheduled” and “unattended” are not yet delivered claims. | 🟡 Schedulable |
 | Re-measurement | Comparable-run trends, automatic baseline selection, coverage-loss classification, and remediation-state comparison are implemented. | A repeatable operational cadence, ruleset-compatible baseline policy, and recorded remediation/re-measure cycle are not yet proven end to end. | 🟡 Mechanism delivered |
 | Consumption-surface coverage | One of the three Sprint 6.1 rule families has shipped: `SEM-018` and `REP-011` assess **endorsement** (both MINOR), fed by Scanner `endorsementDetails` which the collector now carries with absence treated as unknown. A Sprint 6.1 availability record classifies all three Microsoft 365 gating settings as currently unevaluable. A non-normative `@scorer` design note for Sprint 6.2 exists in `docs/SCORING.md`. | A 2026-09-24 documentation review found the **GA** Microsoft 365 consumption surface (Cowork, Copilot Chat) assessed by no rule, the **preview** Fabric IQ ontology item enumerated by the collector but judged by nothing, and one headline verdict standing for four different reachability paths. The **tenant-setting** family is unevaluable at source; the **type-reachability** family is **blocked on the Sprint 6.2 decision** — today's engine has no rule outcome that states unreachability without moving a score or coverage. No Phase 6 release-gate criterion is met. | 🟥 Open, partially started |
-| Scope currency | All three kinds of decay now have a named watcher. The third gained one in this session: [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md) (Sprint 7.1) gives every one of the 13 elements of `WORKSPACE_ITEM_KEYS` exactly one signed disposition — 3 assessed, 4 open, 5 deliberately excluded with a reason, an owning agent and a review-by date, 1 untriaged — and `scripts/check_scope_ledger.py` (Sprint 7.2) reconciles ledger against code offline, on all four CI legs and in the per-change gate, negative-tested three ways. Product facts stay watched by `docs/KNOWN_LIMITATIONS.md` §8 and API surfaces by [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md). | The new watcher is **one source wide**. `TENANT_SETTING_MAP`, `ObjectType`, consumption surfaces and agent kinds are not reconciled by it (Sprints 7.3/7.4), and no self-reconciliation reaches shape the repository has never named — the Cowork class of miss, covered only by 7.3's dated review obligation, which now exists and is gated: three watched classes (Microsoft 365 consumption surfaces, in-Fabric agent surfaces, the preview Fabric IQ workload), each carrying public sources, a checked date and a review-by date, so an unreviewed date fails the build — though it still only guarantees that somebody looked on a stated date, never that they saw. One element remains **untriaged** (row 13, `GraphModel`, held on Q3 to `@collector`), so criterion 1 is open. Of seven Phase 7 release criteria, **one** (criterion 2) is met. Reading a green scope gate as "the catalogue is current" is the specific misreading this row exists to prevent. | 🟡 Started, one criterion met |
+| Scope currency | All three kinds of decay now have a named watcher. [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md) (Sprint 7.1) gives every one of the 13 elements of `WORKSPACE_ITEM_KEYS` exactly one signed disposition — 3 assessed, 4 open, **6 deliberately excluded** with a reason, an owning agent and a review-by date, **0 untriaged** since `@dataagent` signed row 13 (`GraphModel`) on 2026-09-27 — and `scripts/check_scope_ledger.py` (Sprint 7.2) reconciles ledger against code offline, on all four CI legs and in the per-change gate, negative-tested three ways. Product facts stay watched by `docs/KNOWN_LIMITATIONS.md` §8 and API surfaces by [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md). | The new watcher is **one source wide**. `TENANT_SETTING_MAP`, `ObjectType`, consumption surfaces and agent kinds are not reconciled by it (Sprints 7.3/7.4), and no self-reconciliation reaches shape the repository has never named — the Cowork class of miss, covered only by 7.3's dated review obligation, which now exists and is gated: three watched classes (Microsoft 365 consumption surfaces, in-Fabric agent surfaces, the preview Fabric IQ workload), each carrying public sources, a checked date and a review-by date, so an unreviewed date fails the build — though it still only guarantees that somebody looked on a stated date, never that they saw. The empty `untriaged` set closes **one half** of criterion 1 for **one** declared source; the reach half is open and criterion 1 with it. Of seven Phase 7 release criteria, **two** (criteria 2 and 3) are met and one (criterion 1) is **partly met**. Reading a green scope gate as "the catalogue is current" is the specific misreading this row exists to prevent. | 🟡 Started, two criteria met, one partly |
 
 ### Verified Repository Baseline
 
@@ -85,10 +85,10 @@ At this review the documentation gate reported:
 
 - ruleset `2026.09.2`, **67 rules** across five object types — tenant 12, workspace 11,
   semantic model 18, report 11, Data Agent 15;
-- **573 passing** unit tests plus **2 skipped by design on Windows**, so the runner
-  reports `Ran 575 ... OK (skipped=2)`. **Read the convention before quoting it:** the
+- **594 passing** unit tests plus **2 skipped by design on Windows**, so the runner
+  reports `Ran 596 ... OK (skipped=2)`. **Read the convention before quoting it:** the
   bolded figure in this section is always the number that **passed**, never the number
-  that **ran**. 573 ≠ 575, and citing the "Ran" figure as "passing tests" has already
+  that **ran**. 594 ≠ 596, and citing the "Ran" figure as "passing tests" has already
   been corrected twice in this section. If you are copying a number out of a `unittest`
   run, subtract the skips first. The two skips are:
   `tests.test_evidence_sinks` cannot create a filename containing a control character
@@ -96,7 +96,7 @@ At this review the documentation gate reported:
   `tests.test_lakehouse`'s `dir_fd`-anchored deletion proof skips because Windows
   supports neither `os.O_DIRECTORY` nor `dir_fd` for `os.stat`/`os.unlink` — that test
   runs and passes on Linux/macOS, where the anchored delete is live, so on those
-  platforms the same revision reports 575 passing and 0 skipped;
+  platforms the same revision reports 596 passing and 0 skipped;
 
 - clean generated rule documentation, internal links, and synthetic self-assessment gate;
 - `python scripts/check_agent_ownership.py` exit 0 — **28** modules under `fabric_iq/`
@@ -108,20 +108,26 @@ At this review the documentation gate reported:
   which entered the map with Sprint 7.1;
 - `python scripts/check_scope_ledger.py` exit 0 — **1 declared shape source**
   (`WORKSPACE_ITEM_KEYS`, 13 elements) reconciled against **13 ledger rows**, the count
-  the document states. The disposition mix at this revision is **3 assessed / 4 open /
-  5 deliberately excluded / 1 untriaged**, measured by reading the ledger rows directly
-  rather than carried from any agent's report. It moved this session — an earlier
-  measurement recorded four exclusions — because `@dataagent`'s 2026-09-25 triage ruled
-  `Lakehouse` and `KQLDatabase` **open** (in scope as subjects) and excluded `Eventhouse`
-  as a duplicate subject at the wrong grain, which is row 12 and the fifth dated
-  exclusion. **All five exclusions carry `2026-12-24`**; the comparison is
-  `review_by < as_of`, so the gate passes on 2026-12-24 and fails on 2026-12-25 —
-  confirmed by running `audit()` at both dates (0 expiries, then 5). Rows 6–9 are
-  `@readme`'s to re-date, row 12 is `@dataagent`'s. **The untriaged row is not a low
-  score and not a failure**: it is row 13 (`GraphModel`), held on Q3 to `@collector`, and
-  it is the single thing keeping Phase 7 criterion 1 open. One source is the whole of the
-  gate's reach at this revision; see **Per-Change Quality Gate** for what it therefore
-  does not watch;
+  the document states, plus **3 calendar rows** under *classes that exist only as prose*.
+  The disposition mix at this revision is **3 assessed / 4 open / 6 deliberately
+  excluded / 0 untriaged**, measured by parsing the ledger rows directly rather than
+  carried from any agent's report. It has moved twice — an earlier measurement recorded
+  four exclusions; `@dataagent`'s 2026-09-25 triage ruled `Lakehouse` and `KQLDatabase`
+  **open** (in scope as subjects) and excluded `Eventhouse` as a duplicate subject at the
+  wrong grain (row 12, the fifth dated exclusion); then on **2026-09-27** `@dataagent`
+  signed row 13 (`GraphModel`) **deliberately excluded**, `@dataagent`, review by
+  `2026-12-24`, on `@collector`'s Q3 answer. **The `untriaged` set is now empty.**
+  **All six exclusions carry `2026-12-24`, and so do all three calendar rows**; the
+  comparison is `review_by < as_of`, so the gate passes on 2026-12-24 and fails on
+  2026-12-25 — confirmed by running `audit()` at both dates against this tree
+  (**0 problems, then 9**). The nine are ledger rows 6, 7, 8, 9, 12 and 13 plus the three
+  calendar rows, and the check names an owner in every message: **7 are `@readme`'s**
+  (rows 6–9 and all three calendar rows) and **2 are `@dataagent`'s** (rows 12 and 13).
+  **An empty `untriaged` set is a state, not a credit**: it satisfies one half of Phase 7
+  criterion 1 and leaves the other half — how much shape is declared at all — untouched;
+  see **Release Gate for Phase 7** criterion 1 for the crediting decision and for the
+  drafting defect it exposed. One source is the whole of the gate's reach at this
+  revision; see **Per-Change Quality Gate** for what it therefore does not watch;
 - `python scripts/check_evidence_sinks.py` exit 0 — **75 writer destinations** and
   documented output examples each resolve to a committed `.gitignore` rule, all **109
   tracked files** remain trackable (none shadowed by a broad pattern such as `*.jsonl`
@@ -143,35 +149,41 @@ At this review the documentation gate reported:
     them, because the `artifacts/live` example already registered here is the only output
     path they name.
 
-  All figures above were re-measured against the working tree being committed on
-  **2026-09-25** by running the five gate commands directly, rather than carried forward
-  from any agent's report. **Re-measured again later on 2026-09-25, for this roadmap
-  correction: every one of them held.** 573 passing / 2 skipped / `Ran 575`, 28 modules,
-  8 required documents, 109 tracked files, 75 writer destinations, ruleset `2026.09.2`
-  with 67 rules, and 1 declared source / 13 elements / 13 rows. **Nothing moved, and
-  that is the result, not the absence of one** — this correction changed only
-  `docs/ROADMAP.md`, which is neither a module, a required document, a writer
-  destination nor a rule, so a moved figure would have been the finding. The one
-  measurement that *did* move is not a gate figure at all: the ledger's disposition mix,
-  recorded above. Since the earlier 2026-09-25 measurement described below, four
-  moved, and all four move for the same reason — Sprints 7.1 and 7.2 landed: the test count
-  (530 → **573 passing**, `Ran 575`), modules (27 → **28**, `scripts/check_scope_ledger.py`),
-  required documents (7 → **8**, `docs/SCOPE_LEDGER.md`) and tracked files
+  All figures above were re-measured against the working tree on **2026-09-27** by
+  running the five gate commands directly, rather than carried forward from any agent's
+  report — including the two figures two other agents had already measured, because a
+  figure two agents agree on is still a figure neither of them measured here.
+  **Exactly one gate figure moved: the test count.** 594 passing / 2 skipped /
+  `Ran 596`, 28 modules, 8 required documents, 109 tracked files, 75 writer destinations,
+  ruleset `2026.09.2` with 67 rules (tenant 12, workspace 11, semantic model 18, report
+  11, Data Agent 15), and 1 declared source / 13 elements / 13 rows / 3 calendar rows.
+  The test count rose **573 → 594 passing** (`Ran 575` → `Ran 596`) with the work that
+  landed after the 2026-09-25 measurement; everything else held and was re-run rather
+  than assumed. Two non-gate measurements also moved and are recorded above: the
+  ledger's disposition mix (now 3 / 4 / 6 / **0 untriaged**) and the expiry arithmetic
+  (0 problems as of 2026-12-24, **9** as of 2026-12-25 — it was 5 when only exclusions
+  carried that date, and the three calendar rows have since joined it). **A stale
+  baseline is the normal state of this section, not an exception**: the 573 figure had
+  been correct at its own commit boundary and was wrong three sprints later, which is
+  why the instruction is to re-measure rather than to trust the last line written.
+  At the earlier 2026-09-25 measurement four figures moved, all for the same reason —
+  Sprints 7.1 and 7.2 landed: the test count (530 → 573 passing), modules
+  (27 → **28**, `scripts/check_scope_ledger.py`), required documents
+  (7 → **8**, `docs/SCOPE_LEDGER.md`) and tracked files
   (105 → **109**). **The ruleset token and rule total (`2026.09.2`/67) and writer
-  destinations (75) did not move**, and were re-run rather than assumed. A figure that is
+  destinations (75) did not move** then either. A figure that is
   expected to have drifted and has not is still a measurement; record it as unchanged
   instead of quietly restating it. Earlier in the same session the ruleset token and rule
   total had moved from the 2026-09-24 review (`2026.09.1`/65 → `2026.09.2`/67, and the
   per-type breakdown with them) and the test count from 486 → 530.
 
-  The test figure has now moved **three times within this session**, which is the failure
-  mode this section exists to catch: it was first measured at 520 passing, rose to 530
-  when `@tester` added ten cases to `tests/test_skill_drift.py` (6 → 16 test methods),
-  and rose again to 573 when Sprints 7.1 and 7.2 added `tests/test_scope_ledger.py` and
-  `tests/test_scope_ledger_gate.py`. 573 is the figure for the tree being committed,
-  measured after those changes landed. **The lesson is procedural, not
-  arithmetic:** a baseline measured before concurrent work lands is stale on arrival, so
-  re-measure at the commit boundary rather than at the start of the edit.
+  The test figure has now moved **four times across these two sessions**, which is the
+  failure mode this section exists to catch: it was first measured at 520 passing, rose
+  to 530 when `@tester` added ten cases to `tests/test_skill_drift.py` (6 → 16 test
+  methods), rose to 573 when Sprints 7.1 and 7.2 added `tests/test_scope_ledger.py` and
+  `tests/test_scope_ledger_gate.py`, and stands at **594** for this tree. **The lesson is
+  procedural, not arithmetic:** a baseline measured before concurrent work lands is stale
+  on arrival, so re-measure at the commit boundary rather than at the start of the edit.
 
 #### Ruleset ledger note — `2026.09.1` is `AMBIGUOUS_FINGERPRINT`, not a hash
 
@@ -1534,12 +1546,15 @@ change.
 
 ## Phase 7 — Scope-Drift Detection 🟡
 
-**Two of five sprints are delivered and one release criterion of seven is met.** Sprints
-7.1 (the ledger) and 7.2 (the offline reconciliation gate) landed on 2026-09-25;
-criterion 2 is met and the other six are open. Sprints 7.3–7.5 have not started. The
+**Two of five sprints are delivered, one of them now closed, and two release criteria of
+seven are met with a third partly met.** Sprints 7.1 (the ledger) and 7.2 (the offline
+reconciliation gate) landed on 2026-09-25; 7.1 **closed on 2026-09-27** when the last
+untriaged row was signed. Criteria 2 and 3 are met, criterion 1 is **partly met** — its
+untriaged half closed 2026-09-27, its reach half open — and the remaining four are open.
+Sprints 7.3–7.5 have not started. The
 phase still adds **no rule, no object type and no scoring change** — that property is
 deliberate and survives delivery, so nothing below may be cited as coverage. What is now
-true that was not: an omission in the one declared source is a signed, dated, checked
+true that was not: every omission in the one declared source is a signed, dated, checked
 decision rather than a silence. What is still true: the phase detects shape the
 repository already names, and nothing else.
 
@@ -1584,7 +1599,9 @@ which case the reconciliation is noise and the phase's real work is the disposit
 record, not the check. **Result (2026-09-25): not falsified, and the noise half was
 wrong in an instructive direction.** The offline reconciliation is real — `check_scope_ledger.py`
 runs with no tenant and no network. Of the ten unassessed elements, triage sorted four to
-`open` and five to dated exclusions with one still untriaged; the list was not dominated
+`open` and five to dated exclusions with one held on an unresolved referent; the sixth
+exclusion was signed on 2026-09-27 once that referent was established, so the final split
+is four `open` and six dated exclusions. The list was not dominated
 by never-assess items, because **two of the three this roadmap named as obviously
 never-assess were wrong**. See the cheap check below.
 
@@ -1643,10 +1660,11 @@ cleared without a recorded decision is counted as a gate failure, not as a pass.
 no element of a declared shape source is untriaged, every deliberate exclusion carries a
 reason, an owning agent and a review-by date, and no scope statement moves a score, a
 coverage figure or a confidence figure — nor is any of it mapped to `NOT_EVALUATED`,
-which reports missing evidence and never an absent rule. **Criterion 2 is met at this
-revision; the other six are open.**
+which reports missing evidence and never an absent rule. **Criteria 2 and 3 are met at
+this revision and criterion 1 is partly met — its untriaged half closed on 2026-09-27,
+its reach half remains open on 7.3/7.4. The other four are open.**
 
-### Sprint 7.1 — Record What We Deliberately Do Not Assess (the scope ledger) — 🟡 **DELIVERED 2026-09-25** (`662c50b`), sprint stays **OPEN**
+### Sprint 7.1 — Record What We Deliberately Do Not Assess (the scope ledger) — ✅ **CLOSED 2026-09-27** (delivered 2026-09-25, `662c50b`)
 
 1. **Outcome** — One record states, for every element of Fabric's shape the repository
    already names, exactly one disposition: **assessed** (with rule IDs), **deliberately
@@ -1654,20 +1672,28 @@ revision; the other six are open.**
    sprint that would close it), or **untriaged** — the state that must be empty. The
    scope of a verdict becomes something an owner signed, rather than a by-product of
    which collector happened to be written first.
-2. **Current evidence** — **Delivered, and open.** [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md)
+2. **Current evidence** — **Delivered 2026-09-25, closed 2026-09-27.**
+   [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md)
    exists, is owned by `@readme`, is the eighth `REQUIRED_DOCS` entry, and disposes all
    **13** elements of `WORKSPACE_ITEM_KEYS`: **3 assessed** (`reports`, `datasets`,
    `DataAgent`), **4 open** (`dashboards`, `Ontology`, `Lakehouse`, `KQLDatabase`),
-   **5 deliberately excluded** with a reason, an owning agent and a review-by date
-   (`dataflows`, `datamarts`, `Notebook`, `SQLAnalyticsEndpoint`, `Eventhouse`), and
-   **1 untriaged** (`GraphModel`). **The sprint stays open on that single row**, which is
-   exactly what release criterion 1 describes closing, and it is held on a *collection*
-   question, not a rule question: Q3 to `@collector` — whether the Scanner key
-   `GraphModel` denotes the Fabric graph item. `@dataagent` ruled Q1 and Q2 and
-   deliberately declined to apply a ruling to a name whose referent is unverified, which
-   is the discipline row 9's own `SQLAnalyticsEndpoint` correction records. Signing a
+   **6 deliberately excluded** with a reason, an owning agent and a review-by date
+   (`dataflows`, `datamarts`, `Notebook`, `SQLAnalyticsEndpoint`, `Eventhouse`,
+   `GraphModel`), and **0 untriaged** — counted by parsing the ledger for this entry, not
+   copied from a report. **The sprint stayed open for two days on row 13 alone**, and
+   closed when `@dataagent` signed it on 2026-09-27 against `@collector`'s Q3 answer
+   (`API_REALITY_MATRIX.md` §11.6) that the item type `GraphModel` **is** the Fabric
+   graph item. The hold was a *collection* question, not a rule question, and the right
+   one to hold on: `@dataagent` ruled Q1 and Q2 on 2026-09-25 and deliberately declined
+   to apply a ruling to a name whose referent was unverified, which is the discipline
+   row 9's own `SQLAnalyticsEndpoint` correction records. Signing a
    disposition for a name you cannot resolve is the reasonless exclusion this sprint was
    written to prevent, arriving by the back door.
+   **What closing this sprint does not credit.** It closes the *record*, for one source.
+   It does not credit release criterion 1, which is partly met at best (see the gate
+   below), and it does not credit criterion 3, whose subject is every declared source and
+   the permanence discipline, not this table. A sprint closing and a criterion closing
+   are different events, and this roadmap has been wrong in that direction before.
    **What this replaced:** before 2026-09-25 nothing of the kind existed, and the finding
    was the asymmetry itself — 13 item containers enumerated against 3 assessed; 6 settings
    in `TENANT_SETTING_MAP`; 6 `ObjectType` members against 5 with rules — **none of it
@@ -1694,13 +1720,28 @@ revision; the other six are open.**
 5. **Validation** — Focused check: every element of the declared source resolves to
    exactly one disposition; a row marked excluded carries a reason, an owning agent and a
    review-by date, and a row carrying none fails review. Release gate: no element is
-   untriaged and no exclusion is undated. **Note what this does not close** — a ledger is
-   the baseline a detector needs, not a detector. Closing 7.1 closes nothing in 7.2.
+   untriaged and no exclusion is undated — **met for the one declared source on
+   2026-09-27**, measured by parsing the ledger (0 untriaged) and by running `audit()` at
+   2026-12-24 (0 problems). That is the sprint's condition, not criterion 1's; see the
+   drafting finding under **Release Gate for Phase 7**. **Note what this does not
+   close** — a ledger is the baseline a detector needs, not a detector. Closing 7.1
+   closes nothing in 7.2.
 6. **Risks and non-goals** — The real risk is that the ledger becomes somewhere to park
    inconvenient truth: an exclusion reading "out of scope" with no reason is *worse* than
    silence, because it looks decided. The reason field, the named owner and 7.3's review
    obligation are the mitigation, and a reviewer should treat a reasonless exclusion as a
-   finding. Non-goals: no rule, no object type, no scoring change, no claim that an
+   finding. **A second risk arrived with row 13 and is now the sprint's clearest lesson —
+   the referent trap.** The row's original wording, "Graph is a documented data agent
+   source in preview", was true of **two different artefacts**: *Microsoft Graph*, a
+   Microsoft 365 API that can never be an element of `WORKSPACE_ITEM_KEYS`, and the
+   *Fabric graph item*, which is what the key names. Neither agent-source enumeration on
+   the vendor page names the Fabric graph item — the strings "graph model" and
+   "GraphModel" occur **zero** times there. A reason sentence that resolves to the wrong
+   artefact passes every check this phase ships, because the checks reconcile *names*
+   against *code* and can never reconcile a name against the thing it denotes. The
+   mitigation is procedural and cost two days here: **a disposition names the artefact,
+   not the word**, and an unresolved referent is a reason to hold the row rather than to
+   sign it. Non-goals: no rule, no object type, no scoring change, no claim that an
    excluded item type is unimportant, and no attempt to enumerate item types the
    repository has never heard of — that is 7.3 and 7.4.
 7. **Commit boundary** — The ledger, its `REQUIRED_DOCS` entry and its ownership test are
@@ -1717,9 +1758,13 @@ revision; the other six are open.**
    **Per-Change Quality Gate**). It runs offline in CI as its own named step on all four
    legs, is listed in the per-change gate, and `tests/test_scope_ledger_gate.py`
    negative-tests all three required directions plus a vanished declaring module. It is
-   the one Phase 7 release criterion that is met (criterion 2), on the ground that the
+   **a** Phase 7 release criterion **fully** met (criterion 2) — criterion 3 joined it on
+   2026-09-27 on the strength of the ledger's rows rather than this script's design — on
+   the ground that the
    check is **executable and unskippable**; how much shape it *reaches* is criterion 1's
-   and 7.3/7.4's business and is not credited here. The precedent this was built on —
+   and 7.3/7.4's business and is not credited here. That ruling is load-bearing and is
+   left standing: because criterion 2 disclaims reach, reach has to live in criterion 1,
+   which is why criterion 1 is credited only in half on 2026-09-27 — see the gate below. The precedent this was built on —
    `scripts/check_agent_ownership.py` and `scripts/check_evidence_sinks.py`, both
    `@tester`-owned, each enumerating from code against an explicit map — also carried the
    warning that was heeded: Sprint 5.0.1 found the ownership parser could not begin a path
@@ -1785,14 +1830,49 @@ revision; the other six are open.**
    same as being started: nothing below has been done.
 5. **Validation** — Focused check: a row whose review-by date has passed fails the 7.2
    check naming the row and its owner; the same row re-dated with a source and a date
-   passes. Release gate: **a review that found nothing is itself evidence and must be
+   passes. **Measured 2026-09-27, and the arithmetic has moved since it was first
+   written**: all three calendar rows carry `2026-12-24`, the same date as all six
+   deliberate exclusions, so `audit()` reports **0 problems as of 2026-12-24 and 9 as of
+   2026-12-25** — rows 6, 7, 8, 9, 12, 13 plus the three calendar rows, each named
+   individually. **The expiry cost is no longer an exclusions-only phenomenon**: any text
+   in this roadmap that describes the first fire as "the exclusions coming due" is
+   describing a five-message event that is now a nine-message one, of which three are
+   this sprint's. The ownership split is **`@readme` 7** (rows 6–9 and all three calendar
+   rows) and **`@dataagent` 2** (rows 12 and 13). Concentrating every date on one day is
+   a scheduling defect, not a detail; it is recorded as a risk below.
+   Release gate: **a review that found nothing is itself evidence and must be
    written down** with its date and the sources consulted — otherwise the next reviewer
    cannot distinguish a checked surface from an unchecked one, which is the exact
    confusion this phase exists to remove. **Open.**
 6. **Risks and non-goals** — This is a calendar, not a detector. It fails silently when a
    human reads carelessly, and that failure cannot be negative-tested. Its honest claim is
    narrow: it guarantees that somebody looked on a stated date, never that they saw.
-   Non-goals: no automated release-note ingestion, no network call in a gate, and no
+   **The clustered review date is the live instance of that risk, and it is owed an edit
+   now rather than in December.** Every dated row in the ledger — all six deliberate
+   exclusions and all three calendar rows — carries `2026-12-24`, so the first expiry is
+   **nine messages on one morning, across two agents** (`@readme` 7, `@dataagent` 2).
+   That is precisely the shape in which a review obligation gets cleared in bulk by
+   somebody who has stopped reading it, which is the failure the **no bulk re-dating
+   command** rule exists to prevent: the mechanism refuses the bulk edit, but a
+   nine-message day re-creates the incentive by hand. The cadence argument above is what
+   makes this fixable — three to five classes on a quarterly cycle should fire *a handful
+   of times a year*, spread out, not all at once. **Owner: `@readme`, and the edit is due
+   well before 2026-12-24** — staggering the three calendar rows across the quarter is a
+   documentation edit, needs no mechanism change, and must not be discovered on the day
+   the build turns red. Re-dating them *on* 2026-12-24 to clear a red build would be the
+   noise-budget failure criterion 5 describes, not a fix.
+   **A third failure mode surfaced on 2026-09-27 and it is not carelessness — the source
+   can be inconsistent with itself.** `concept-data-agent` carries two enumerations of a
+   data agent's data sources that disagree on the same page on the same day: the
+   *Prerequisites* list names a mirrored database and omits Microsoft Graph; the
+   *Selecting data sources* list names Microsoft Graph and omits the mirrored database.
+   `@readme` recorded both verbatim with their section labels and picked no winner, which
+   is the correct handling. The consequence for this sprint is a drafting rule: **a
+   review row, or any sprint text, that cites "the documented source list" without naming
+   the section is under-specified and must name it** — a reviewer cannot re-verify a
+   claim against a page that contradicts itself unless the claim says which part of the
+   page it came from. Non-goals: no automated release-note ingestion, no network call in
+   a gate, and no
    treatment of a vendor documentation page as an observation of a tenant — the roadmap
    already forbids that conversion and this sprint does not create an exception to it.
 7. **Commit boundary** — The review-obligation rows and their sourcing are a `@readme`
@@ -1809,11 +1889,34 @@ revision; the other six are open.**
    is invisible to the run and to the operator alike. Whether unrecognised containers
    actually appear, and under what key spelling, is **unknown**: the Scanner was not
    exercised at all by the 2026-09-24 exploratory read.
+   **A sharper form of the same gap was recorded by `@collector` on 2026-09-27, and it
+   belongs to this sprint rather than to a new one.** Eight of the thirteen keys in
+   `WORKSPACE_ITEM_KEYS` are Fabric item types whose **spelling in a Scanner payload has
+   never been observed** — they were written from the `ItemType` enum, which is the
+   enum's spelling and not necessarily the container's — and the tuple carries no
+   `GraphQuerySet` at all. Q3 established the *item* (`GraphModel` is the Fabric graph
+   item) and explicitly did **not** establish the *container*. The failure mode is worse
+   than a missing count because it is silent and it is directional: a misspelled key
+   matches nothing, the container is dropped, `items_total` **undercounts**, and the
+   tenant reads as **tidier than it is** — which then feeds `WKS-009` coverage. A wrong
+   key therefore produces a more complete-looking estate, never a visibly broken one.
+   **Note what this does to the Phase 7 gate**: `check_scope_ledger.py` reconciles the
+   ledger against the constant, so thirteen rows can be clean, dated and signed over
+   element names the product never emits. The gate proves ledger↔code agreement and has
+   no purchase on code↔product agreement; that is recorded under **What This Phase
+   Cannot Detect** and is not fixable by any offline check.
 3. **Smallest slice** — `@collector` records in [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md)
    whether a Scanner workspace payload carries containers outside the known tuple, and
    records **key names only** — never contents, because an unknown container's contents
-   are un-triaged tenant evidence of unknown sensitivity. A counting mechanism follows
-   only if unrecognised keys are actually observed.
+   are un-triaged tenant evidence of unknown sensitivity. **One observed scan result
+   settles both questions at once**: the same payload that reveals unknown containers
+   also confirms or refutes all eight unconfirmed spellings and the `GraphQuerySet`
+   absence, so this is one observation with two findings, not two sprints. A counting
+   mechanism follows only if unrecognised keys are actually observed; a **spelling
+   correction** follows immediately if any of the eight is wrong, and that correction is
+   a `@collector` change to the constant with a `@tester` fixture, not a ledger edit —
+   though every ledger row naming a corrected key becomes `@readme`'s to re-sign in the
+   same change.
 4. **Dependencies** — Inherits Sprint 5.1 **in full**: an authorised tenant, a read-only
    service principal whose scopes and evidence expiry `@security` approves beforehand, and
    the expiry set at authorisation rather than afterwards. `@collector` owns the record.
@@ -1904,6 +2007,15 @@ reach invites the assumption that silence means currency.
 - **Its own blind spot.** A new source of shape added to the code without being registered
   with the ledger is undetected by construction. 7.2's third negative test narrows this
   and does not close it.
+- **Whether the names it reconciles are the product's names.** The check compares the
+  ledger against a constant the collector maintains by hand; it cannot compare either
+  against a tenant. **Eight of the thirteen keys in `WORKSPACE_ITEM_KEYS` have never been
+  observed in a Scanner payload** (`@collector`, 2026-09-27), so a clean, fully signed
+  ledger is consistent with disposing element names Fabric never emits. The consequence
+  is directional and therefore worth stating rather than filing: a wrong key drops its
+  container silently, `items_total` undercounts, and the estate reads **tidier** than it
+  is, feeding `WKS-009` coverage. Only an observed scan result settles it — Sprint 7.4,
+  blocked on 5.1. No offline check can, and none below should be read as if it did.
 - **Whether an assessed thing is assessed *well*.** This phase counts subjects, never
   quality. L5 behavioural quality remains `NOT_EVALUATED` by design until Sprint 5.4
   produces a real execution proof, and no scope statement may be read as a quality claim.
@@ -1914,20 +2026,43 @@ due. It does not mean Fabric stood still.
 
 ## Release Gate for Phase 7
 
-The phase closes only when all of the following are executable or evidenced. **Criterion 2
-is met at this revision (Sprint 7.2); the other six are open.**
+The phase closes only when all of the following are executable or evidenced. **Criteria 2
+(Sprint 7.2) and 3 are met at this revision. Criterion 1 is partly met — half (a) closed
+2026-09-27, half (b) open — and the criterion therefore stays open. The other four are
+open.**
 
-1. Every element in every declared shape source carries exactly one disposition, and the
-   untriaged set is empty. **Open** — and it is now open on **one row and one question**,
-   not on a backlog. Twelve of the thirteen elements of `WORKSPACE_ITEM_KEYS` are
-   disposed; row 13 (`GraphModel`) is untriaged, held on **Q3 to `@collector`** —
-   whether that Scanner key denotes the Fabric graph item. It is **not** waiting on a
-   `@dataagent` answer: Q1 and Q2 were ruled on 2026-09-25, and `@dataagent` declined to
-   apply the ruling to a name whose referent is unverified, which is the same discipline
-   the ledger's own `SQLAnalyticsEndpoint` correction records. The criterion's other half
-   is untouched by that answer: **only one shape source is declared**, so "every declared
-   shape source" is today a statement about `WORKSPACE_ITEM_KEYS` alone, and closing row
-   13 would satisfy the untriaged half while leaving the reach half to 7.3/7.4.
+1. **Two halves, and they must be read separately** — this criterion was drafted as one
+   sentence and the drafting is defective; the repair is below, and stating it is part of
+   the ruling rather than a footnote to it.
+   **(a) Completeness.** Every element in every declared shape source carries exactly one
+   disposition, and the untriaged set is empty. **Met 2026-09-27.** All 13 elements of
+   `WORKSPACE_ITEM_KEYS` carry exactly one disposition — 3 assessed, 4 open, 6
+   deliberately excluded — and `untriaged` is empty, measured by parsing the ledger for
+   this entry rather than accepting any agent's report. Row 13 (`GraphModel`) was the
+   last, signed **deliberately excluded** by `@dataagent` with a reason, an owner and a
+   `2026-12-24` review date, on `@collector`'s Q3 answer. Both declining agents were
+   right to decline: an empty bucket is not a credit, and the credit was the roadmap
+   owner's to make.
+   **(b) Reach.** The declared sources are the shape sources the repository actually has.
+   **Open.** `TENANT_SETTING_MAP`, `ObjectType`, consumption surfaces and agent kinds are
+   unreconciled; **one** source is declared, and Sprints 7.3 and 7.4 own the rest.
+   **Why the criterion is not credited as met.** On its literal text, half (a) *is* the
+   whole criterion: "every **declared** shape source" quantifies over what has been
+   declared, so the sentence is satisfiable by declaring less — a gate that grades a
+   detector on the reach it chose to admit. That is the defect. It matters because
+   `@orchestrator`'s ruling on criterion 2 (met, 2026-09-25) rests explicitly on reach
+   being **criterion 1's business and not criterion 2's**; if criterion 1 is read
+   literally and credited, reach becomes the business of no criterion at all and Phase 7
+   could close with one source declared out of four-plus known ones — the precise failure
+   this phase exists to prevent. Crediting half (a) as the whole is therefore not a
+   generous reading of the same standard `@orchestrator` applied; it is a hole. Half (b)
+   is written into the criterion above so the allocation criterion 2's ruling depends on
+   now exists in the words, and **the criterion closes only when both halves do.**
+   **What would close (b):** every shape source the code declares is registered with the
+   ledger and reconciled by the check, which is 7.3's and 7.4's delivery, not a
+   re-reading of this text. The honest summary in one line — *the untriaged half is
+   closed for the one source we declared; how much we declared is still the open
+   question.*
 2. The reconciliation check runs offline in CI as its own named step, appears in the
    per-change quality gate, and is negative-tested three ways — a new untriaged element, an
    expired disposition, and a declared source that has vanished. **Met (2026-09-25,
@@ -1942,7 +2077,31 @@ is met at this revision (Sprint 7.2); the other six are open.**
    check reaches, which is criterion 1's and 7.3/7.4's business.
 3. Every deliberate exclusion carries a reason, an owning agent and a review-by date. No
    exclusion is permanent by construction, and an undated one fails the check rather than
-   being grandfathered. **Open.**
+   being grandfathered. **Met 2026-09-27.** All **six** exclusions in the ledger
+   (`dataflows`, `datamarts`, `Notebook`, `SQLAnalyticsEndpoint`, `Eventhouse`,
+   `GraphModel`) carry all three fields, asserted on the real tree by
+   `test_every_deliberately_excluded_row_carries_a_reason_and_an_owner` and
+   `test_every_deliberately_excluded_row_carries_a_review_by_date`. It is **enforced, not
+   merely true**, and mutation-proved in both directions:
+   `test_an_exclusion_that_loses_its_date_fails` and
+   `test_a_back_dated_review_fails_and_is_named` fire, while
+   `test_a_date_still_in_the_future_is_silent` proves the check does not fire on a
+   healthy row — and `test_the_real_ledger_is_byte_identical_after_every_mutation_proof`
+   proves the proofs left the ledger untouched.
+   **Reach is deliberately not re-asserted here.** This criterion's subject is the
+   *well-formedness of each exclusion that exists*, not the *count of declared sources*.
+   Reach lives in criterion 1 half (b) and in exactly one place: if it were also read
+   into this sentence it would be counted twice, and **no criterion touching an exclusion
+   could ever close** — the mirror of the defect criterion 1 records, not a stricter form
+   of it. A reader whose instinct is to re-import reach here should follow that instinct
+   to 1(b) instead.
+   **What being met does not mean.** It does not mean the exclusions are **right**: a
+   well-formed *wrong* exclusion passes this criterion intact, and one nearly shipped —
+   see the **referent trap** in Sprint 7.1's risks, where a reason sentence that was true
+   of the wrong artefact would have satisfied every field this criterion counts. Nor does
+   it mean the set is **complete**; that is 1(b) again. What it does mean is narrow and
+   durable: every exclusion on the books is well-formed, and cannot silently stop being
+   so.
 4. **Historical replay.** Against a fixture of the repository's shape sources as they
    stood before 2026-09-24, the check fires on the `Ontology` asymmetry — and the same test
    records that it does **not** fire on the Microsoft 365 surface, naming 7.3's review
@@ -1979,7 +2138,7 @@ undecided) → 6.1 type-reachability family (blocked until 6.2 decides) → 6.3 
 object type (preview) → 6.4 grounding sources as subjects (blocked on 5.1)`
 
 `(2026-09-24 product-fit review — a human found both gaps and the repository found
-neither) → 7.1 scope ledger ✅ (open on one untriaged row) → 7.2 offline reconciliation
+neither) → 7.1 scope ledger ✅ (closed 2026-09-27, `untriaged` empty) → 7.2 offline reconciliation
 gate ✅ → 7.3 dated review
 obligation → 7.4 tenant-observed unknown item types (blocked on 5.1) → 7.5 scope
 statement in the verdict (blocked on a ratified 6.2)`
@@ -2069,7 +2228,7 @@ written deliberately as a named blind spot.
   two are genuine gaps, and a gate that is red on arrival teaches contributors to clear it
   without reading. 7.3 follows 7.2 because the expiry mechanism it needs is built there.
   **The order was right and the estimate was low.** Triage produced four `open` rows and
-  one still untriaged, not two genuine gaps: `Lakehouse` and `KQLDatabase` — both named
+  six dated exclusions, not two genuine gaps: `Lakehouse` and `KQLDatabase` — both named
   above as items nobody would assess — turned out to be in scope and now need Sprint 6.4.
   A check shipped first would have made that argument with the build red.
 - **Why this was chosen ahead of the ontology layer, and what deferring it costs.**
@@ -2191,15 +2350,22 @@ names; and every `deliberately excluded` row carries a review-by date that has n
 — an undated exclusion fails too, because one that never comes back is permanent by
 neglect rather than by decision. It never reads the network and has no bulk `--update`
 flag by design — the manual cost on every fire is the point. One consequence a
-contributor should know before reading a red build as a flake: the **five** current
-exclusions (ledger rows 6, 7, 8, 9 and 12) are each dated `2026-12-24`, and the
+contributor should know before reading a red build as a flake: the **six** current
+exclusions (ledger rows 6, 7, 8, 9, 12 and 13) **and all three calendar rows** are each
+dated `2026-12-24`, and the
 comparison is `review_by < as_of`, so this check **passes on 2026-12-24 and fails on
-2026-12-25 with nobody having changed a line** — all five at once, named individually.
-Verified by running `audit()` at both dates: 0 expiries as of 2026-12-24, 5 as of
-2026-12-25. Clearing it costs a deliberate per-row edit with a recorded decision, and
-the rows are not all one agent's to clear: rows 6–9 (`dataflows`, `datamarts`,
-`Notebook`, `SQLAnalyticsEndpoint`) are owed by **`@readme`**, row 12 (`Eventhouse`) by
-**`@dataagent`**, and the check names the owner in each message. That is the review
+2026-12-25 with nobody having changed a line** — all nine at once, named individually.
+Verified by running `audit()` at both dates against this tree: 0 problems as of
+2026-12-24, **9** as of 2026-12-25. **That figure has moved twice** — it was 5 when only
+five exclusions carried the date, 6 when row 13 was signed on 2026-09-27, and 9 once
+Sprint 7.3's three calendar rows joined the same day; anyone quoting it should re-run
+`audit()` rather than copy it, and should not describe the first fire as an
+exclusions-only event. Clearing it costs a deliberate per-row edit with a recorded
+decision, and
+the rows are not all one agent's to clear: **seven are `@readme`'s** (rows 6–9 —
+`dataflows`, `datamarts`, `Notebook`, `SQLAnalyticsEndpoint` — and all three calendar
+rows) and **two are `@dataagent`'s** (row 12 `Eventhouse`, row 13 `GraphModel`), and the
+check names the owner in each message. That is the review
 obligation working. It runs in CI as its own named step,
 *Check the scope ledger disposes every element in code*, with exactly the command above;
 `tests.test_skill_drift` covers the
