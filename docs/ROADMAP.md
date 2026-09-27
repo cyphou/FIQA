@@ -2,7 +2,7 @@
 
 Owner: **@roadmap-planner**. This document is authoritative for scope and release gates.
 
-Last evidence review: **2026-09-25** against ruleset `2026.09.2`.
+Last evidence review: **2026-09-27** against ruleset `2026.09.2`.
 
 ## Purpose
 
@@ -77,7 +77,8 @@ records, not earlier roadmap labels.
 | Fabric publication | Notebook, Data Pipeline, Lakehouse, Gold Delta marts, Direct Lake semantic model/report, run summary, trends, burn-down, and CI exit gates exist. The model/report synthetic self-assessment gate is executable. A versioned schedule contract covering cadence, `concurrency: 1` overlap prevention, identity requirement, schedule-run housekeeping, failure notification, and rerun procedure is documented in `fabric/README.md` and `docs/INSTALL.md`; the Bronze/Silver/Gold retention contract is documented as 90/180/730 days in `fabric_iq/lakehouse.py` and `docs/IDENTITY_AND_RETENTION.md`, with a durable per-run manifest and a tested, explicitly invoked `LakehouseRetentionPruner.prune()` mechanism now implemented. | No actual unattended/scheduled run has been evidenced. Retention enforcement is a tested library mechanism only: no live deployment schedule invokes the pruner yet. “Scheduled” and “unattended” are not yet delivered claims. | 🟡 Schedulable |
 | Re-measurement | Comparable-run trends, automatic baseline selection, coverage-loss classification, and remediation-state comparison are implemented. | A repeatable operational cadence, ruleset-compatible baseline policy, and recorded remediation/re-measure cycle are not yet proven end to end. | 🟡 Mechanism delivered |
 | Consumption-surface coverage | One of the three Sprint 6.1 rule families has shipped: `SEM-018` and `REP-011` assess **endorsement** (both MINOR), fed by Scanner `endorsementDetails` which the collector now carries with absence treated as unknown. A Sprint 6.1 availability record classifies all three Microsoft 365 gating settings as currently unevaluable. A non-normative `@scorer` design note for Sprint 6.2 exists in `docs/SCORING.md`. | A 2026-09-24 documentation review found the **GA** Microsoft 365 consumption surface (Cowork, Copilot Chat) assessed by no rule, the **preview** Fabric IQ ontology item enumerated by the collector but judged by nothing, and one headline verdict standing for four different reachability paths. The **tenant-setting** family is unevaluable at source; the **type-reachability** family is **blocked on the Sprint 6.2 decision** — today's engine has no rule outcome that states unreachability without moving a score or coverage. No Phase 6 release-gate criterion is met. | 🟥 Open, partially started |
-| Scope currency | All three kinds of decay now have a named watcher. [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md) (Sprint 7.1) gives every one of the 13 elements of `WORKSPACE_ITEM_KEYS` exactly one signed disposition — 3 assessed, 4 open, **6 deliberately excluded** with a reason, an owning agent and a review-by date, **0 untriaged** since `@dataagent` signed row 13 (`GraphModel`) on 2026-09-27 — and `scripts/check_scope_ledger.py` (Sprint 7.2) reconciles ledger against code offline, on all four CI legs and in the per-change gate, negative-tested three ways. Product facts stay watched by `docs/KNOWN_LIMITATIONS.md` §8 and API surfaces by [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md). | The new watcher is **one source wide**. `TENANT_SETTING_MAP`, `ObjectType`, consumption surfaces and agent kinds are not reconciled by it (Sprints 7.3/7.4), and no self-reconciliation reaches shape the repository has never named — the Cowork class of miss, covered only by 7.3's dated review obligation, which now exists and is gated: three watched classes (Microsoft 365 consumption surfaces, in-Fabric agent surfaces, the preview Fabric IQ workload), each carrying public sources, a checked date and a review-by date, so an unreviewed date fails the build — though it still only guarantees that somebody looked on a stated date, never that they saw. The empty `untriaged` set closes **one half** of criterion 1 for **one** declared source; the reach half is open and criterion 1 with it. Of seven Phase 7 release criteria, **two** (criteria 2 and 3) are met and one (criterion 1) is **partly met**. Reading a green scope gate as "the catalogue is current" is the specific misreading this row exists to prevent. | 🟡 Started, two criteria met, one partly |
+| Scope currency | All three kinds of decay now have a named watcher. [`SCOPE_LEDGER.md`](SCOPE_LEDGER.md) (Sprint 7.1) gives every one of the 13 elements of `WORKSPACE_ITEM_KEYS` exactly one signed disposition — 3 assessed, 4 open, **6 deliberately excluded** with a reason, an owning agent and a review-by date, **0 untriaged** since `@dataagent` signed row 13 (`GraphModel`) on 2026-09-27 — and `scripts/check_scope_ledger.py` (Sprint 7.2) reconciles ledger against code offline, on all four CI legs and in the per-change gate, negative-tested three ways. Product facts stay watched by `docs/KNOWN_LIMITATIONS.md` §8 and API surfaces by [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md). | The new watcher is **one source wide**. `TENANT_SETTING_MAP`, `ObjectType`, consumption surfaces and agent kinds are not reconciled by it (Sprints 7.3/7.4), and no self-reconciliation reaches shape the repository has never named — the Cowork class of miss, covered only by 7.3's dated review obligation, which now exists and is gated: three watched classes (Microsoft 365 consumption surfaces, in-Fabric agent surfaces, the preview Fabric IQ workload), each carrying public sources, a checked date and a review-by date, so an unreviewed date fails the build — though it still only guarantees that somebody looked on a stated date, never that they saw. The empty `untriaged` set closes **one half** of criterion 1 for **one** declared source; the reach half is open and criterion 1 with it. Of seven Phase 7 release criteria, **two** (criteria 2 and 3) are met and **two** (criteria 1 and 7) are **partly met** — criterion 7 split on 2026-09-27 into a met offline half and an open live half, and criterion 6 was redrafted the same day because its previous wording was true of the empty set and creditable without building anything. Reading a green scope gate as "the catalogue is current" is the specific misreading this row exists to prevent. | 🟡 Started, two criteria met, two partly |
+| Tenant-wide Microsoft IQ readiness | **None.** A 2026-09-27 documentation re-verification (recorded in Phase 8) confirmed five deltas against the Microsoft Learn surface since the 2026-09-24/25 reviews — a fourth **Web IQ** layer, GA of the M365 Copilot Cowork connector and the standalone M365 Copilot connector, preview consumption of a Fabric data agent from M365 Copilot via **Agent Store** publication, the exact Copilot-and-AI tenant-settings group and its two undocumented-by-name settings, and confirmation that Embedded (A/EM) capacity SKUs and Power-BI-only regions are unsupported for the Copilot Chat path. **Nothing else exists**: no consumption-surface registry, no rule over any of the newly identified settings, no capacity/region reachability statement, no data-agent publication-target or compliance-boundary-egress rule, and no per-surface tenant-wide verdict or estate reachability funnel. | Every item in Phase 8's seven sprints (8.1–8.7): the registry itself; classification of the unmapped Copilot/AI tenant settings named in the 2026-09-27 re-verification below (the OpenAI-subprocessor setting and its cross-geo and storage variants, and standalone Copilot in Power BI with its "Only show approved items" restriction) — none of which has a confirmed `settingName` in this repository yet, distinct from *Share Fabric data with your Microsoft 365 services*, which Sprint 6.1 already classifies `permission-blocked`; tenant-gate rules per surface; capacity/region reachability (blocked on a ratified Sprint 6.2); data-agent publication and boundary-egress governance (blocked on Sprints 5.1/5.4 evidence); a tenant-wide per-surface verdict and reachability funnel (blocked on a ratified Sprint 6.2); and the attested-evidence design question for out-of-plane facts (licences, the M365 admin center setting, Cowork DLP). | 🟥 Open, plan only |
 
 ### Verified Repository Baseline
 
@@ -1547,10 +1548,11 @@ change.
 ## Phase 7 — Scope-Drift Detection 🟡
 
 **Two of five sprints are delivered, one of them now closed, and two release criteria of
-seven are met with a third partly met.** Sprints 7.1 (the ledger) and 7.2 (the offline
+seven are met with two more partly met.** Sprints 7.1 (the ledger) and 7.2 (the offline
 reconciliation gate) landed on 2026-09-25; 7.1 **closed on 2026-09-27** when the last
-untriaged row was signed. Criteria 2 and 3 are met, criterion 1 is **partly met** — its
-untriaged half closed 2026-09-27, its reach half open — and the remaining four are open.
+untriaged row was signed. Criteria 2 and 3 are met; criteria 1 and 7 are **partly met** —
+criterion 1's untriaged half closed 2026-09-27 and its reach half is open, criterion 7's
+offline half is met and its live half is open — and criteria 4, 5 and 6 are open.
 Sprints 7.3–7.5 have not started. The
 phase still adds **no rule, no object type and no scoring change** — that property is
 deliberate and survives delivery, so nothing below may be cited as coverage. What is now
@@ -1658,11 +1660,13 @@ cleared without a recorded decision is counted as a gate failure, not as a pass.
 
 **Exit gate.** All seven criteria in **Release Gate for Phase 7** are met; in particular,
 no element of a declared shape source is untriaged, every deliberate exclusion carries a
-reason, an owning agent and a review-by date, and no scope statement moves a score, a
-coverage figure or a confidence figure — nor is any of it mapped to `NOT_EVALUATED`,
+reason, an owning agent and a review-by date, and a scope statement **exists** and moves
+no score, coverage or confidence figure — nor is any of it mapped to `NOT_EVALUATED`,
 which reports missing evidence and never an absent rule. **Criteria 2 and 3 are met at
-this revision and criterion 1 is partly met — its untriaged half closed on 2026-09-27,
-its reach half remains open on 7.3/7.4. The other four are open.**
+this revision; criteria 1 and 7 are partly met — criterion 1's untriaged half closed on
+2026-09-27 with its reach half open on 7.3/7.4, and criterion 7's offline half is met
+with its live half open on 7.4. Criteria 4, 5 and 6 are open: two met, two partly met,
+three open.**
 
 ### Sprint 7.1 — Record What We Deliberately Do Not Assess (the scope ledger) — ✅ **CLOSED 2026-09-27** (delivered 2026-09-25, `662c50b`)
 
@@ -1759,8 +1763,15 @@ its reach half remains open on 7.3/7.4. The other four are open.**
    legs, is listed in the per-change gate, and `tests/test_scope_ledger_gate.py`
    negative-tests all three required directions plus a vanished declaring module. It is
    **a** Phase 7 release criterion **fully** met (criterion 2) — criterion 3 joined it on
-   2026-09-27 on the strength of the ledger's rows rather than this script's design — on
-   the ground that the
+   2026-09-27 on the strength of the ledger's rows rather than this script's design, and
+   criterion **7(a)** joined it the same day on the strength of this script's imports:
+   `test_the_gate_never_reads_the_network` and
+   `test_the_gate_depends_on_nothing_outside_the_standard_library` measure the gate's own
+   parse tree, which is why the credit is worded as *the gate contains no network call*
+   and not as *nothing the gate loads can fetch* — the declared source is resolved through
+   `importlib` at run time and neither test sees it. Criterion 7's live half stays with
+   7.4 — on the
+   ground that the
    check is **executable and unskippable**; how much shape it *reaches* is criterion 1's
    and 7.3/7.4's business and is not credited here. That ruling is load-bearing and is
    left standing: because criterion 2 disclaims reach, reach has to live in criterion 1,
@@ -2027,9 +2038,42 @@ due. It does not mean Fabric stood still.
 ## Release Gate for Phase 7
 
 The phase closes only when all of the following are executable or evidenced. **Criteria 2
-(Sprint 7.2) and 3 are met at this revision. Criterion 1 is partly met — half (a) closed
-2026-09-27, half (b) open — and the criterion therefore stays open. The other four are
-open.**
+(Sprint 7.2) and 3 are met at this revision. Criteria 1 and 7 are partly met — 1(a) and
+7(a) closed 2026-09-27, 1(b) and 7(b) open — and both criteria therefore stay open.
+Criteria 4, 5 and 6 are open. Two met, two partly met, three open, of seven.**
+
+**Drafting rule for this gate, and for every gate written after it: a release criterion
+must be unsatisfiable by doing less.** If a criterion can be met by narrowing its scope,
+by deferring half its subject, or by building nothing at all, it is not a gate — it is a
+description, and it grades the work on a boundary the work itself chose. Three tests
+before a criterion is written down, any *yes* meaning redraft:
+
+- **Test A — would it still be true if the implementation declared a smaller scope?**
+  Criterion 1 was: "every element in every **declared** shape source" is satisfied by
+  declaring one source and disposing it, which is why reach had to be written into it as
+  half (b).
+- **Test B — is it true of the empty set?** Criterion 6 was: it forbade a scope statement
+  from moving `score`, `status` or `coverage` while **no scope statement exists**, so it
+  was creditable at this revision by building nothing at all. The repair below requires
+  the statement to **exist** and then be inert.
+- **Test C — does it defer part of its subject to something that does not exist?**
+  Criterion 7 deferred its live half to "a separate criterion" that was not among the
+  seven, so that half was owned by no criterion. It is now half (b), in the same numbered
+  block as the half that is met.
+
+The generalisation is **assert a positive fact, not an absence**, and it is not a new
+idea here — it is the same defect this repository has now closed four times lower down
+the stack: the Skill's drift gate that carried no entry for the number that drifts; the
+ownership parser that could not begin a path with a dot and so reported clean over a file
+it had never read; a review obligation whose dates nothing parsed; and a gate holding a
+fallback copy of a constant nobody had compared to the writer it stood in for
+(`test_a_missing_constant_fails_rather_than_reporting_clean` exists because of that one).
+Each was green while measuring nothing. A criterion phrased as *"nothing does X"* is
+green on an empty repository; a criterion phrased as *"Y exists and does not do X"* is
+not. **Prefer the second form even when it makes the gate read as further from closed —
+the distance is the information.**
+
+**The seven criteria:**
 
 1. **Two halves, and they must be read separately** — this criterion was drafted as one
    sentence and the drafting is defective; the repair is below, and stating it is part of
@@ -2113,17 +2157,639 @@ open.**
    recorded decision counts as a gate failure, not a pass. If the check fires on changes
    unrelated to product shape, the check is wrong and is fixed or withdrawn — contributors
    are not asked to absorb it. **Open.**
-6. No scope statement moves `score`, `raw_score`, `status`, `eligible`, `confidence` or
-   `coverage`, and none is mapped to `NOT_EVALUATED`, `NOT_APPLICABLE` or any other rule
-   outcome. **Open.**
-7. No part of the detector reads the network, requires a tenant, or depends on a
-   non-standard-library package. The live half (7.4) is a **separate** criterion and stays
-   open until an approved read-only identity produces its record; the offline half may not
-   be credited for it. **Open.**
+6. **A scope statement exists, and it moves nothing.** A run over a fixture that contains
+   at least one present-but-unassessed item type **emits a scope statement**; and the same
+   fixture, run with that statement suppressed, produces **byte-identical** `score`,
+   `raw_score`, `status`, `eligible`, `confidence` and `coverage` on every scorecard and
+   every rollup, with the statement mapped to no rule outcome — not `NOT_EVALUATED`, not
+   `NOT_APPLICABLE`, not any other. One executable test asserts both directions and
+   **fails as loudly when the statement is absent as when a quality figure moves**.
+   **Open, and unmet by construction at this revision.** No scope statement exists —
+   Sprint 7.5 has not started — so the existence half fails outright and the inertness
+   half has no subject to be true of.
+   **Why this is a redraft and not a tightening.** The previous wording was *"No scope
+   statement moves `score`, `raw_score`, `status`, `eligible`, `confidence` or `coverage`,
+   and none is mapped to `NOT_EVALUATED`, `NOT_APPLICABLE` or any other rule outcome."*
+   That is an absence quantified over an empty set: with zero scope statements in the
+   repository, every one of them satisfies it, and the criterion was creditable **today,
+   without Sprint 7.5 ever being built**. It failed drafting test 2 in the preamble. The
+   repair is the standard one — the only way to satisfy the criterion is now to have built
+   the statement and *then* shown it moves nothing. Note what did **not** change: the
+   zero-impact constraint is the same constraint, in the same six fields, that Sprint 7.5
+   and Phase 6 criterion 3 already carry. The redraft adds an existence obligation; it
+   relaxes nothing, and it credits nothing.
+7. **Two halves, split in place, for the same reason criterion 1 was** — the detector must
+   be offline by construction, *and* the live observation it cannot make offline must
+   actually have been made. The original sentence deferred the second half to "a separate
+   criterion" that was not among the seven, which is drafting test 3 in the preamble: a
+   subject owned by no criterion.
+   **(a) Offline by construction. Met 2026-09-27.** The shipped detector
+   (`scripts/check_scope_ledger.py`) needs no tenant, no credential and no network: it
+   runs green on all four CI legs and in the per-change gate with nothing configured.
+   `tests/test_scope_ledger_gate.py::test_the_gate_never_reads_the_network` reads the
+   gate's **parse tree** — deliberately `ast` and not a regex, after the regex it replaced
+   matched the word "from" in a prose docstring — and fails if it imports `urllib`,
+   `http`, `socket`, `ssl`, `ftplib`, `requests`, `webbrowser` or `smtplib`, or if the
+   source contains `urlopen`. `test_the_gate_depends_on_nothing_outside_the_standard_library`
+   fails on any import outside `argparse`, `datetime`, `importlib`, `os`, `re`, `sys`,
+   `typing`, `__future__` and first-party `fabric_iq`.
+   **The exact boundary of that credit, because the criterion's old words were wider than
+   its evidence.** Both tests read the **gate script's own** direct imports and source
+   text. The gate resolves each declared source through `importlib` at run time, so
+   `fabric_iq.collectors.fabric_api` — which *does* import `urllib.request.urlopen` for
+   the live transport — is loaded by the gate and is invisible to both assertions. What is
+   measured is therefore: *the gate contains no network call and no dependency outside the
+   standard library plus first-party code.* What is **not** measured is: *no module
+   reachable from the gate contains network code* — that is false, and stating it here is
+   cheaper than letting a future reader infer it. Importing a module that can fetch is not
+   fetching, the gate makes no call, and the honest credit is the narrower sentence.
+   **(b) The live record. Open.** The offline half may not be credited for it, and no
+   amount of import hygiene can produce it. Sprint 7.4 owns it: an observed Scanner
+   payload, under a read-only identity whose scopes and evidence expiry `@security`
+   approved **beforehand**, recorded in [`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md)
+   as key names only. It is blocked on Sprint 5.1. Until it exists, the repository has
+   proved ledger↔code agreement and **nothing** about code↔product agreement — eight of
+   the thirteen keys in `WORKSPACE_ITEM_KEYS` have never been observed in a real payload,
+   so a fully signed ledger is consistent with disposing names Fabric never emits.
+   **Why split in place rather than adding an eighth criterion.** Both repairs make the
+   dangling reference true; only one puts the credit boundary where the misreading
+   happens. The misreading this defect invites is *"the detector is import-clean,
+   therefore criterion 7 is met"* — and an eighth criterion sitting at the end of the list
+   leaves that inference undisturbed, because the reader who stops at criterion 7 never
+   reaches the thing that contradicts them. Splitting forces "met" and "open" into one
+   numbered block that cannot be read by halves. It also keeps **one** repair shape in
+   this gate: a reader who learns the two-halves pattern at criterion 1 applies it here
+   without being taught twice, and two different repairs for one defect would teach
+   neither. The count staying at seven is a consequence, not the reason. **Criterion 7
+   closes only when both halves do.**
 
 Closing the phase also requires publishing **What This Phase Cannot Detect** where
 operators read it — `@readme`, in `docs/KNOWN_LIMITATIONS.md` — because a detector shipped
 without its limits is precisely the decoration this phase exists to avoid.
+
+---
+
+## Phase 8 — Tenant-Wide Microsoft IQ Readiness 🟥
+
+**No Phase 8 sprint has started and no release-gate criterion is met.** This phase does
+not open a new maturity dimension of collection; it names a scope gap the 2026-09-24 and
+2026-09-25 reviews left standing and this session's 2026-09-27 re-verification sharpened.
+Phase 6 built the *per-object* half of consumption-surface readiness (Sprint 6.2's
+undecided reachability block) and stopped at the object boundary. Phase 7 built a
+scope-drift detector for one source (`WORKSPACE_ITEM_KEYS`) and named, but did not
+schedule, the rest. Neither phase asks the *tenant-wide* question directly: whether the
+Fabric side of Microsoft IQ — Fabric IQ reached through M365 Copilot Chat, Cowork, the
+Power BI agent in Microsoft 365, and Fabric data agents published beyond Fabric — is
+open for an entire estate, and if not, exactly what blocks it and for how much of the
+estate.
+
+**Outcome.** An organisation gets a **tenant-wide, per-consumption-surface** readiness
+answer for Microsoft IQ — not "is this object ready" but "of everything in this estate,
+how much is reachable by each surface Microsoft actually ships, and what specifically
+blocks the rest" — without merging that answer into the object-level score Phase 6
+already protects, and without evaluating Work IQ, Foundry IQ or Web IQ as workloads in
+their own right.
+
+**Concrete anchor.** Today the engine produces **one rollup** per tenant run. It has
+never produced a reachability **funnel** — of N reports and M semantic models, how many
+are reachable per surface and why not — and the tenant-setting, capacity/region and
+data-agent-publication facts this phase needs are recorded nowhere in this repository
+before the 2026-09-27 re-verification below.
+
+**Falsifiable hypothesis.** The consumption-surface facts Microsoft documents — tenant
+settings, capacity/region exclusions, publication targets — are either observable through
+a read surface this project already exercises, in which case a per-surface tenant rule
+can be written and degrades honestly to `NOT_EVALUATED` where it cannot read; or they are
+administered outside Fabric's control plane entirely (a licence, an M365 admin center
+setting, Cowork's DLP posture), in which case no widening of Fabric scope reaches them
+and the honest answer is a permanent, named blind spot rather than an assumed vendor
+default. Sprint 6.1's tenant-setting availability record already falsified half of this
+for two settings; Sprint 8.2 extends the same check to the settings this re-verification
+found unmapped.
+
+**Cheap check.** Before any rule is written, `@collector` confirms whether each newly
+identified Copilot/AI tenant setting's `settingName` appears in a payload this project
+already reads, using the same disposition Sprint 6.1's availability record used
+(confirmed field / `permission-blocked` / permanent `absent`), and records the answer in
+[`API_REALITY_MATRIX.md`](API_REALITY_MATRIX.md). **This has not yet run**; Sprint 8.2
+is that check.
+
+**Exit gate.** All seven criteria in **Release Gate for Phase 8** are met; in particular,
+no tenant-wide verdict states a single merged Microsoft IQ readiness number, every
+surface named in the consumption-surface registry is either assessed with confirmed
+evidence or stated `NOT_EVALUATED`/permanently unreadable, and every capacity, region or
+publication-target reachability fact is reported as a reachability statement with zero
+impact on score, eligibility, confidence or coverage.
+
+### Documentation Re-Verification — 2026-09-27 — Microsoft IQ Surface Deltas
+
+**Not a sprint, and explicitly not a live-tenant observation. It clears no Phase 8 gate,
+moves no criterion, and evidences no rule** — recorded on the same terms as the
+2026-09-24 and 2026-09-25 reviews above: durable knowledge that constrains later design,
+re-quotable only from here rather than re-derived from memory later. Every fact below
+comes from a **public Microsoft Learn page read on 2026-09-27**. None of it has been
+verified against a live tenant: no API was called, no tenant setting was observed, no
+object was assessed, and no fixture was produced. **This record does not establish that a
+product changed between 2026-09-24 and 2026-09-27** — each page carries its own stated
+update date alongside the fact below, and where that date predates the earlier reviews
+this record is reading the same page in more detail, not reporting a change; the two are
+not distinguished further than the stated date allows.
+
+1. **A fourth IQ layer.** `https://learn.microsoft.com/fabric/iq/overview` (page updated
+   2026-08-31, read 2026-09-27) states Microsoft IQ comprises **Fabric IQ, Work IQ,
+   Foundry IQ and Web IQ** — a fourth layer not named in the 2026-09-24 review's
+   three-layer framing (sourced then from `fabric/fundamentals/fabric-terminology#fabric-iq`).
+   The IQ workload (preview) lists six item kinds: **Ontology (preview), Power BI
+   semantic model, Planning, Graph, Data agent, Operations agent** — two of which
+   (`Planning`, `Operations agent`) have no `WORKSPACE_ITEM_KEYS` entry and no
+   `ObjectType` member, verified against both constants on 2026-09-27. Data agents are
+   stated to be "publishable across Microsoft 365, Foundry, Copilot Studio, and custom
+   apps" — four publication targets, none of which the rule catalogue distinguishes.
+   Ontologies can be generated from semantic models, already recorded in Sprint 6.3.
+2. **Cowork, re-read in more detail.**
+   `https://learn.microsoft.com/fabric/iq/connectors/cowork-overview` (updated
+   2026-09-23, read 2026-09-27). Confirms and sharpens the 2026-09-24 finding: the plugin
+   is **GA and installed by default**; grounding is limited to Power BI reports and their
+   semantic models, including workspace apps; it excludes dashboards, paginated (RDL)
+   reports, share links, a semantic model referenced by name, lakehouses, eventhouses,
+   ontologies and data agents — all already recorded. **New in this reading**: discovery
+   supports **Verified Answers and schema selection**, and a **value search** feature is
+   described as "available in your region" — a regional caveat with no confirmed scope in
+   this repository. Cowork **runs as the querying user**, and RLS applies. **DLP is
+   confirmed not supported in Cowork**, matching the 2026-09-24 finding, in contrast with
+   the Copilot Chat page below. Sensitivity labels: the **most restrictive** label is
+   inherited by content Cowork subsequently creates — emails, meeting invites, files.
+   **Exactly two tenant settings are named on this page** — *Fabric data available in
+   M365 Copilot* (Microsoft 365 admin center, on by default) and *Share Fabric data with
+   your Microsoft 365 services* (Fabric admin portal) — and **cross-geo processing is not
+   named on the Cowork page at all**, even though `TEN-006` today reads as if a single
+   cross-geo setting gated the Microsoft 365 path uniformly. **Prerequisites are more
+   specific than previously recorded**: Cowork access requires **usage-based
+   (consumption) billing** enabled, plus M365 Copilot licensing and **Read** permission on
+   the report and its model in the home tenant; no additional F-SKU or PPU capacity is
+   required beyond that.
+3. **The standalone Microsoft 365 Copilot connector, re-read.**
+   `https://learn.microsoft.com/fabric/iq/connectors/microsoft-365-copilot-overview`
+   (`ms.date` 2026-09-15, read 2026-09-27) — the same page the 2026-09-24 review cited for
+   "Copilot Chat", reread for detail the first pass did not carry into this roadmap.
+   **GA**, requiring an **M365 Copilot Premium** licence for every user, RLS and OLS both
+   honoured, DLP applies — all already recorded, and DLP remains the documented contrast
+   with Cowork. **Three tenant settings gate this path**, not the two on the Cowork page:
+   the same two, plus **Azure OpenAI cross-geo processing**, required only for tenants
+   outside the US and EU — this is the setting `TEN-006` reads. **New in this reading**:
+   a semantic model **URL may be pasted** to attach it, but it is **not offered in the
+   attach menu**; an organizational-app report is attachable, but pasting its link
+   **fails**; paginated reports, dashboards, top-level apps and report share links remain
+   unsupported. Data agents and ontologies are reachable **only through an explicitly
+   published Microsoft 365 agent** (already recorded in the 2026-09-25 supersession
+   note). **Two facts with no prior record in this roadmap**: **Embedded capacities (A
+   and EM SKUs) are not supported** — Pro, PPU, Premium and Fabric (F) capacities are; and
+   **regions where Power BI is the only Fabric workload available are not supported**
+   for this path. Both are capacity/region **reachability** facts, not tenant-setting
+   facts, and neither `TEN-*` nor any rule in the catalogue currently states them.
+   Answers reflect the **last successful refresh** — a freshness caveat with no rule
+   reading it either.
+4. **A named, distinct preview consumption path for Fabric data agents.**
+   `https://learn.microsoft.com/fabric/data-science/data-agent-microsoft-365-copilot`
+   (read 2026-09-27) — not cited by either the 2026-09-24 or 2026-09-25 reviews.
+   Consuming a Fabric data agent **from M365 Copilot is itself preview** — distinct from
+   the ontology/agent GA-vs-preview split already recorded — requires a **paid F2+ or
+   P1+ SKU with Fabric enabled**, plus an M365 Copilot licence or an O365 commercial
+   licence, and is reached by **publishing the agent to the Agent Store** ("Publish to
+   Agent Store") and then **@mentioning** it in Teams or Copilot. Neither
+   `docs/SCOPE_LEDGER.md` nor the rule catalogue has any concept of a publication target
+   for a data agent: every existing Data Agent rule assesses the agent's own definition,
+   none assesses where it has been published or what compliance boundary that publication
+   crosses.
+5. **The tenant-setting group itself, read directly rather than inferred from the
+   connector pages.**
+   `https://learn.microsoft.com/fabric/admin/service-admin-portal-copilot` (read
+   2026-09-27), the "Copilot and AI" tenant-settings group in the Fabric admin portal.
+   Two settings are **enabled by default**: *Users can use Copilot and other features
+   powered by Azure OpenAI* (tenant **and** capacity level — verified 2026-09-27 as
+   `copilot_enabled`'s mapped candidates `EnableAOAI`/`CopilotEnabled` in
+   `TENANT_SETTING_MAP`) and *Capacities can be designated as Copilot in Fabric
+   capacities* (**not mapped anywhere** in `TENANT_SETTING_MAP`, verified 2026-09-27).
+   Six settings are **disabled by default and unmapped in `TENANT_SETTING_MAP`**: *Users
+   can use Copilot, AI Agents and other AI experiences powered by OpenAI as a Microsoft
+   Subprocessor* (tenant and capacity); *Data sent to OpenAI as a Microsoft Subprocessor
+   can be processed outside…* and *Data sent to Azure OpenAI can be processed outside…*
+   (two distinct cross-geo settings — only the second reads as a plausible match for
+   `cross_geo_ai_consent`'s mapped candidate `AllowUserDataProcessedByAiServicesOutOfGeo`,
+   and that resemblance is a hypothesis, not a confirmed match: Sprint 8.2's first
+   question, not this record's answer); *Data sent to Azure OpenAI can be **stored**
+   outside…* (a storage variant distinct from **processing**, applying to Copilot in
+   notebooks and data agents outside the US/EU); *Users can access a standalone,
+   cross-item Copilot in Power BI experience (preview)*, which the page states **also
+   enables the Power BI agent in Microsoft 365** — one setting gating two surfaces, a
+   fact no `TEN-*` rule or the Sprint 8.1 registry may collapse into one; and *Only show
+   approved items in the standalone Copilot in Power BI experience (preview)*, which
+   restricts that experience's search to items marked **Approved for Copilot** (renamed
+   from "AI-prepped") — a label this project's existing `SEM-*`/`REP-*` approval rules
+   treat only as self-attestation quality evidence, and which, when this tenant setting is
+   on, additionally becomes a **reachability gate** on the standalone Power BI Copilot and
+   the Power BI agent in M365 — a distinction that must be planned for, and is still never
+   a quality score. The page's important note: a data agent consumed from Foundry,
+   Copilot Studio, M365 Copilot, or **as an MCP server**, may send responses **outside
+   Fabric's compliance boundary or region** — the same boundary-egress concern as delta 4,
+   now stated for four consumption paths rather than one, and named by neither
+   `TENANT_SETTING_MAP` nor any rule.
+
+**What this changes about the Phase 6/7 record above, and what it does not.** Nothing in
+Phase 6 or Phase 7 is corrected by this record; both stay exactly as last written, and
+none of their release-gate criteria move. What changes is scope: Phase 6 and Sprint 6.1
+named **two** tenant settings as the Microsoft 365 gates, and Sprint 7.1's
+[`SCOPE_LEDGER.md`](SCOPE_LEDGER.md) disposes only `WORKSPACE_ITEM_KEYS`, the
+item-container source. Neither source enumerates the Copilot-and-AI tenant-settings group
+as a whole, the capacity/region reachability facts in delta 3, or the publication-target
+concept in deltas 4 and 5. **Phase 8 exists to give those a home rather than to re-open
+Phase 6 or Phase 7's already-signed decisions.**
+
+### Sprint 8.1 — Declare the Consumption-Surface Registry — 🟥 **OPEN**, not started
+
+1. **Outcome** — A single, named, versioned constant enumerates every Microsoft IQ
+   consumption surface this project knows about — M365 Copilot Chat, Cowork, the Power BI
+   agent in Microsoft 365 (standalone Copilot in Power BI), a Fabric data agent consumed
+   in Fabric, a Fabric data agent published to the M365 Agent Store / Copilot Studio /
+   Foundry / as an MCP server, and the preview ontology and operations-agent items — each
+   carrying its documented prerequisites (licence, tenant setting, capacity/SKU, region)
+   with a public source and a read date. It is data, not scoring: no rule reads it yet
+   and no score moves because it exists.
+2. **Current evidence** — **Open.** Nothing of the kind exists. The 2026-09-27
+   re-verification above is the only durable record of these facts, and it lives in
+   prose, not in a constant a check can import — the same gap Sprint 7.1 closed for
+   `WORKSPACE_ITEM_KEYS`, but for consumption surfaces.
+3. **Smallest slice** — A `CONSUMPTION_SURFACES`-style declaration with one row per
+   surface and a `source`/`read_on` pair per prerequisite, reviewed alone before anything
+   reads it. **This is a precondition input to the Sprint 6.2 per-surface verdict
+   decision, not the decision itself, and does not pre-empt it**: the registry says what
+   surfaces exist and what gates them; 6.2 says how a verdict expresses reachability by
+   surface.
+4. **Dependencies** — `@scorer` owns the constant's shape, since it is the vocabulary a
+   future per-surface verdict would read; `@readme` owns the dated sourcing of every
+   prerequisite fact, in the same discipline as `docs/KNOWN_LIMITATIONS.md` §8. A
+   registry that is not on Sprint 7's watch list is exactly the blind spot Phase 7 exists
+   to prevent, so this sprint's commit also proposes how `scripts/check_scope_ledger.py`
+   or Sprint 7.3's dated-review mechanism extends to cover it — an `@tester` question to
+   resolve at implementation time, not decided here. No dependency on Sprint 5.1: this is
+   repository knowledge, not a live read.
+5. **Validation** — Focused check: the registry parses to a non-empty sequence, every
+   surface names a public source and a read date, and no two surfaces state contradictory
+   prerequisites (for example, one row must not claim cross-geo gates Cowork while
+   another correctly states it does not). Release gate: none by itself — this sprint adds
+   a Phase 8 precondition, not a Phase 8 release criterion, mirroring Sprint 6.1's
+   availability record, which also created no criterion alone.
+6. **Risks and non-goals** — The registry will drift as Microsoft changes its products —
+   Web IQ appeared between the 2026-09-24 and 2026-09-27 reads — so a registry with no
+   review-by date decays exactly the way an unreviewed exclusion did in Sprint 7.1; the
+   review-by discipline is not optional here. Non-goals: this sprint does not write a
+   rule, does not add an `ObjectType`, does not change `ScoringEngine.score_object`'s
+   outcomes, and does not decide Sprint 6.2.
+7. **Commit boundary** — The registry constant and its dated sourcing are one commit; any
+   scope-ledger or Sprint 7.3-style reconciliation extension is a separate `@tester`-led
+   commit; no rule module is touched in either.
+
+### Sprint 8.2 — Collector Cheap Check: the Unmapped Copilot/AI Settings — 🟥 **OPEN**, blocked on Sprint 5.1 for the live half
+
+1. **Outcome** — Each Copilot/AI tenant setting the 2026-09-27 re-verification found
+   absent from `TENANT_SETTING_MAP` is either confirmed present in a read payload with
+   its exact `settingName`, or classified `permission-blocked`/`absent`/permanent-blind-spot
+   with the identity that attempted it — the same three-way disposition Sprint 6.1's
+   availability record used for its two Microsoft 365 gates.
+2. **Current evidence** — **Open.** `TENANT_SETTING_MAP` maps six field names today
+   (verified 2026-09-27): `fabric_enabled`, `copilot_enabled`, `agents_enabled`,
+   `scanner_enabled`, `sensitivity_labels_enabled`, `cross_geo_ai_consent`, against
+   `FabricGAWorkloads`/`FabricEnabled`, `EnableAOAI`/`CopilotEnabled`,
+   `OntologyPreview`/`AgentsEnabled`, `AllowServicePrincipalsUseReadAdminAPIs`,
+   `EimInformationProtectionEdit`/`InformationProtection`, and
+   `AllowUserDataProcessedByAiServicesOutOfGeo` respectively. This sprint's scope is
+   exactly the following, named rather than counted:
+   (a) the **six disabled-by-default settings** in delta 5 — *Users can use Copilot, AI
+   Agents and other AI experiences powered by OpenAI as a Microsoft Subprocessor*; *Data
+   sent to OpenAI as a Microsoft Subprocessor can be processed outside…*; *Data sent to
+   Azure OpenAI can be processed outside…*; *Data sent to Azure OpenAI can be stored
+   outside…*; *Users can access a standalone, cross-item Copilot in Power BI experience
+   (preview)*; and *Only show approved items in the standalone Copilot in Power BI
+   experience (preview)*;
+   (b) the **enabled-by-default but unmapped** setting *Capacities can be designated as
+   Copilot in Fabric capacities*; and
+   (c) the **`cross_geo_ai_consent` hypothesis** — whether its mapped candidate
+   `AllowUserDataProcessedByAiServicesOutOfGeo` is in fact *Data sent to Azure OpenAI can
+   be processed outside…* from (a). That resemblance is the only candidate key name
+   recorded in this repository for any setting in (a) or (b), and it is unconfirmed; every
+   other setting in (a) and (b) has no candidate key name recorded anywhere in this
+   repository.
+3. **Smallest slice** — Not a rule. `@collector` attempts, under the same read-only
+   identity and prior-scope-approval discipline Sprint 6.1's check used, to observe the
+   tenant-settings response and record which of the newly named settings' `settingName`
+   values (if any) appear, following exactly the pattern in `API_REALITY_MATRIX.md`. **A
+   single flagged question travels with this slice and must be answered before any rule
+   reads the result**: is `agents_enabled`'s candidate key `OntologyPreview`/`AgentsEnabled`
+   actually the right pair for a data-agent gate, or is a setting named for ontology
+   preview a mismatched proxy for an unrelated agents capability? This roadmap raises the
+   question because the pairing reads as suspect against the 2026-09-27 tenant-settings-
+   group page, which names no "OntologyPreview" setting among the Copilot-and-AI group —
+   **it does not assert the mapping is wrong**, because a public settings-group page and a
+   live tenant-settings payload are not proven to enumerate the same names, and only
+   `@collector`'s read (or `@tenant`'s review of it) can settle it.
+4. **Dependencies** — `@collector` owns the read attempt and the `API_REALITY_MATRIX.md`
+   record; `@tenant` reviews whether the `agents_enabled` mapping question changes
+   anything for `TEN-002` ("Copilot and AI agent tenant settings are enabled") pending
+   `@collector`'s answer; `@security` reviews any new scope this read needs beyond what
+   Sprint 5.1 already authorises. This sprint inherits Sprint 5.1's identity prerequisite
+   in full for the live half — the same inheritance Sprint 6.1's own tenant-setting check
+   took — so nothing here may substitute a documented default for an observed value while
+   5.1 is unresolved. The repository-only half (recording candidate key names as
+   hypotheses, without confirming them) does not depend on 5.1 and may proceed now.
+5. **Validation** — Focused check: synthetic present/absent/permission-blocked/malformed
+   cases for each newly named setting produce the classification the availability record
+   states, mirroring Sprint 6.1 item 5's validation shape for tenant settings. Release
+   gate: no rule maps a new field to a documented vendor default; every classification
+   names the identity and date that obtained it.
+6. **Risks and non-goals** — The risk Sprint 6.1 already met once: one of these settings
+   (the M365 admin center pair, if any exist outside Fabric's control plane) may be a
+   permanent blind spot exactly like "Fabric data available in M365 Copilot" was.
+   Non-goals: this sprint does not write `TEN-*` rules (that is 8.3), does not resolve
+   the `agents_enabled` question without a live read, and does not assume the answer
+   either way.
+7. **Commit boundary** — The read attempt and its `API_REALITY_MATRIX.md` record are one
+   `@collector`-owned commit; the repository-only hypothesis note about `agents_enabled`
+   (if recorded ahead of a live read) is a separate, clearly-labelled-as-unconfirmed
+   commit so a later reader cannot mistake a question for an answer.
+
+### Sprint 8.3 — Tenant-Gate Rules Per Surface — 🟥 **OPEN**, blocked on Sprints 8.1/8.2
+
+1. **Outcome** — Each Copilot/AI tenant setting Sprint 8.2 confirms readable gets an
+   owning rule; each setting Sprint 8.2 classifies unreadable or permanently blind gets a
+   rule that is **born `NOT_EVALUATED` and stays there**, rather than no rule at all —
+   closing the same "named blind spot beats a silent one" gap Sprint 6.1 accepted for its
+   two settings.
+2. **Current evidence** — **Open.** Zero rules exist for any setting in Sprint 8.2's
+   named scope: (a) the six disabled-by-default settings — the OpenAI-as-a-Microsoft-
+   Subprocessor toggle, OpenAI-subprocessor cross-geo processing, Azure OpenAI cross-geo
+   processing, Azure OpenAI cross-geo storage, standalone Copilot in Power BI, and "Only
+   show approved items"; (b) the unmapped "Capacities can be designated as Copilot in
+   Fabric capacities"; and (c) no new rule for Azure OpenAI cross-geo processing may
+   treat `cross_geo_ai_consent`'s existing mapping as covering it until Sprint 8.2 proves
+   or disproves that candidate match.
+3. **Smallest slice** — One rule, for the setting most likely to be readable: "Capacities
+   can be designated as Copilot in Fabric capacities" is capacity-scoped like
+   `copilot_enabled` already is, so it is the cheapest test of whether the same read
+   surface that answers `copilot_enabled` also answers this one.
+4. **Dependencies** — `@tenant` owns rule authorship; depends on Sprint 8.2's
+   classification for each setting before its rule is written — a rule written against
+   an unconfirmed key name repeats the mistake Sprint 6.1 warned against ("guessing a key
+   name … would manufacture a blind spot"); `@tester` owns fixtures for present, absent
+   and permission-blocked cases.
+5. **Validation** — Focused check: synthetic present, absent, null, forbidden and
+   malformed cases per setting produce the documented outcome, mirroring Sprint 6.1 item
+   5's rule-validation shape exactly. Release gate: no rule passes on an unread setting;
+   every rule for a permanently blind setting is `NOT_EVALUATED` with no code path that
+   could ever flip it.
+6. **Risks and non-goals** — The "Only show approved items" setting is the one genuinely
+   new rule shape here: when on, it converts an existing self-attested quality signal
+   (Approved for Copilot / AI-prepped) into a **reachability gate** on two surfaces
+   (standalone Copilot in Power BI and the Power BI agent in M365). A rule that reads
+   this setting must not retroactively change what the existing `SEM-*`/`REP-*` approval
+   rules mean as quality evidence — the two stay two separate outcomes, following the
+   same never-merge discipline the Non-Negotiable Contract states for eligibility, score
+   and confidence. Non-goals: no reachability rule authored here changes score, coverage,
+   eligibility or confidence — see Sprint 8.4, which owns that constraint for the
+   capacity/region family; this sprint's rules are ordinary tenant-setting evidence
+   rules, not reachability statements.
+7. **Commit boundary** — Each setting's rule and fixture set is its own commit; the
+   "Only show approved items" rule, because it touches an existing rule's meaning, is
+   reviewed by `@semantic` alongside `@tenant` before it lands and is never bundled with
+   an unrelated setting's rule in the same commit.
+
+### Sprint 8.4 — Capacity and Region Reachability — 🟥 **OPEN**, blocked on a ratified Sprint 6.2
+
+1. **Outcome** — An estate on an Embedded (A/EM) SKU, or in a region where Power BI is
+   the only Fabric workload available, carries an explicit statement that the Copilot
+   Chat path is unreachable for that reason — with every quality figure on the affected
+   scorecards unchanged, the identical constraint Phase 6 release-gate criterion 3
+   already states for type reachability.
+2. **Current evidence** — **Open.** Neither fact (Embedded SKU exclusion, Power-BI-only-
+   region exclusion) is recorded anywhere in this repository before the 2026-09-27
+   re-verification above; no rule, fixture or mart column reads capacity SKU or region for
+   this purpose today, though `fabric_iq/collectors/fabric_api.py`'s
+   `normalize_capacity` already carries `sku` and `region` fields for an unrelated reason
+   (the capacity join) — the same asymmetry Sprint 6.3 found for `Ontology`: the field is
+   already collected, and nothing judges it for this fact.
+3. **Smallest slice** — Not a rule. The first change is confirming, against a fixture
+   built from already-collected `sku`/`region` values, that the exclusion can be
+   expressed as a derived, zero-impact reachability statement using whatever shape
+   Sprint 6.2 ratifies — this sprint cannot start before that shape exists, for the exact
+   reason Sprint 6.1's type-reachability family is blocked on it: `ScoringEngine.score_object`
+   offers a rule outcome three fates today, and "capacity/region makes this path
+   unreachable" is a documented fact, not an unknown, so neither `FAILED` nor
+   `NOT_EVALUATED` is honest for it.
+4. **Dependencies** — Hard-blocked on Sprint 6.2's ratified decision, in the same way and
+   for the same textual reason Sprint 6.1 item 5 already states for type reachability;
+   `@scorer` owns the decision, `@tenant` owns the capacity-scoped rule once it exists,
+   `@lakehouse` owns any mart consequence.
+5. **Validation** — Focused check: a fixture on an Embedded A SKU and a fixture in a
+   Power-BI-only region each carry a reachability statement for the Copilot Chat surface
+   while `score`, `raw_score`, `status`, `eligible`, `confidence` and `coverage` stay
+   byte-identical to the same fixture without the feature — the identical test shape
+   Phase 6 release-gate criterion 3 already specifies. Release gate: this criterion is
+   retained as Phase 8's own and has no executable form until Sprint 6.2 is decided, for
+   the same reason Phase 6 criterion 3 states.
+6. **Risks and non-goals** — Region and SKU facts change with Microsoft's own product
+   decisions (regions gain Fabric workloads over time) and must carry their own source
+   and re-verification date, following `docs/KNOWN_LIMITATIONS.md` §8's discipline.
+   Non-goals: no capacity or region rule authored here scores anything; it is
+   reachability, not quality, following the line Sprint 6.1 already drew and refused to
+   cross.
+7. **Commit boundary** — No commit lands until Sprint 6.2 is ratified; when it is, the
+   reachability check is one commit and any mart/report consequence is a second, per the
+   same three-boundary split Sprint 6.2 item 7 already requires.
+
+### Sprint 8.5 — Data Agent Publication Target and Compliance-Boundary Egress — 🟥 **OPEN**, blocked on Sprints 5.1 and 5.4
+
+1. **Outcome** — A data agent's readiness statement names where it is (or may be)
+   published — in Fabric only, or to the M365 Agent Store, Copilot Studio, Foundry, or as
+   an MCP server — and, where evidence of publication exists, whether that publication
+   crosses Fabric's compliance boundary or region, per the 2026-09-27 finding that any of
+   the four external paths "may send responses outside Fabric's compliance
+   boundary/region".
+2. **Current evidence** — **Open.** All fifteen Data Agent rules assess an agent's own
+   definition (instructions, sources, verified answers, evaluation); none reads or
+   reports a publication target. `docs/SCOPE_LEDGER.md` has no row for a publication-
+   target concept because `WORKSPACE_ITEM_KEYS` names item containers, not publication
+   destinations, so this gap is invisible to Sprint 7's reconciliation entirely — a
+   second class of shape Phase 7 was explicit it does not watch.
+3. **Smallest slice** — A single `@collector` question, not a rule: does any read surface
+   this project exercises return a data agent's publication state at all, or is
+   "published to the Agent Store" only observable from within the M365 admin surface
+   Sprint 8.2 already found to be a permanent blind spot for an unrelated setting? If the
+   answer is no, the honest output of this sprint's first slice is a limitation entry,
+   following exactly the precedent Sprint 6.3 item 3 set for ontology bindings: an
+   `ObjectType` or rule added over evidence that cannot be read is a scorecard-shaped
+   hole, worse than no rule at all.
+4. **Dependencies** — `@dataagent` owns the read question and any rule that follows;
+   `@security` reviews the compliance-boundary-egress framing before any rule ships,
+   because "may send responses outside Fabric's compliance boundary" is a data-residency
+   claim of exactly the kind `@security` already owns for cross-geo AI consent; blocked on
+   Sprint 5.1 for any live read and on Sprint 5.4 for the same reason Sprint 6.4 is
+   blocked on it — an agent's publication metadata, like a lakehouse's table metadata, is
+   a fact this project has never confirmed is readable from the surfaces it exercises
+   today.
+5. **Validation** — Focused check: an agent fixture with a recorded publication target of
+   "MCP server" produces a distinct finding from a fixture published "in Fabric only",
+   and an agent with no recorded publication state produces `NOT_EVALUATED` rather than an
+   assumed "in Fabric only" default. Release gate: no rule asserts a publication target it
+   did not read; the compliance-boundary-egress statement, if it exists, is
+   `NOT_EVALUATED` absent evidence and never a quality deduction on its own — the same
+   reachability-not-quality line Sprint 8.4 draws.
+6. **Risks and non-goals** — The permanent-blind-spot risk is real and named up front
+   rather than discovered later the way "Fabric data available in M365 Copilot" was:
+   publication to the Agent Store may be visible only from an M365 admin surface this
+   project has never read and may never be authorised to read. Non-goals: this sprint
+   does not evaluate what an external consumer does with a published agent's answers
+   (that is Work IQ/Foundry IQ territory, explicitly out of scope below), and does not
+   gate publication itself — it reports, it does not prevent.
+7. **Commit boundary** — The `@collector` read question and its answer are one commit,
+   independent of any rule; a rule (if the answer is yes) is a separate `@dataagent`-led
+   commit with its own fixtures, reviewed by `@security` before merge.
+
+### Sprint 8.6 — Tenant-Wide Per-Surface Verdict and Estate Reachability Funnel — 🟥 **OPEN**, blocked on a ratified Sprint 6.2
+
+1. **Outcome** — A tenant-wide run states, per consumption surface named in the Sprint
+   8.1 registry, how many of the estate's reports and semantic models are reachable and
+   how many are not — an estate **reachability funnel**, not a single rollup — without
+   averaging surfaces into one number, the same binding constraint Sprint 6.2's design
+   note already states for the per-object case.
+2. **Current evidence** — **Open.** The engine's tenant-wide output today is one rollup;
+   there is no per-surface breakdown at any level, object or tenant.
+3. **Smallest slice** — Not the funnel. The first change is confirming that whatever
+   per-object reachability shape Sprint 6.2 ratifies can be aggregated into a count (of N
+   objects, M reachable, K not, and why) without inventing a second scoring mechanism — an
+   aggregation question for `@scorer`, not a new decision.
+4. **Dependencies** — Hard-blocked on Sprint 6.2's ratified decision, exactly like
+   Sprint 8.4; `@scorer` owns the aggregation; `@lakehouse` owns the Gold mart and report
+   page once the shape exists and must not pre-empt it, following the same discipline
+   Sprint 6.2 item 4 states for `@lakehouse` today.
+5. **Validation** — Focused check: a fixture estate with a known mix of reachable and
+   unreachable objects per surface produces a funnel whose counts match the fixture
+   exactly, and the tenant-wide score, eligibility and confidence stay unchanged by the
+   funnel's presence. Release gate: no single headline number is presented as tenant-wide
+   Microsoft IQ readiness; every surface in the registry appears in the funnel or is
+   explicitly marked not assessed.
+6. **Risks and non-goals** — The same inverse-failure risk the Sprint 6.2 design note
+   already names for the per-object case: a funnel with too many surfaces is as
+   unreadable as no funnel at all, and the trade-off is `@scorer`'s, not this document's.
+   Non-goals: this sprint does not decide 6.2, does not evaluate any surface's answer
+   quality, and does not produce a single "Microsoft IQ readiness score" for the tenant
+   under any name.
+7. **Commit boundary** — No commit lands until Sprint 6.2 is ratified; the aggregation
+   logic is one `@scorer`-led commit, the mart/report consequence a separate
+   `@lakehouse`-led one, per the same three-boundary split as Sprint 8.4.
+
+### Sprint 8.7 — Out-of-Plane Evidence: an Attested-Evidence Design Question — 🟥 **OPEN**, design question raised, no decision
+
+1. **Outcome** — `@scorer` decides whether a class of tenant fact this project can never
+   observe through Fabric's control plane — an M365 Copilot Premium or Cowork
+   consumption-billing licence, the M365 admin center's "Fabric data available in M365
+   Copilot" setting, Cowork's DLP posture — may be recorded as **operator-attested**
+   evidence, visibly distinct from observed evidence everywhere it appears, and never
+   sufficient on its own to satisfy a blocking rule.
+2. **Current evidence** — **Open, and deliberately not pre-decided here**, following the
+   same discipline Sprint 6.2 uses for its own design note: this roadmap states the
+   problem and raises the question; it does not propose a field, a shape or a weight.
+   Today the engine has exactly two evidence states for a rule outcome that matters
+   here — evidence exists, or it does not and the rule is `NOT_EVALUATED` — and no notion
+   of "asserted by a human, not observed by the tool" at all.
+3. **Smallest slice** — A `@scorer`-owned design note, in `docs/SCORING.md` alongside the
+   existing Sprint 6.2 note, reviewed alone before any code moves — the same
+   smallest-slice shape Sprint 6.2 used, for the same reason: a design decision that
+   lands as code without review is how a scoring change arrives unreviewed.
+4. **Dependencies** — `@scorer` owns the decision; `@security` reviews any
+   attested-evidence field for the privacy and retention question it raises
+   immediately — an operator attestation about a licence or a DLP posture is itself
+   tenant-derived information, and if it names a real value it inherits every constraint
+   the Non-Negotiable Contract already places on tenant-derived evidence; `@readme`
+   documents the distinction wherever an attested value appears in output, following the
+   same discipline that already separates `NOT_EVALUATED` from a scored zero.
+5. **Validation** — Focused check, once and if a shape is adopted: an attested value
+   never moves a blocking-rule outcome to `PASSED` on its own, and every report surface
+   renders it visibly distinct from observed evidence — a fixture asserting both must
+   fail the same way a merged score would fail Sprint 6.2's validation. Release gate:
+   none until a decision is ratified; this sprint's only executable obligation today is
+   that no code anywhere treats an operator's unverified claim as observed evidence,
+   which is already true and is asserted here as a non-regression, not as new work.
+6. **Risks and non-goals** — The obvious risk: an attested-evidence channel is an
+   invitation to assert what was not checked, and the entire discipline of this
+   project — missing evidence is `NOT_EVALUATED`, never a pass — exists to resist exactly
+   that temptation. If `@scorer`'s decision is that no such channel should exist, that is
+   a legitimate closure of this sprint and this roadmap will record it as such rather
+   than as an open item. Non-goals: this sprint does not invent a licence-verification
+   API (none exists), does not weaken the blocking-cap discipline, and does not let an
+   attested value substitute for `NOT_EVALUATED` anywhere a blocking rule is at stake.
+7. **Commit boundary** — The design note is one boundary, reviewed alone, exactly as
+   Sprint 6.2 item 7 requires for its own note; any accepted model change is a separate,
+   later `@scorer`-led boundary with its own migration and regression tests.
+
+### What Phase 8 Cannot and Will Not Assess
+
+Explicit non-goals, stated once here rather than scattered across sprints — a phase that
+can be mistaken for more than it does is the same decoration risk Phase 7's own limits
+section exists to name. Phase 8 does not evaluate Copilot's, Cowork's or any agent's
+**answer quality** — that is Sprint 5.4's territory and remains `NOT_EVALUATED` until its
+proof exists; it does not check a **per-user** licence assignment, only whether a licence
+class is attested or observed at the tenant/registry level; it does not assess **Work
+IQ**, **Foundry IQ** or **Web IQ** as workloads — only the Fabric-side facts (tenant
+settings, capacity, region, publication target) that gate whether Fabric content reaches
+them; and it makes **no write** to any tenant, consistent with the Non-Negotiable
+Contract's read-only guarantee, which nothing in this phase relaxes.
+
+## Release Gate for Phase 8
+
+The phase closes only when all of the following are executable or evidenced. **All seven
+are open; none is met at this revision.** Following the drafting rule Phase 7
+established — a release criterion must be unsatisfiable by doing less, must not be true
+of the empty set, and must not defer part of its subject to a criterion that does not
+exist — each criterion below asserts a positive fact, not an absence.
+
+1. A consumption-surface registry (Sprint 8.1) exists, is non-empty, and every surface it
+   names carries a public source and a read date for every prerequisite fact it states.
+   **Open.**
+2. Every Copilot/AI tenant setting in Sprint 8.2's named scope is either mapped to a
+   confirmed field with the identity that read it, or carries an explicit
+   `permission-blocked`, `absent`, or permanent-blind-spot classification — never a
+   documented vendor default stored as an observed value. That scope is, by name:
+   (a) the six disabled-by-default settings — *OpenAI as a Microsoft Subprocessor*,
+   *OpenAI-subprocessor cross-geo processing*, *Azure OpenAI cross-geo processing*,
+   *Azure OpenAI cross-geo storage*, *standalone Copilot in Power BI*, and *Only show
+   approved items*; (b) the unmapped *Capacities can be designated as Copilot in Fabric
+   capacities*; and (c) `cross_geo_ai_consent`, whose candidate
+   `AllowUserDataProcessedByAiServicesOutOfGeo` is confirmed or refuted as the *Azure
+   OpenAI cross-geo processing* setting by an observed read, not by name resemblance.
+   **Open.**
+3. Every tenant setting confirmed readable by criterion 2 has an owning rule that is born
+   `NOT_EVALUATED` where the setting is unreadable for a given tenant, and no rule for a
+   permanently blind setting can ever return anything but `NOT_EVALUATED`. **Open.**
+4. A capacity- or region-based reachability exclusion (Embedded SKU, Power-BI-only
+   region) is reported as a reachability statement, on a real fixture, with `score`,
+   `raw_score`, `status`, `eligible`, `confidence` and `coverage` byte-identical to the
+   same fixture without the feature. **Open, and unsatisfiable by construction until
+   Sprint 6.2 is ratified**, for the identical reason Phase 6 criterion 3 states.
+5. A data agent's publication target and any confirmed compliance-boundary-egress fact is
+   either reported with a source, or the read question that would produce it is answered
+   and recorded (even if the answer is "not observable"), rather than left silent.
+   **Open.**
+6. A tenant-wide run **exists and produces** a per-surface estate reachability funnel —
+   not a description of one that would exist if built — whose counts are verified against
+   a fixture with a known reachable/unreachable mix, and the same run's score,
+   eligibility and confidence are unchanged by the funnel's presence. **Open, and unmet
+   by construction: no funnel exists, so both halves of this criterion — existence and
+   inertness — have no subject to be true of**, the same state Phase 7 criterion 6 was in
+   before Sprint 7.5.
+7. If an attested-evidence class is adopted under Sprint 8.7, every rendering of an
+   attested value is visibly distinct from observed evidence and no blocking-rule outcome
+   is reachable from an attested value alone; if no such class is adopted, this criterion
+   is satisfied by the design note recording that decision and by there being no code
+   path that treats an unverified claim as observed evidence. **Open — no decision made.**
 
 ## Sequencing and Release Policy
 
@@ -2142,6 +2808,15 @@ neither) → 7.1 scope ledger ✅ (closed 2026-09-27, `untriaged` empty) → 7.2
 gate ✅ → 7.3 dated review
 obligation → 7.4 tenant-observed unknown item types (blocked on 5.1) → 7.5 scope
 statement in the verdict (blocked on a ratified 6.2)`
+
+`(2026-09-27 documentation re-verification — knowledge only, clears no gate) → 8.1
+consumption-surface registry → 8.2 collector cheap check on the unmapped Copilot/AI
+settings (repository half unblocked, live half blocked on 5.1) → 8.3 tenant-gate rules
+per surface (blocked on 8.1/8.2) → 8.4 capacity/region reachability (blocked on a
+ratified 6.2) → 8.5 data agent publication and boundary-egress governance (blocked on
+5.1 and 5.4) → 8.6 tenant-wide per-surface verdict and estate reachability funnel
+(blocked on a ratified 6.2) → 8.7 attested-evidence design question (no blocker,
+`@scorer`'s to decide)`
 
 The 6.1 tenant-setting family is unsequenced against 6.2: it is blocked on collection,
 not on the verdict shape, and may land whenever its inputs become readable — or be
@@ -2247,6 +2922,38 @@ written deliberately as a named blind spot.
   from a silent one into a recorded, dated, reviewable one — the difference between a gap
   and a blind spot. **No part of Phase 7 assesses a single ontology, and none of it may be
   cited as progress on 6.3.**
+- **Phase 8 does not jump the queue, and does not jump Sprint 5.1 in particular.** Every
+  external blocker named above for Phases 5–7 is unchanged by it: 5.1 still needs an
+  authorised test tenant and an approved read-only service principal, 5.4 still needs its
+  API proof, and Sprint 6.2's per-surface verdict decision is still unratified. A
+  documentation re-verification changes none of that, for the same reason the 2026-09-24
+  review changed nothing for Phase 6: reading a product page is not observing a tenant.
+- **With Sprint 5.1 externally blocked and outside this repository's control, Sprint
+  6.2's per-surface verdict decision is the single highest-leverage repository-internal
+  item for tenant-wide Microsoft IQ readiness, and it sits on Phase 8's critical path.**
+  Two of Phase 8's seven sprints (8.4 and 8.6) cannot start before it, for the identical
+  reason Sprint 6.1's type-reachability family cannot; a third (8.3) touches a rule shape
+  ("Only show approved items" as a reachability gate on an existing quality signal) that
+  is easier to get right once 6.2 has settled where a reachability statement lives.
+  Deciding 6.2 is worth more, per hour spent, than any other item in this roadmap that
+  this repository alone controls — it is not blocked on a tenant, a licence, or a vendor
+  API; it is blocked on a review this project can schedule today. **Phase 8 does not
+  jump Sprint 6.2 either**: 8.4 and 8.6 wait behind it exactly as Sprint 6.3 does.
+- **8.1 and 8.2's repository-only half carry no external blocker**, the same scheduling
+  convenience Sprints 5.0.1, 6.1's design note, and 7.1–7.3 already had, and the same
+  warning applies without exception: proceeding on them now closes no Phase 5, 6 or 7
+  criterion, and 8.2's live half inherits Sprint 5.1's identity prerequisite in full the
+  moment it needs a real tenant read.
+- **8.3 may begin once 8.1 and 8.2 exist**, but any rule it writes over a setting Sprint
+  8.2 could not confirm is born `NOT_EVALUATED`, following the exact discipline Sprint
+  6.1 already established for its own two unread gates.
+- **8.5 is blocked on both 5.1 and 5.4, not on 6.2**: a data agent's publication metadata
+  is a read-surface question, the same class of unconfirmed field Sprint 6.4 is blocked
+  on for lakehouse table metadata, and no verdict shape decides whether that metadata is
+  readable.
+- **8.7 carries no blocker at all** and could be scheduled independently of every other
+  Phase 8 sprint; it is sequenced last here only because it is lowest-leverage relative
+  to Sprint 6.2, not because anything depends on it.
 
 ## Risks Across the Phase
 

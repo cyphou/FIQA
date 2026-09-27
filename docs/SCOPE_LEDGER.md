@@ -12,6 +12,10 @@ surfaces, the in-Fabric agent surfaces, the preview Fabric IQ workload). Those r
 no constant, because these classes appear in none; they carry a source, a checked date and
 a 90-day review date, and **those dates are enforced** — the gate parses the calendar as a
 second section kind and fails the build when a review falls due and no review happened.
+Since 2026-09-27 the dates are also **staggered** rather than shared: they were all written
+as `2026-12-24` and four of the document's nine dated rows have since been pulled earlier,
+so the obligation arrives on three mornings instead of nine messages on one. Pulling a date
+earlier is always available; pushing one later without having done the review is not.
 What that does and does not buy a reader is stated at the head of the table itself, and how
 the enforcement came to exist is recorded in
 [*Recorded finding — the experiment that closed this gap*](#recorded-finding--the-experiment-that-closed-this-gap-2026-09-25).
@@ -119,8 +123,8 @@ python assess.py --list-rules          # 67 rules, ruleset 2026.09.2
 | 5 | `Ontology` | **open** | Sprint 6.3 — *Ontology as an Assessed Object Type (preview)* | `@collector` (read record), then `@scorer` | n/a — tracked by the sprint |
 | 6 | `dataflows` | **deliberately excluded** | Not a grounding target for either GA consumption surface and not a documented data agent data source; its readiness effect reaches an answer only through the semantic model that consumes it, which is assessed | `@readme` | 2026-12-24 |
 | 7 | `datamarts` | **deliberately excluded** | Same reachability basis as `dataflows`: a self-service store whose only documented path into an IQ answer is the semantic model it surfaces | `@readme` | 2026-12-24 |
-| 8 | `Notebook` | **deliberately excluded** | Compute and authoring, not a queryable subject: no documented Fabric IQ surface grounds on a notebook and it appears in no documented data agent source list | `@readme` | 2026-12-24 |
-| 9 | `SQLAnalyticsEndpoint` | **deliberately excluded** | A derived surface, not an authored item — every lakehouse provisions one automatically, so any readiness statement about it is a statement about its parent item (row 10) | `@readme` | 2026-12-24 |
+| 8 | `Notebook` | **deliberately excluded** | Compute and authoring, not a queryable subject: no documented Fabric IQ surface grounds on a notebook and it appears in no documented data agent source list | `@readme` | 2026-11-24 |
+| 9 | `SQLAnalyticsEndpoint` | **deliberately excluded** | A derived surface, not an authored item — every lakehouse provisions one automatically, so any readiness statement about it is a statement about its parent item (row 10) | `@readme` | 2026-10-24 |
 | 10 | `Lakehouse` | **open** | Q1 answered 2026-09-25 by `@dataagent`: a documented agent source is an assessed subject in its own right where a readiness fact lives on it and is unobservable from the agent. `AGT-001` and `AGT-005` judge the agent's *declaration* about a lakehouse (supported type, reachability, routing text authored on the agent); the table and column metadata the generated SQL is written against is a fact about the lakehouse and nothing reads it. In scope as a subject, unassessable today: Sprint 5.1 first (no exercised endpoint returns that metadata), then a `@scorer`-owned object type on the Sprint 6.3 pattern | `@dataagent` (ruling), `@scorer` (object type), `@collector` (read record) | n/a — tracked by the sprint |
 | 11 | `KQLDatabase` | **open** | Same ruling as row 10, and Q2 answered with it: the assessed subject is the artefact the agent's source binding names, which the documented list gives as "a KQL database" and not its container (row 12). In scope as a subject, unassessable today for the same two reasons, and closed by the same path — Sprint 5.1, then an object type on the Sprint 6.3 pattern | `@dataagent` (ruling), `@scorer` (object type), `@collector` (read record) | n/a — tracked by the sprint |
 | 12 | `Eventhouse` | **deliberately excluded** | Q2's grain half, decided with row 11 and not separately. An eventhouse "is a container that can hold multiple databases" (verified 2026-09-25) and no documented data agent source list names it, so a readiness statement about an eventhouse is a statement about the KQL databases inside it — row 9's duplicate-subject basis applied to a parent instead of a child. Re-opened if a readiness fact is shown to live on the eventhouse alone and to change an agent's answer | `@dataagent` | 2026-12-24 |
@@ -177,20 +181,40 @@ about a row you can go and read. Emptying that set was Phase 7 criterion 1's pre
 crediting the criterion is an owner's judgement, which no script can make and which this
 document does not make either.
 
-**The cost, stated before anyone meets it: this gate goes red on 2026-12-25.** Every dated
-row in this document carries `2026-12-24`, so they all come due that day and CI fails with
-nobody having changed a line. The invariant is **one deliberate per-row edit per dated
-row**, each with a re-verified reason or a recorded reading; there is deliberately no bulk
-re-dating command. Reproduced by running the audit as of 2026-12-25 and as of 2026-12-24:
-**nine expiries and zero** respectively — the six exclusions (rows 6–9, 12 and 13) *and*,
-since the calendar was wired up, the three calendar rows (1–3). Seven are owed by
-`@readme` (exclusion rows 6–9 and all three calendar rows) and two by `@dataagent`
-(rows 12 and 13). That is the review obligation working as designed, not a flake. **The
-number moves with the table and is re-measured, never transcribed:** it read five when
-only the exclusions were dated, eight once the calendar was gated (2026-09-25), and nine
-since row 13 gained a date (re-measured 2026-09-27, the audit run at both dates again).
-Add a dated row and it rises again; the number above is what reproduces today, not a
-ceiling.
+**The cost, stated before anyone meets it: this gate goes red on three mornings, and the
+first is 2026-10-25.** Nine rows in this document carry a date, and until 2026-09-27 all
+nine carried `2026-12-24` — one morning, nine failure messages, two agents, CI red with
+nobody having changed a line. **Nine on one morning is the shape in which a review
+obligation gets cleared by somebody who has stopped reading**, which is the very thing the
+no-bulk-re-dating rule exists to prevent; the mechanism refuses the bulk edit, a nine-message
+day re-creates the incentive by hand. So on 2026-09-27 the dates were **staggered — four
+rows pulled earlier, none pushed later** (the direction rule, and which row went where, are
+in [*The review calendar*](#the-review-calendar--classes-that-exist-only-as-prose-3-rows)
+below; the edit is logged as a schedule change and **not** as a review).
+
+Re-measured with the audit at each boundary on 2026-09-27, never transcribed. The
+*expired* column is cumulative — an unreviewed row stays expired — so it is what CI prints
+if **nobody** reviews; the *newly due* column is what one morning actually asks for:
+
+| Audit as of | Expired (cumulative) | Newly due that morning | Owed by |
+|---|---|---|---|
+| 2026-10-24 | 0 | — | — |
+| 2026-10-25 | 2 | row 9 `SQLAnalyticsEndpoint`; calendar row 3 `fabric-iq-workload-preview` | `@readme` |
+| 2026-11-25 | 4 | row 8 `Notebook`; calendar row 2 `in-fabric-agent-surfaces` | `@readme` |
+| 2026-12-25 | 9 | rows 6 `dataflows` and 7 `datamarts`, calendar row 1 `m365-consumption-surfaces`; rows 12 `Eventhouse` and 13 `GraphModel` | `@readme` (3), `@dataagent` (2) |
+
+The invariant is unchanged and the staggering did not soften it: **one deliberate per-row
+edit per dated row**, each with a re-verified reason or a recorded reading, and there is
+still no bulk re-dating command — the stagger itself was four separate per-row edits.
+**The total obligation did not fall: it is still nine reviews.** What fell is the worst
+morning, from **nine to five**, and three of those five are `@readme`'s M365 consumption
+cluster, which one reading pass over two pages discharges; the other two are `@dataagent`'s
+and are theirs to move or to leave. That is the review obligation working as designed, not
+a flake. **The numbers move with the table and are re-measured:** they read five when only
+the exclusions were dated, eight once the calendar was gated (2026-09-25), nine once row 13
+gained a date (2026-09-27), and nine still — now spread 2 / 2 / 5 rather than piled on one
+day. Add a dated row and the total rises again; the figures above are what reproduces
+today, not a ceiling.
 
 **Two scripts parse this file**, so its shape is load-bearing in two places: the gate
 asserts the number of rows it reads against the `13 rows` in the ledger heading and the
@@ -203,6 +227,15 @@ renaming it, which exits 1 reporting `0 review-calendar section(s) parsed`. The 
 inside the heading may be reworded freely; the count must move with the table. Change a row
 deliberately; never reformat the table, renumber it, or edit a heading without moving its
 count with it.
+
+**One date is load-bearing too, and it is row 6's.** Two proofs in
+[`tests/test_scope_ledger_gate.py`](../tests/test_scope_ledger_gate.py) mutate the *first*
+`| 2026-12-24 |` cell in this file and then assert the failure names `dataflows` and
+`row 6`. Row 6 is that first cell, so **moving row 6's date off 2026-12-24 breaks the gate's
+own negative tests** — which is why the 2026-09-27 stagger left row 6 where it was, and
+kept row 7 beside it for the one-reading-pass reason given with the calendar below.
+Recorded here because it is invisible from the table: the next person to re-date these rows
+should move row 6 only together with `@tester`, who owns the proofs.
 
 ---
 
@@ -245,6 +278,45 @@ review repeatedly finds nothing, lengthen the cadence and record why in the log 
 not delete the row.** A deleted row is indistinguishable from a surface nobody ever
 watched, which is the confusion this document exists to remove.
 
+**The dates are staggered, and the direction is the whole safeguard (2026-09-27).** Every
+dated row in this document — three here, six above — was first written with the same
+review-by date, `2026-12-24`, because all of them were sourced in the same week. Nine
+failure messages on one morning across two agents is not a cadence, it is a pile-up, and it
+manufactures the exact incentive the [no-bulk-re-dating rule](#maintaining-this-document)
+exists to remove: a reviewer who meets nine red lines at once clears them as a batch. Four
+rows were therefore **pulled earlier**, and the rule that makes this legitimate is
+one-directional and admits no exception:
+
+> **Pull a review-by date earlier at any time. Never push one later without having done
+> the review.** Reviewing sooner costs more attention, not less, so it cannot launder a
+> missed obligation; re-dating outward without a reading *is* the missed obligation. A
+> longer cadence is earned by a review that repeatedly found nothing and is recorded in
+> the log — never by scheduling convenience, and never in advance.
+
+**Who moved, where, and why**, each measured against its own checked date so that no move
+lengthens a cycle: calendar row 3 `fabric-iq-workload-preview` and ledger row 9
+`SQLAnalyticsEndpoint` to **2026-10-24** (29 days from the 2026-09-25 reading, not 90) —
+the preview-to-GA transition is the single most likely and most consequential change on
+this calendar, and row 9's exclusion is explicitly conditional on row 10's live lakehouse
+ruling, so these two are the rows most likely to have moved. Calendar row 2
+`in-fabric-agent-surfaces` and ledger row 8 `Notebook` to **2026-11-24** (60 days, not 90) —
+one re-read of the data agent pages discharges both, since row 8's exclusion rests on that
+source list. Calendar row 1 `m365-consumption-surfaces` and ledger rows 6 `dataflows` and
+7 `datamarts` **stay at 2026-12-24**: rows 6 and 7 quote their reasons verbatim from row 1's
+two pages, so one pass over two pages clears all three, and splitting them would buy a
+smaller morning at the price of reading the same pages twice. Rows 12 and 13 also stay at
+2026-12-24 because **they are `@dataagent`'s signature and not this agent's to re-date**;
+whether to stagger them is routed to them, not decided here.
+
+**Each row's cadence returns to 90 days from its own next review**, so the shortened first
+cycles are a one-off transition cost, paid once, to buy three single-owner mornings instead
+of one nine-row one. **Staggering is not reviewing.** Moving a date changes when somebody
+must read; it reads nothing, finds nothing and clears nothing, and the log entry recording
+it says so in those words — the next person deciding whether to re-stagger or to re-date
+must be able to tell the two apart at a glance. The measured distribution is in
+[*What the gate checks*](#what-the-gate-checks-and-what-it-does-not) above and is re-run,
+not carried forward.
+
 **`watched` is a review obligation, not a scope disposition.** It is deliberately not one
 of the four words in the [disposition vocabulary](#disposition-vocabulary) above, and the
 rows below are deliberately not ledger rows: they dispose no element of any constant,
@@ -265,8 +337,8 @@ counts 13, and **nothing anywhere sums them to 16**.
 | # | Class | Obligation | What is watched, the sources re-read, and what the last review found | Reviewer | Review by |
 |---|---|---|---|---|---|
 | 1 | `m365-consumption-surfaces` | **watched** | **Cowork and Copilot Chat** — the two GA surfaces whose grounding scope decides which assessed object can actually answer, and whose exclusions (`dashboards`, row 4; `dataflows`/`datamarts`, rows 6–7) are quoted from these two pages. Re-read in full **2026-09-25**: [Fabric IQ in Microsoft 365 Copilot Cowork](https://learn.microsoft.com/fabric/iq/connectors/cowork-overview) and [Fabric IQ in Microsoft 365 Copilot Chat](https://learn.microsoft.com/fabric/iq/connectors/microsoft-365-copilot-overview). **Found: no change.** The Cowork plugin is still "a generally available (GA) feature" and "installed by default in Cowork"; it still "grounds on Power BI reports and the semantic models behind them" and still does not ground on "Fabric items that aren't Power BI reports or semantic models, such as lakehouses, eventhouses, ontologies, and data agents"; "Data loss prevention (DLP) isn't currently supported in Cowork". Copilot Chat data answering from Power BI content is still GA, DLP policies there "also apply", and its exclusion of agents and ontologies is still the conditional one — they "can't answer questions in Copilot Chat **without an explicitly published Microsoft 365 agent**" | `@readme` (accuracy and dating); a change in grounding scope routes to `@scorer` (Sprint 6.2) and to `@semantic` | 2026-12-24 |
-| 2 | `in-fabric-agent-surfaces` | **watched** | **What counts as an agent inside Fabric, its GA/preview status, and its documented data sources** — the set that decides whether the 15 `AGT-*` rules still address the right subject, and the list rows 10–13 rest on. Re-read in full **2026-09-25**: [Fabric data agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent), [What is graph in Microsoft Fabric?](https://learn.microsoft.com/fabric/graph/overview) and [What is Copilot in Fabric?](https://learn.microsoft.com/fabric/fundamentals/copilot-fabric-overview). **Found: no change to the source list.** "Data agent in Microsoft Fabric is a generally available feature"; the documented sources remain "a warehouse, a lakehouse, a Power BI semantic model, a KQL database, a mirrored database, or an ontology", with graph still preview. Recorded as context rather than as a disposition change: the page states that Purview risk discovery and auditing for agents is "currently in preview", and Copilot in Fabric continues to carry per-workload preview features | `@readme` (accuracy and dating); a change to the documented source list routes to `@dataagent`, who owns the Q1 ruling it would disturb | 2026-12-24 |
-| 3 | `fabric-iq-workload-preview` | **watched** | **The GA/preview status of the Fabric IQ workload and of its ontology item** — the pin under Sprint 6.3, under row 5's `open` disposition, and under any claim this tool makes about ontology readiness. A move to GA is a roadmap event, not a documentation edit. Re-read in full **2026-09-25**: [What is Fabric IQ?](https://learn.microsoft.com/fabric/iq/overview) and [What is ontology (preview)?](https://learn.microsoft.com/fabric/iq/ontology/overview). **Found: still preview.** The ontology article is titled "What is ontology (preview)?" and states the item is "part of the Fabric IQ (preview) workload"; the workload overview names "ontology (preview) and semantic model" as the two core items | `@readme` (accuracy and dating); a GA transition routes to `@roadmap-planner` (which sprint) and `@collector` (read record) | 2026-12-24 |
+| 2 | `in-fabric-agent-surfaces` | **watched** | **What counts as an agent inside Fabric, its GA/preview status, and its documented data sources** — the set that decides whether the 15 `AGT-*` rules still address the right subject, and the list rows 10–13 rest on. Re-read in full **2026-09-25**: [Fabric data agent concepts](https://learn.microsoft.com/fabric/data-science/concept-data-agent), [What is graph in Microsoft Fabric?](https://learn.microsoft.com/fabric/graph/overview) and [What is Copilot in Fabric?](https://learn.microsoft.com/fabric/fundamentals/copilot-fabric-overview). **Found: no change to the source list.** "Data agent in Microsoft Fabric is a generally available feature"; the documented sources remain "a warehouse, a lakehouse, a Power BI semantic model, a KQL database, a mirrored database, or an ontology", with graph still preview. Recorded as context rather than as a disposition change: the page states that Purview risk discovery and auditing for agents is "currently in preview", and Copilot in Fabric continues to carry per-workload preview features | `@readme` (accuracy and dating); a change to the documented source list routes to `@dataagent`, who owns the Q1 ruling it would disturb | 2026-11-24 |
+| 3 | `fabric-iq-workload-preview` | **watched** | **The GA/preview status of the Fabric IQ workload and of its ontology item** — the pin under Sprint 6.3, under row 5's `open` disposition, and under any claim this tool makes about ontology readiness. A move to GA is a roadmap event, not a documentation edit. Re-read in full **2026-09-25**: [What is Fabric IQ?](https://learn.microsoft.com/fabric/iq/overview) and [What is ontology (preview)?](https://learn.microsoft.com/fabric/iq/ontology/overview). **Found: still preview.** The ontology article is titled "What is ontology (preview)?" and states the item is "part of the Fabric IQ (preview) workload"; the workload overview names "ontology (preview) and semantic model" as the two core items | `@readme` (accuracy and dating); a GA transition routes to `@roadmap-planner` (which sprint) and `@collector` (read record) | 2026-10-24 |
 
 **Three rows, one class each, and the set is deliberately small.** These are the three
 classes Sprint 7.3 names for its smallest slice. Tenant settings, capacity SKU thresholds
@@ -279,6 +351,9 @@ letting a reader assume coverage.
 A nil result is the normal outcome of a quarterly read and it **must be written down with
 its date and the sources consulted**, otherwise the next reviewer cannot distinguish a
 checked surface from an unchecked one. Append a row per review; never overwrite one.
+**A schedule change is appended here too, and is marked as not being a review** — the log
+is the only place a later reader can tell "somebody read the sources" from "somebody moved
+the date", and those two must never be allowed to look alike.
 
 | Review date | Class | Reviewer | Sources consulted | Finding | Next review |
 |---|---|---|---|---|---|
@@ -287,13 +362,18 @@ checked surface from an unchecked one. Append a row per review; never overwrite 
 | 2026-09-25 | `fabric-iq-workload-preview` | `@readme` | `iq/overview`, `iq/ontology/overview` (both read live, in full) | **Nil — still preview.** Both the ontology item and the Fabric IQ workload are labelled preview on the live pages. Row 5 and Sprint 6.3 stand as written | 2026-12-24 |
 | 2026-09-27 | `in-fabric-agent-surfaces` | `@readme` | `concept-data-agent` only (read live, in full) — **a partial, unscheduled re-read of one of that row's three sources**, triggered by two dated readings of it disagreeing | **Not nil — a finding, and it is about the page, not about a change.** The page carries **two different enumerations** of a data agent's data sources: *Prerequisites* names a mirrored database and not Microsoft Graph; *Selecting data sources* names Microsoft Graph and not a mirrored database. Both quoted verbatim in [*Sources*](#sources), neither preferred. Neither names the Fabric graph item ("graph model"/"GraphModel": 0 occurrences; "Microsoft Graph": 5), which **supports** row 13 rather than disturbing it. Also newly recorded: "Eventhouse KQL databases are supported as KQL data sources for data agents", routed to `@dataagent` for rows 11–12 and acted on by nobody here. No disposition changed | 2026-12-24 — **unchanged.** A partial read of one source does not reset a calendar row whose obligation is all three; row 2 stays due and stays gated |
 
+| 2026-09-27 — **schedule change, not a review** | all three rows | `@readme` | **None. No page was opened and no source was consulted** — this entry exists so that the date moves below cannot later be mistaken for evidence that somebody read something. The last readings of these three rows remain the 2026-09-25 entries above, and the 2026-09-27 partial re-read of `concept-data-agent` | **Not a finding — a staggering of the review calendar.** All nine dated rows in this document carried `2026-12-24`, so nine failure messages would have landed on one morning across two agents: the shape in which a batch of obligations gets cleared without being read. Four rows were **pulled earlier and none pushed later** — calendar row 3 and ledger row 9 to 2026-10-24, calendar row 2 and ledger row 8 to 2026-11-24. Calendar row 1 and ledger rows 6–7 were left at 2026-12-24 deliberately (one reading pass covers all three), and ledger rows 12–13 were left because they are `@dataagent`'s signature — staggering those is **routed to them, not done here**. No source was re-read, no finding was recorded, no disposition moved, and **nothing was cleared: the obligation is still nine reviews**, now due on three mornings instead of one. Reasoning and the re-measured distribution: [*The review calendar*](#the-review-calendar--classes-that-exist-only-as-prose-3-rows) and [*What the gate checks*](#what-the-gate-checks-and-what-it-does-not) | Row 3 → **2026-10-24**; row 2 → **2026-11-24**; row 1 → **2026-12-24**, unmoved. These supersede the `Next review` cells in the earlier entries, which are left exactly as written because they record what was scheduled on the day of that review; **the calendar table above is authoritative, this column is history** |
+
 **No review in this log found a change**, and that is the expected shape of a first entry
 written on the same day the rows were sourced. It is recorded anyway, because the value of
 the log is only realised when a later reviewer can tell *checked and unchanged* from *never
 checked*. **The fourth entry (2026-09-27) is the exception that shows the log earning its
 keep:** it found no product change either, but it found that one source page states its
 own source list two different ways — which only became visible because two readings were
-dated and both were kept.
+dated and both were kept. **The fifth entry is not a review at all** and is labelled so in
+every column — a date moved, nothing was read. Counting it among the reviews, or reading
+its `Next review` dates as though sources had been consulted, would be precisely the
+confusion this log exists to prevent.
 
 ### Recorded finding — the experiment that closed this gap (2026-09-25)
 
@@ -371,8 +451,10 @@ enforceable**, and no date moved.
 **What did not change.** The calendar is still a calendar. The forward cost it adds is in
 [*What the gate checks*](#what-the-gate-checks-and-what-it-does-not) above — at this
 revision it took the dated rows coming due on 2026-12-24 from five to **eight**. (That
-figure is historical: it is **nine** as of 2026-09-27, after row 13 was signed and dated.
-The current number lives in *What the gate checks* and is re-measured there, not here.)
+figure is historical in two ways: it read **nine** as of 2026-09-27, after row 13 was
+signed and dated, and the rows no longer share one date at all — four were pulled earlier
+on 2026-09-27, leaving 2 / 2 / 5 across 2026-10-24, 2026-11-24 and 2026-12-24. The current
+numbers live in *What the gate checks* and are re-measured there, not here.)
 
 ---
 
@@ -563,6 +645,7 @@ the auto-provisioning fact instead.
 | Q4 | Should an upstream producer's refresh state become an input to a **semantic-model** rule, given that `SEM-016` currently reads freshness from the model alone? | `@semantic` | 6, 7 (does not change their disposition; may add a rule elsewhere) | **Open** |
 | Q5 | Once a source object type exists, does `AGT-003`'s defer-to-the-source's-own-scorecard pattern generalise to a lakehouse and a KQL database, or should the agent carry a per-source-type readiness rule instead? | `@dataagent` (rule design), with `@scorer` on the object type | none — raised by the Q1 ruling, changes no disposition | **Open.** Today `fabric_iq/scoring.py` populates `source_scores` only for `semantic_model` sources, so `AGT-003` is answerable for one source type of six |
 | Q6 | Which sprint owns the source-as-subject object type and its collection prerequisite? No sprint currently carries rows 10 and 11; the closing path named there (Sprint 5.1, then the Sprint 6.3 pattern) is a prerequisite and a precedent, not an owner. | `@orchestrator` (roadmap owner) | 10, 11 — their **closing sprint**, not their disposition | **Open.** No roadmap change is made here; naming a sprint that does not exist would be the scheduling equivalent of a reasonless exclusion |
+| Q7 | After the 2026-09-27 stagger, **five** dated rows still come due on 2026-12-24 — calendar row 1 and rows 6–7 (`@readme`, one reading pass) plus rows 12 and 13. Should rows 12 and 13 be pulled earlier too, so that morning is smaller and single-owner? | `@dataagent` | 12, 13 — their **review dates**, not their dispositions | **Open, and deliberately not acted on.** Both rows are `@dataagent`'s signature and re-dating them is theirs, not `@readme`'s: a date is part of what an owner signed. The direction rule applies unchanged — **pull earlier, never push later** — and the two rows share the data agent source list with calendar row 2, now due 2026-11-24, so a single earlier reading could discharge all three |
 
 No question above is routed to `@tenant`: `WORKSPACE_ITEM_KEYS` contains no tenant-level
 element. `TENANT_SETTING_MAP` is where `@tenant`'s dispositions will be owed, and that
@@ -675,15 +758,34 @@ anything here, and the weaker of the two is flagged as weaker.
 
 ## Maintaining this document
 
-- **Review cadence: 90 days**, the cadence Sprint 7.3 proposes, applied in two places.
-  All **six** `deliberately excluded` ledger rows carry **2026-12-24** — rows 6–9 owed by
-  `@readme` and rows 12 and 13 owed by `@dataagent`, who excluded both. The **three**
-  review-calendar rows carry the same date and the same cadence, and are owed by `@readme`.
-  Both are enforced by the same expiry check: re-measured with the audit on 2026-09-27,
-  **nine expiries as of 2026-12-25 — six exclusions and three calendar rows — and none
-  as of 2026-12-24.** (It read eight before row 13 was dated; the figure is re-run at each
-  revision, never carried forward.) A calendar date passing unnoticed is now a build
-  failure; what it is still not is a signal that the product moved.
+- **Review cadence: 90 days, staggered — not synchronised.** The cadence Sprint 7.3
+  proposes is applied in two places: all **six** `deliberately excluded` ledger rows are
+  dated (rows 6–9 owed by `@readme`, rows 12 and 13 by `@dataagent`, who excluded both) and
+  so are the **three** review-calendar rows, owed by `@readme`. Both kinds are enforced by
+  the same expiry check. Until 2026-09-27 every one of those nine rows carried
+  `2026-12-24`; four were then **pulled earlier** — calendar row 3 and row 9 to
+  **2026-10-24**, calendar row 2 and row 8 to **2026-11-24** — leaving rows 6, 7 and
+  calendar row 1 (`@readme`, one reading pass over the same two pages) and rows 12 and 13
+  (`@dataagent`'s, routed to them) on **2026-12-24**. Re-measured with the audit on
+  2026-09-27: **2 expiries as of 2026-10-25, 4 as of 2026-11-25 and 9 as of 2026-12-25**
+  (cumulative, so those are the figures if nobody reviews), and **0 as of 2026-10-24**. The
+  worst morning is five rather than nine; **the total obligation is unchanged at nine
+  reviews.** A calendar date passing unnoticed is a build failure; what it is still not is
+  a signal that the product moved.
+- **Dates move earlier, never later.** Pulling a review forward costs more attention and
+  can be done at any time. Pushing one out is a review obligation deferred, and it is
+  legitimate **only** after a review that repeatedly found nothing, recorded in the log —
+  never for scheduling convenience, and never in advance of the due date. Re-dating another
+  agent's row is not this agent's act at all: rows 12 and 13 stayed where they were on
+  2026-09-27 for that reason, and the suggestion to stagger them was routed to `@dataagent`
+  rather than applied to their signature.
+- **Staggering is not reviewing, and the log must show the difference.** A date move reads
+  nothing, finds nothing and clears nothing. When one happens it is appended to
+  [*The review log*](#the-review-log--a-review-that-found-nothing-is-still-evidence) with
+  `Sources consulted` reading **none** and the finding column saying so in words — the
+  2026-09-27 entry is the worked example. Earlier entries' `Next review` cells are left
+  untouched even when a later stagger supersedes them: the calendar table is authoritative
+  and the log is history.
 - **There is no bulk re-dating command, and there must not be one.** Clearing a review
   costs one deliberate per-row edit with a recorded reason. That cost is the point: a
   guard people regenerate without reading is decoration. The absence is now asserted by
@@ -717,6 +819,7 @@ owns: the accuracy of the rows is `@readme`'s, the checking of them is not.
 | 2026-09-25 | `@readme` | **The review calendar** — all 3 rows, sourced and dated from a live re-read of the six Learn pages named in their cells. Findings: three nil results, logged individually |
 | 2026-09-27 | `@dataagent` | `WORKSPACE_ITEM_KEYS` — row 13 (`GraphModel`) alone: signed **deliberately excluded**, with a reason, an owner and a 2026-12-24 review-by date, on `@collector`'s Q3 answer. This is what emptied the `untriaged` set |
 | 2026-09-27 | `@readme` | **Sources and dates only** — a partial re-read of `concept-data-agent` and a reconciliation of this document's prose to the signed row 13 (counts, expiry arithmetic, the two-enumeration finding). **No row, no tally and no calendar date was touched** |
+| 2026-09-27 | `@readme` | **Review dates only, and not a review** — the stagger. Four dates pulled earlier (calendar rows 2 and 3, ledger rows 8 and 9); **no source was opened and no reason re-verified**, and no disposition, basis, owner, tally or heading count moved. Rows 6, 7 and calendar row 1 were left at 2026-12-24 deliberately; rows 12 and 13 were left because they are `@dataagent`'s, and the question of staggering them is routed as Q7 |
 
 **13 of 13 ledger rows reviewed, by two reviewers, and 3 of 3 calendar rows by one.** The
 dates differ and are kept apart: rows 1–9 and all three calendar rows on 2026-09-25 by
