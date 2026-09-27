@@ -17,6 +17,7 @@ number a director will quote in a steering committee. Treat it accordingly.
   agreement statistics and disagreement enumeration. It measures the weights against
   human judgement and **proposes no number**: a calibration routine that also proposed
   the correction it measured would have inverted the point of the exercise.
+- `fabric_iq/surfaces.py` — dated, data-only consumption-surface registry
 - `fabric_iq/rules/base.py` — `Rule`, `RuleRegistry`, rule helpers
 - `fabric_iq/rules/__init__.py` — registry assembly
 
