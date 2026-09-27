@@ -12,7 +12,7 @@ live results remain bounded by the fields the APIs actually return.
 | | |
 |---|---|
 | 🏷️ **Ruleset** | `2026.09.2` · package `0.1.0` |
-| ✅ **Tests** | 573 tests passed — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity, calibration, scope-drift reconciliation (two skip on Windows by design: one needs a filename Windows refuses, one needs `dir_fd` deletion Windows does not provide) |
+| ✅ **Tests** | 618 tests run, 2 skipped on Windows by design (one needs a filename Windows refuses, one needs `dir_fd` deletion Windows does not provide) — engine, rules, scoring, trends, preceptor, deployment, installer, self-assessment, evidence hygiene, reporting orientation, standalone guidance, Skill claim integrity, calibration, scope-drift reconciliation, consumption-surface registry |
 | 🐍 **Python** | 3.12+ · zero external dependencies |
 | 📜 **License** | Internal — see repository settings |
 | 🎯 **Coverage** | 67 rules · 5 object types · 9 Gold marts · 14-agent environment |
@@ -410,6 +410,18 @@ Phase 5 is **Evidence Closure and Repeatable Re-Measurement**. It remains open u
 the API reality matrix, rule/input reconciliation, dated product-fact verification,
 practitioner calibration, real Data Agent execution proof, and two compatible
 unattended runs satisfy the gates in [docs/ROADMAP.md](./docs/ROADMAP.md).
+
+Phase 8, **Tenant-wide Microsoft IQ readiness**, is planned in
+[docs/ROADMAP.md](./docs/ROADMAP.md); all seven release-gate criteria remain open.
+Sprint 8.1 landed only as repository knowledge: [`fabric_iq/surfaces.py`](./fabric_iq/surfaces.py)
+is a data-only registry of eight consumption surfaces with Microsoft Learn prerequisites
+read on 2026-09-27 (M365 Copilot Chat and Cowork, the Power BI agent in M365, Fabric data
+agents in Fabric, M365, and via Foundry, Copilot Studio, or MCP, Ontology, and Operations
+agent). No rule, scorer, or collector reads it, so it changes no score, eligibility, or
+confidence and does not assess whether M365 Copilot or Cowork can reach Fabric content.
+`scripts/check_scope_ledger.py` fails when a surface review date expires. Sprints 8.2–8.6
+are blocked on prerequisites in Sprints 5.1, 5.4, and 6.2; Sprint 8.7 awaits a scoring
+design decision.
 
 > [!WARNING]
 > This tool never reports a score without eligibility and confidence alongside it —
